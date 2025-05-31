@@ -1,0 +1,95 @@
+# Archivos y carpetas específicas de .NET Core
+*.swp
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.tmp
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Carpetas de Visual Studio
+.vs/
+.vscode/
+.idea/
+
+# Carpetas de construcción y resultados de compilación
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Archivos de Visual Studio
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Archivos temporales de Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archivos de caché
+*.jfm
+*.dbmdl
+*.dbproj.schemaview
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# Archivos de configuración local que pueden contener información sensible
+appsettings.Development.json
+appsettings.local.json
+appsettings.*.json
+!appsettings.json
+
+# Archivos del sistema operativo
+.DS_Store
+
+# Archivos de NuGet
+*.nupkg
+# Los archivos de paquetes se pueden regenerar mediante NuGet
+**/[Pp]ackages/*
+# excepto build/, que se usa como destino de MSBuild
+!**/[Pp]ackages/build/
+# Descomente si es necesario, pero generalmente estos archivos no deben ser parte del control de versiones
+#!**/[Pp]ackages/repositories.config
+# Los archivos project.json de NuGet v3 producen archivos más ignorables
+*.nuget.props
+*.nuget.targets
+
+# Carpetas de node.js para proyectos con frontend
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Archivos de cobertura de pruebas
+*.coverage
+*.coveragexml
+TestResults/
+
+# Archivos de publicación y despliegue
+**/publish/
+**/published/
+**/PublishProfiles/
+*.publishproj
+*.pubxml
+*.pubxml.user
