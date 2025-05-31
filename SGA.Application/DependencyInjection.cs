@@ -1,0 +1,19 @@
+using Microsoft.Extensions.DependencyInjection;
+using SGA.Application.Services;
+using SGA.Infrastructure.Repositories;
+
+namespace SGA.Application
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddApplication(this IServiceCollection services)
+        {
+            // Registrar servicios
+            services.AddScoped<IDocenteService, DocenteService>();
+            services.AddScoped<IDocumentoService, DocumentoService>();
+            services.AddScoped<ISolicitudAscensoService, SolicitudAscensoService>();
+            
+            return services;
+        }
+    }
+}
