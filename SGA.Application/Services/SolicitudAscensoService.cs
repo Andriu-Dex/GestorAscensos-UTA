@@ -14,7 +14,7 @@ namespace SGA.Application.Services
         Task<IEnumerable<SolicitudAscenso>> GetSolicitudesByDocenteIdAsync(int docenteId);
         Task<IEnumerable<SolicitudAscenso>> GetSolicitudesPendientesAsync();
         Task<SolicitudAscenso> CrearSolicitudAscensoAsync(int docenteId, List<int> documentosIds);
-        Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string motivoRechazo = null, int revisorId = 0);
+        Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string? motivoRechazo = null, int revisorId = 0);
     }
 
     public class SolicitudAscensoService : ISolicitudAscensoService
@@ -117,7 +117,7 @@ namespace SGA.Application.Services
             return solicitud;
         }
 
-        public async Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string motivoRechazo = null, int revisorId = 0)
+        public async Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string? motivoRechazo = null, int revisorId = 0)
         {
             using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             

@@ -40,6 +40,23 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Configurar antiforgery
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+    options.Cookie.Name = "XSRF-TOKEN";
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
+// Configurar cookies
+builder.Services.Configure<CookiePolicyOptions>(options =>
+{
+    options.CheckConsentNeeded = context => true;
+    options.MinimumSameSitePolicy = SameSiteMode.Strict;
+    options.Secure = CookieSecurePolicy.Always;
+});
+
 // Registrar servicios de aplicación e infraestructura
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);

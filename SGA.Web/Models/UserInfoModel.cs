@@ -1,0 +1,16 @@
+namespace SGA.Web.Models
+{
+    public class UserInfoModel
+    {        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Cedula { get; set; } = string.Empty;
+        public string Facultad { get; set; } = string.Empty;
+        public string Departamento { get; set; } = string.Empty;
+        public int NivelActual { get; set; }
+        public DateTime FechaIngresoNivelActual { get; set; }
+        public bool EsAdmin { get; set; }
+    }
+}

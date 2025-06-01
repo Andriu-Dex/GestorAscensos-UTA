@@ -1,6 +1,11 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using SGA.Web.Services
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">SGA.Web</a>
+        <a class="navbar-brand" href="">Gestor Ascensos UTA</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -11,19 +16,61 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inicio
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+        
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="solicitudes">
+                        <span class="bi bi-clipboard-fill-nav-menu" aria-hidden="true"></span> Mis Solicitudes
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="documentos">
+                        <span class="bi bi-file-earmark-fill-nav-menu" aria-hidden="true"></span> Mis Documentos
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="perfil">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Mi Perfil
+                    </NavLink>
+                </div>
+                  <AuthorizeView Roles="Administrador">
+                    <Authorized Context="adminAuth">
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/docentes">
+                                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Gestión de Docentes
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/solicitudes">
+                                <span class="bi bi-clipboard-check-fill-nav-menu" aria-hidden="true"></span> Gestión de Solicitudes
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                
+                <div class="nav-item px-3">
+                    <a class="nav-link" href="javascript:void(0)" @onclick="Logout">
+                        <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Cerrar Sesión
+                    </a>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Iniciar Sesión
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="register">
+                        <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Registrarse
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
@@ -35,5 +82,11 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/", true);
     }
 }

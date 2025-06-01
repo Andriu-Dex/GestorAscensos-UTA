@@ -7,11 +7,11 @@ namespace SGA.Application
     public static class DependencyInjection
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
-        {
-            // Registrar servicios
+        {            // Registrar servicios
             services.AddScoped<IDocenteService, DocenteService>();
             services.AddScoped<IDocumentoService, DocumentoService>();
             services.AddScoped<ISolicitudAscensoService, SolicitudAscensoService>();
+            services.AddScoped<IDatosTTHHService, DatosTTHHService>();
             
             return services;
         }

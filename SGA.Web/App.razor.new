@@ -4,14 +4,15 @@
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeInfo">
-            <AuthorizeRouteView RouteData="@routeInfo" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized Context="notAuthorizedContext">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized Context="authContext">
                     @{
                         var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
                         NavigationManager.NavigateTo($"login?returnUrl={returnUrl}", forceLoad: true);
                     }
-                </NotAuthorized>                <Authorizing>
+                </NotAuthorized>
+                <Authorizing>
                     <div class="d-flex justify-content-center mt-4">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Cargando...</span>
@@ -19,7 +20,7 @@
                     </div>
                 </Authorizing>
             </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeInfo" Selector="h1" />
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
             <LayoutView Layout="@typeof(MainLayout)">

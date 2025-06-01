@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <ItemGroup>
     <ProjectReference Include="..\SGA.Domain\SGA.Domain.csproj" />
-    <ProjectReference Include="..\SGA.Application\SGA.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

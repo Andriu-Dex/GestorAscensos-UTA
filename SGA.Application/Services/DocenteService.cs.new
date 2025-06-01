@@ -7,6 +7,18 @@ using SGA.Infrastructure.Repositories;
 
 namespace SGA.Application.Services
 {
+    public interface IDocenteService
+    {
+        Task<Docente> GetDocenteByIdAsync(int id);
+        Task<Docente> GetDocenteByCedulaAsync(string cedula);
+        Task<Docente> GetDocenteByUsernameAsync(string username);
+        Task<bool> ValidarRequisitosAscensoAsync(int docenteId);
+        Task<Dictionary<string, bool>> ObtenerEstadoRequisitosAsync(int docenteId);
+        Task ActualizarIndicadoresAsync(int docenteId, int tiempoRol, int numeroObras, decimal puntajeEvaluacion, int horasCapacitacion, int tiempoInvestigacion);
+        Task UpdateDocenteAsync(Docente docente);
+        Task CreateDocenteAsync(Docente docente);
+    }
+
     public class DocenteService : IDocenteService
     {
         private readonly IDocenteRepository _docenteRepository;
@@ -31,18 +43,13 @@ namespace SGA.Application.Services
             return await _docenteRepository.GetByUsernameAsync(username);
         }
 
-        public async Task<Docente> GetDocenteByEmailAsync(string email)
-        {
-            return await _docenteRepository.GetByEmailAsync(email);
-        }
-
         public async Task<bool> ValidarRequisitosAscensoAsync(int docenteId)
         {
             var docente = await _docenteRepository.GetByIdAsync(docenteId);
             if (docente == null)
                 return false;
 
-            if (docente.NivelActual >= 5)
+            if (docente.NivelActual >= 5) // Ya está en nivel máximo
                 return false;
 
             var requisito = ObtenerRequisitoParaNivel(docente.NivelActual);
@@ -95,12 +102,15 @@ namespace SGA.Application.Services
         {
             var existingDocente = await _docenteRepository.GetByIdAsync(docente.Id);
             if (existingDocente == null)
-                throw new Exception("Docente no encontrado");            existingDocente.Cedula = docente.Cedula;
+                throw new Exception("Docente no encontrado");
+
+            existingDocente.Cedula = docente.Cedula;
             existingDocente.Nombres = docente.Nombres;
             existingDocente.Apellidos = docente.Apellidos;
             existingDocente.Email = docente.Email;
             existingDocente.TelefonoContacto = docente.TelefonoContacto;
             existingDocente.Facultad = docente.Facultad;
+            existingDocente.Departamento = docente.Departamento;
             existingDocente.NivelActual = docente.NivelActual;
             existingDocente.TiempoEnRolActual = docente.TiempoEnRolActual;
             existingDocente.NumeroObras = docente.NumeroObras;
@@ -119,6 +129,7 @@ namespace SGA.Application.Services
 
         public async Task CreateDocenteAsync(Docente docente)
         {
+            // Verificar si ya existe un docente con el mismo nombre de usuario o cédula
             var existingByUsername = await _docenteRepository.GetByUsernameAsync(docente.NombreUsuario);
             if (existingByUsername != null)
             {

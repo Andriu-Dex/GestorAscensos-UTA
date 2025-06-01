@@ -14,12 +14,11 @@ namespace SGA.Infrastructure
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(
                     configuration.GetConnectionString("DefaultConnection"),
-                    b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
-
-            // Registrar repositorios
+                    b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));            // Registrar repositorios
             services.AddScoped<IDocenteRepository, DocenteRepository>();
             services.AddScoped<IDocumentoRepository, DocumentoRepository>();
             services.AddScoped<ISolicitudAscensoRepository, SolicitudAscensoRepository>();
+            services.AddScoped<IDatosTTHHRepository, DatosTTHHRepository>();
             
             return services;
         }

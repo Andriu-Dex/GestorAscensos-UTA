@@ -5,14 +5,18 @@ namespace SGA.Domain.Entities
 {
     public class Docente
     {
+        public Docente()
+        {
+            Documentos = new List<Documento>();
+            Solicitudes = new List<SolicitudAscenso>();
+        }
+
         public int Id { get; set; }
-        public string Cedula { get; set; }
-        public string Nombres { get; set; }
-        public string Apellidos { get; set; }
-        public string Email { get; set; }
-        public string TelefonoContacto { get; set; }
-        public string Facultad { get; set; }
-        public string Departamento { get; set; }
+        public required string Cedula { get; set; }
+        public required string Nombres { get; set; }
+        public required string Apellidos { get; set; }        public required string Email { get; set; }
+        public required string TelefonoContacto { get; set; }
+        public required string Facultad { get; set; }
 
         // Nivel actual del docente (Titular 1, 2, 3, 4, 5)
         public int NivelActual { get; set; }
@@ -32,10 +36,12 @@ namespace SGA.Domain.Entities
         public ICollection<SolicitudAscenso> Solicitudes { get; set; }
         
         // Autenticación
-        public string NombreUsuario { get; set; }
-        public string PasswordHash { get; set; }
+        public required string NombreUsuario { get; set; }
+        public required string PasswordHash { get; set; }
         public int IntentosFallidos { get; set; }
         public bool Bloqueado { get; set; }
         public DateTime? FechaBloqueo { get; set; }
+        public bool EsAdministrador { get; set; }
+        public DateTime FechaRegistro { get; set; }
     }
 }

@@ -1,0 +1,79 @@
+@baseUrl = https://localhost:7030
+
+### Obtener token CSRF
+GET {{baseUrl}}/api/auth/csrf-token
+###
+
+### Registrar un nuevo docente
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf-token}}
+
+{
+    "cedula": "1804567890",
+    "nombres": "Juan Carlos",
+    "apellidos": "Pérez López",
+    "email": "jperez@uta.edu.ec",
+    "telefono": "0987654321",
+    "facultad": "FISEI",
+    "departamento": "Sistemas",
+    "username": "jperez",
+    "password": "Test123!@#",
+    "confirmPassword": "Test123!@#"
+}
+
+### Iniciar sesión
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf-token}}
+
+{
+    "username": "jperez",
+    "password": "Test123!@#"
+}
+
+### Probar contraseña débil (debe fallar)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf-token}}
+
+{
+    "cedula": "1804567891",
+    "nombres": "Ana María",
+    "apellidos": "González López",
+    "email": "agonzalez@uta.edu.ec",
+    "telefono": "0987654322",
+    "facultad": "FISEI",
+    "departamento": "Sistemas",
+    "username": "agonzalez",
+    "password": "123456",
+    "confirmPassword": "123456"
+}
+
+### Probar cédula inválida (debe fallar)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf-token}}
+
+{
+    "cedula": "1234567890",
+    "nombres": "Pedro José",
+    "apellidos": "Martínez López",
+    "email": "pmartinez@uta.edu.ec",
+    "telefono": "0987654323",
+    "facultad": "FISEI",
+    "departamento": "Sistemas",
+    "username": "pmartinez",
+    "password": "Test123!@#",
+    "confirmPassword": "Test123!@#"
+}
+
+### Probar bloqueo por intentos fallidos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+X-XSRF-TOKEN: {{csrf-token}}
+
+{
+    "username": "jperez",
+    "password": "contraseñaincorrecta"
+}
