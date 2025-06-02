@@ -120,3 +120,5 @@ Los ascensos son secuenciales entre niveles **Titular 1** a **Titular 5**, cumpl
 - El sistema debe ser escalable a futuro (otros roles, otros tipos de personal)
 
 ---
+
+La Base De Datos siempre debe estar en tercera forma normal (3FN), nunca debe violar esa regla.

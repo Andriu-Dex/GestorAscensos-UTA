@@ -179,11 +179,20 @@
             passwordType = "password";
             passwordIcon = "eye";
         }
-    }    private async Task ValidarCedula()
+    }
+
+    private async Task ValidarCedula()
     {
         if (string.IsNullOrEmpty(registerModel.Cedula) || registerModel.Cedula.Length != 10 || !int.TryParse(registerModel.Cedula, out _))
         {
             errorMessage = "Ingrese una cédula válida de 10 dígitos.";
+            return;
+        }
+
+        // Validar estructura de la cédula ecuatoriana
+        if (!ValidarCedulaEcuatoriana(registerModel.Cedula))
+        {
+            errorMessage = "La cédula ingresada no es válida.";
             return;
         }
 
@@ -200,7 +209,7 @@
                 errorMessage = verificacionResult.Message;
                 isLoading = false;
                 return;
-            }// Obtener datos desde la API de TTHH
+            }            // Obtener datos desde la API de TTHH
             var datosPersonales = await ApiService.ObtenerDatosTTHH(registerModel.Cedula);
             if (datosPersonales != null)
             {
@@ -235,13 +244,20 @@
         {
             errorMessage = $"Error al validar la cédula: {ex.Message}";
             datosCargados = false;
-        }        finally
+        }
+        finally
         {
             isLoading = false;
         }
-    }
+    }    private bool ValidarCedulaEcuatoriana(string cedula)
+    {
+        // Validar que sean 10 dígitos y solo contenga números
+        if (cedula.Length != 10)
+            return false;
 
-    private async Task HandleRegistration()
+        // Verificar que solo contenga números (no letras ni símbolos)
+        return cedula.All(char.IsDigit);
+    }    private async Task HandleRegistration()
     {
         isLoading = true;
         errorMessage = "";
@@ -249,11 +265,39 @@
 
         try
         {
-            // Validar que sea un correo institucional
+            // Crear un username a partir del correo (quitar @uta.edu.ec)
             string email = registerModel.Email.ToLower();
+            
+            // Verificar que sea un correo institucional
             if (!email.EndsWith("@uta.edu.ec"))
             {
                 errorMessage = "El correo debe ser institucional (@uta.edu.ec)";
+                isLoading = false;
+                return;
+            }
+
+            // Generar username a partir del correo
+            string username = email.Replace("@uta.edu.ec", "");
+            
+            // Si el username está vacío (caso extremo), usar las iniciales del nombre y apellido
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                string inicialNombre = !string.IsNullOrEmpty(registerModel.Nombres) && registerModel.Nombres.Length > 0 
+                    ? registerModel.Nombres.Substring(0, 1).ToLower() : "u";
+                    
+                string inicialApellido = !string.IsNullOrEmpty(registerModel.Apellidos) && registerModel.Apellidos.Length > 0 
+                    ? registerModel.Apellidos.Substring(0, 1).ToLower() : "t";
+                    
+                username = $"user_{inicialNombre}{inicialApellido}{DateTime.Now.Ticks % 1000}";
+            }
+            
+            Console.WriteLine($"Username generado: {username}");
+            
+            // Verificar si ya existe un usuario con este correo
+            var verificacionResult = await AuthService.VerificarEmail(registerModel.Email);
+            if (!verificacionResult.Success)
+            {
+                errorMessage = verificacionResult.Message;
                 isLoading = false;
                 return;
             }
@@ -267,9 +311,7 @@
                 return;
             }
 
-            // Generar un username simple basado en el correo, solo como identificador interno
-            // Quitamos el dominio y agregamos la cédula como sufijo para hacerlo único
-            string username = email.Replace("@uta.edu.ec", "_") + registerModel.Cedula;
+            // Asignar username al modelo
             registerModel.Username = username;
 
             var result = await AuthService.Register(registerModel);
