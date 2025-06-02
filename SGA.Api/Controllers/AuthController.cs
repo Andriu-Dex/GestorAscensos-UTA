@@ -62,9 +62,7 @@ namespace SGA.Api.Controllers
                 _logger.LogError(ex, $"Error al obtener datos TTHH para cédula {cedula}: {ex.Message}");
                 return StatusCode(500, new { message = "Error interno del servidor" });
             }
-        }
-
-        [HttpPost("login")]
+        }        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             try
@@ -74,10 +72,10 @@ namespace SGA.Api.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var docente = await _docenteService.GetDocenteByUsernameAsync(model.Username);
+                var docente = await _docenteService.GetDocenteByEmailAsync(model.Email);
                 if (docente == null)
                 {
-                    _logger.LogWarning($"Intento de login con usuario inexistente: {model.Username}");
+                    _logger.LogWarning($"Intento de login con correo inexistente: {model.Email}");
                     return Unauthorized(new { message = "Correo o contraseña incorrectos" });
                 }
 
@@ -104,13 +102,12 @@ namespace SGA.Api.Controllers
                 {
                     // Incrementar intentos fallidos
                     docente.IntentosFallidos++;
-                    
-                    // Bloquear después de 3 intentos fallidos
+                      // Bloquear después de 3 intentos fallidos
                     if (docente.IntentosFallidos >= 3)
                     {
                         docente.Bloqueado = true;
                         docente.FechaBloqueo = DateTime.Now;
-                        _logger.LogWarning($"Usuario bloqueado por múltiples intentos fallidos: {model.Username}");
+                        _logger.LogWarning($"Usuario bloqueado por múltiples intentos fallidos: {model.Email}");
                     }
 
                     await _docenteService.UpdateDocenteAsync(docente);
@@ -125,20 +122,17 @@ namespace SGA.Api.Controllers
 
                 // Restablecer intentos fallidos
                 docente.IntentosFallidos = 0;
-                await _docenteService.UpdateDocenteAsync(docente);
-
-                // Generar token JWT
+                await _docenteService.UpdateDocenteAsync(docente);                // Generar token JWT
                 var token = GenerateJwtToken(docente);
 
-                _logger.LogInformation($"Login exitoso para el usuario: {model.Username}");
-
-                return Ok(new
+                _logger.LogInformation($"Login exitoso para el usuario: {model.Email}");                return Ok(new
                 {
                     token,
                     user = new
                     {
                         id = docente.Id,
                         username = docente.NombreUsuario,
+                        email = docente.Email,
                         nombres = docente.Nombres,
                         apellidos = docente.Apellidos,
                         esAdmin = docente.EsAdministrador
@@ -398,12 +392,11 @@ namespace SGA.Api.Controllers
             // Validación simplificada: solo verificamos que sea numérica y tenga 10 dígitos
             return cedula.Length == 10 && cedula.All(char.IsDigit);
         }
-    }
-
-    public class LoginModel
+    }    public class LoginModel
     {
-        [Required(ErrorMessage = "El nombre de usuario es obligatorio")]
-        public string Username { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
+        [EmailAddress(ErrorMessage = "El formato del correo electrónico no es válido")]
+        public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
         public string Password { get; set; } = string.Empty;
