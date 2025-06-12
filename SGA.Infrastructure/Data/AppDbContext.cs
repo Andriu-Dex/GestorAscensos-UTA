@@ -8,9 +8,7 @@ namespace SGA.Infrastructure.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-        }
-
-        public DbSet<Teacher> Teachers { get; set; }
+        }        public DbSet<Teacher> Teachers { get; set; }
         public DbSet<PromotionRequest> PromotionRequests { get; set; }
         public DbSet<UserType> UserTypes { get; set; }
         public DbSet<AcademicDegree> AcademicDegrees { get; set; }
@@ -18,6 +16,7 @@ namespace SGA.Infrastructure.Data
         public DbSet<Document> Documents { get; set; }
         public DbSet<DocumentObservation> DocumentObservations { get; set; }
         public DbSet<PromotionObservation> PromotionObservations { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -312,8 +311,47 @@ namespace SGA.Infrastructure.Data
                     Id = 3,
                     DegreeType = "Doctorado",
                     Title = "PhD en Ciencias de la Computación",
-                    IssuingInstitution = "Universidad Politécnica de Madrid",
-                    TeacherId = 3
+                    IssuingInstitution = "Universidad Politécnica de Madrid",                    TeacherId = 3
+                }
+            );
+              // Configuración del modelo User
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.PasswordHash).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Email).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.CreatedAt).IsRequired();
+                
+                // Relación con UserType
+                entity.HasOne(e => e.UserType)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserTypeId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                
+                // Relación con Teacher (opcional, un User puede no ser un Teacher)
+                entity.HasOne(e => e.Teacher)
+                      .WithOne()
+                      .HasForeignKey<User>(e => e.TeacherId)
+                      .IsRequired(false);
+                
+                // Índices para búsquedas rápidas
+                entity.HasIndex(e => e.Username).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
+            });
+            
+            // Datos iniciales para User (admin)
+            modelBuilder.Entity<User>().HasData(                new 
+                {
+                    Id = 1,
+                    Username = "admin",
+                    PasswordHash = "$2a$11$mRI2S8DXP3oWwRo5i.SSRuSRKVTQlSFWJZK.jRsrL6Ex38PAHgzNC", // Hash válido para "Admin123!"
+                    Email = "admin@uta.edu.ec",
+                    IsActive = true,
+                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    FailedLoginAttempts = 0,
+                    UserTypeId = 1, // Tipo de usuario Administrador
+                    TeacherId = (int?)null // El admin no es un teacher
                 }
             );
         }

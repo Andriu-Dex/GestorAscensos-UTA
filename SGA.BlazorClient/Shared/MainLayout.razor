@@ -1,29 +1,60 @@
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using SGA.BlazorApp.Client.Auth
+@inject IAuthenticationService AuthService
+@inject NavigationManager NavigationManager
 
-<div class="page">
-    <main>
-        <NavMenu />
-        <div class="container">
-            <ErrorBoundary>
-                <ChildContent>
-                    @Body
-                </ChildContent>
-                <ErrorContent Context="exception">
-                    <div class="alert alert-danger mt-4">
-                        <h4 class="alert-heading">Error</h4>
-                        <p>Ha ocurrido un error en la aplicación:</p>
-                        <p>@exception.Message</p>
+<AuthorizeView>
+    <Authorized>
+        <div class="page">
+            <main>
+                <NavMenu />
+                <div class="container">
+                    <div class="top-row d-flex justify-content-end mb-3">
+                        <button class="btn btn-outline-secondary" @onclick="HandleLogout">Cerrar Sesión</button>
                     </div>
-                </ErrorContent>
-            </ErrorBoundary>
-        </div>
-    </main>
+                    <ErrorBoundary>
+                        <ChildContent>
+                            @Body
+                        </ChildContent>
+                        <ErrorContent Context="exception">
+                            <div class="alert alert-danger mt-4">
+                                <h4 class="alert-heading">Error</h4>
+                                <p>Ha ocurrido un error en la aplicación:</p>
+                                <p>@exception.Message</p>
+                            </div>
+                        </ErrorContent>
+                    </ErrorBoundary>
+                </div>
+            </main>
 
-    <footer class="footer border-top text-muted py-3 mt-5">
-        <div class="container">
-            <div class="text-center">
-                &copy; 2025 - Sistema de Gestión y Control de Ascensos para Profesores - UTA
-            </div>
+            <footer class="footer border-top text-muted py-3 mt-5">
+                <div class="container">
+                    <div class="text-center">
+                        &copy; 2025 - Sistema de Gestión y Control de Ascensos para Profesores - UTA
+                    </div>
+                </div>
+            </footer>
         </div>
-    </footer>
-</div>
+    </Authorized>
+    <NotAuthorized>
+        @if (isLoginPage)
+        {
+            @Body
+        }
+        else
+        {
+            <RedirectToLogin />
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool isLoginPage => NavigationManager.Uri.Contains("/login");
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/login");
+    }
+}
