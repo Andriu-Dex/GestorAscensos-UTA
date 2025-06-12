@@ -1,0 +1,3 @@
+@echo off
+echo Iniciando herramientas de base de datos...
+powershell -ExecutionPolicy Bypass -File "%~dp0database-tools.ps1"

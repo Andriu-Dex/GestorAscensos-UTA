@@ -1,0 +1,3 @@
+@echo off
+echo Verificando herramientas de Entity Framework...
+powershell -ExecutionPolicy Bypass -File "%~dp0verify-ef-tools.ps1"

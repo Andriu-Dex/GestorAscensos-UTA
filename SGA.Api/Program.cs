@@ -54,6 +54,24 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// Apply database migrations
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        logger.LogInformation("Applying database migrations");
+        await SGA.Infrastructure.Data.DatabaseMigrationManager.MigrateAsync(services, logger);
+        logger.LogInformation("Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while applying database migrations");
+    }
+}
+
 app.UseHttpsRedirection();
 app.UseCors("AllowBlazorClient");
 
