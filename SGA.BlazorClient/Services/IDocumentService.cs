@@ -12,6 +12,7 @@ namespace SGA.BlazorClient.Services
         Task<IEnumerable<DocumentDto>> GetDocumentsByRequirementIdAsync(int requirementId);
         Task<IEnumerable<DocumentDto>> GetDocumentsByTypeAsync(string documentType);
         Task<int> UploadDocumentAsync(UploadDocumentDto document);
+        Task<int> CreateDocumentAsync(DocumentDto document);
         Task AddObservationAsync(int documentId, AddDocumentObservationDto observation);
         Task<byte[]> DownloadDocumentAsync(int id);
     }

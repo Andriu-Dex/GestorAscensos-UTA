@@ -1,0 +1,93 @@
+@namespace SGA.BlazorClient.Shared
+
+<div class="modal @(_isVisible ? "show d-block" : "d-none")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog @SizeClass">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                @if (ShowCloseButton)
+                {
+                    <button type="button" class="btn-close" @onclick="Hide" aria-label="Close"></button>
+                }
+            </div>
+            <div class="modal-body">
+                @ChildContent
+            </div>
+            @if (ShowFooter)
+            {
+                <div class="modal-footer">
+                    @if (FooterContent != null)
+                    {
+                        @FooterContent
+                    }
+                    else
+                    {
+                        @if (ShowCancelButton)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="Hide">@CancelText</button>
+                        }
+                        @if (ShowConfirmButton)
+                        {
+                            <button type="button" class="btn btn-primary" @onclick="Confirm">@ConfirmText</button>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment FooterContent { get; set; }
+    [Parameter] public ModalSize Size { get; set; } = ModalSize.Medium;
+    [Parameter] public bool ShowFooter { get; set; } = true;
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+    [Parameter] public bool ShowConfirmButton { get; set; } = true;
+    [Parameter] public string CancelText { get; set; } = "Cancelar";
+    [Parameter] public string ConfirmText { get; set; } = "Confirmar";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _isVisible;
+
+    public void Show()
+    {
+        _isVisible = true;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        _isVisible = false;
+        OnClose.InvokeAsync();
+        OnCancel.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task Confirm()
+    {
+        _isVisible = false;
+        await OnConfirm.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private string SizeClass => Size switch
+    {
+        ModalSize.Small => "modal-sm",
+        ModalSize.Large => "modal-lg",
+        ModalSize.ExtraLarge => "modal-xl",
+        _ => ""
+    };
+
+    public enum ModalSize
+    {
+        Small,
+        Medium,
+        Large,
+        ExtraLarge
+    }
+}

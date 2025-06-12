@@ -14,13 +14,15 @@ namespace SGA.Application.DTOs
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public DateTime? UploadDate { get; set; }
-        public bool IsEditable { get; set; }
-        public string Department { get; set; } = string.Empty;
+        public bool IsEditable { get; set; }        public string Department { get; set; } = string.Empty;
         public string IssuingInstitution { get; set; } = string.Empty;
         public int? DurationHours { get; set; }
         
-        // No incluimos FileContent para evitar transferir datos binarios grandes
-        // Usaremos un endpoint dedicado para la descarga de archivos
+        // Propiedades para manejar archivos (útiles para upload/download)
+        public byte[]? FileContent { get; set; }
+        public string? FileName { get; set; }
+        public long? FileSize { get; set; }
+        public string? ContentType { get; set; }
         
         public int TeacherId { get; set; }
         public string TeacherFullName { get; set; } = string.Empty;

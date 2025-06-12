@@ -1,0 +1,14 @@
+@namespace SGA.BlazorClient.Shared
+
+<div class="loading-container">
+    <div class="loading-logo">
+        <img src="images/uta-logo.png" alt="UTA Logo" class="img-fluid" />
+    </div>
+    <h2 class="loading-title">Sistema de Gestión de Ascensos</h2>
+    <div class="loading-spinner-uta"></div>
+    <p class="mt-3 text-institutional">@Message</p>
+</div>
+
+@code {
+    [Parameter] public string Message { get; set; } = "Cargando...";
+}

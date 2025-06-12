@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <main>
+        <NavMenu />
+        <div class="container">
+            <ErrorBoundary>
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent Context="exception">
+                    <div class="alert alert-danger mt-4">
+                        <h4 class="alert-heading">Error</h4>
+                        <p>Ha ocurrido un error en la aplicación:</p>
+                        <p>@exception.Message</p>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
+        </div>
+    </main>
+
+    <footer class="footer border-top text-muted py-3 mt-5">
+        <div class="container">
+            <div class="text-center">
+                &copy; 2025 - Sistema de Gestión y Control de Ascensos para Profesores - UTA
+            </div>
+        </div>
+    </footer>
+</div>

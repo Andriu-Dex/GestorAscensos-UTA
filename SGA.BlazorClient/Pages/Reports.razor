@@ -1,0 +1,171 @@
+@page "/reports"
+@using SGA.Application.DTOs
+@using SGA.BlazorClient.Services
+@using SGA.BlazorClient.Shared
+@inject ITeacherService TeacherService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Reportes de Docentes</h3>
+    <div>
+        <button class="btn btn-primary">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Generar Reporte
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Reporte Individual
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Genera un reporte detallado del estado actual de un docente específico y su proceso de ascenso.</p>
+                <p>Incluye información sobre:</p>
+                <ul>
+                    <li>Datos personales</li>
+                    <li>Categoría actual</li>
+                    <li>Tiempo en la categoría</li>
+                    <li>Requisitos cumplidos</li>
+                    <li>Documentos presentados</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-light">
+                <button class="btn btn-outline-primary w-100">
+                    <i class="bi bi-file-earmark-text me-1"></i> Generar Reporte Individual
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    Reporte Estadístico
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Genera un reporte estadístico sobre los procesos de ascenso en la institución.</p>
+                <p>Incluye información sobre:</p>
+                <ul>
+                    <li>Cantidad de docentes por categoría</li>
+                    <li>Procesos de ascenso en curso</li>
+                    <li>Tasa de aprobación/rechazo</li>
+                    <li>Tiempos promedio de proceso</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-light">
+                <button class="btn btn-outline-success w-100">
+                    <i class="bi bi-graph-up me-1"></i> Generar Reporte Estadístico
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    Reporte de Actividad
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Genera un reporte de actividad en el sistema durante un período determinado.</p>
+                <p>Incluye información sobre:</p>
+                <ul>
+                    <li>Solicitudes recibidas</li>
+                    <li>Documentos subidos</li>
+                    <li>Cambios de estado en solicitudes</li>
+                    <li>Actividad de administradores</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-light">
+                <button class="btn btn-outline-info w-100">
+                    <i class="bi bi-activity me-1"></i> Generar Reporte de Actividad
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history me-2"></i>
+            Reportes Recientes
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Fecha de Generación</th>
+                        <th>Generado por</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                <span>Reporte Individual - Ana Rojas</span>
+                            </div>
+                        </td>
+                        <td>Individual</td>
+                        <td>12/06/2025</td>
+                        <td>Admin</td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i> Descargar
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                <span>Estadísticas Q2 2025</span>
+                            </div>
+                        </td>
+                        <td>Estadístico</td>
+                        <td>10/06/2025</td>
+                        <td>Admin</td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i> Descargar
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                <span>Actividad Mayo 2025</span>
+                            </div>
+                        </td>
+                        <td>Actividad</td>
+                        <td>01/06/2025</td>
+                        <td>Admin</td>
+                        <td>
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i> Descargar
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Implementación básica por ahora
+}

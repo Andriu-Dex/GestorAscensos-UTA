@@ -1,0 +1,54 @@
+@namespace SGA.BlazorClient.Shared
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex align-items-center">
+        <span class="@IconClass me-2"></span>
+        <h5 class="card-title mb-0">@Title</h5>
+        @if (ShowRefreshButton)
+        {
+            <button class="btn btn-sm btn-outline-primary ms-auto" @onclick="OnRefresh" disabled="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Cargando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Actualizar</span>
+                }
+            </button>
+        }
+    </div>
+    <div class="card-body">
+        @if (IsLoading)
+        {
+            <div class="text-center py-3">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2">Cargando información...</p>
+            </div>
+        }
+        else
+        {
+            @ChildContent
+        }
+    </div>
+    @if (FooterContent != null)
+    {
+        <div class="card-footer">
+            @FooterContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string IconClass { get; set; } = "bi bi-card-text";
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment FooterContent { get; set; }
+    [Parameter] public bool ShowRefreshButton { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+}

@@ -1,4 +1,5 @@
 using SGA.Application.DTOs;
+using SGA.Application.Models;
 using SGA.Domain.Enums;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -51,21 +52,19 @@ namespace SGA.BlazorClient.Services
         }
         
         public async Task<int> CreateRequestAsync(int teacherId)
-        {
-            var response = await _httpClient.PostAsync($"{ApiEndpoint}/teacher/{teacherId}", null);
+        {            var response = await _httpClient.PostAsync($"{ApiEndpoint}/teacher/{teacherId}", null);
             response.EnsureSuccessStatusCode();
             
             var result = await response.Content.ReadFromJsonAsync<PromotionRequestResult>();
-            return result.PromotionRequestId;
+            return result?.PromotionRequestId ?? 0;
         }
         
         public async Task<int> CreateRequestWithDocumentAsync(int teacherId, int documentId)
         {
             var response = await _httpClient.PostAsync($"{ApiEndpoint}/teacher/{teacherId}/withdocument/{documentId}", null);
             response.EnsureSuccessStatusCode();
-            
-            var result = await response.Content.ReadFromJsonAsync<PromotionRequestResult>();
-            return result.PromotionRequestId;
+              var result = await response.Content.ReadFromJsonAsync<PromotionRequestResult>();
+            return result?.PromotionRequestId ?? 0;
         }
     }
 }

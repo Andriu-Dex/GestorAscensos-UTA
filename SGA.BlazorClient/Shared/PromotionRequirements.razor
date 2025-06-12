@@ -1,0 +1,114 @@
+@using SGA.Application.DTOs
+@namespace SGA.BlazorClient.Shared
+
+<DataCard Title="Requisitos de Promoción" IconClass="bi bi-check-circle" IsLoading="@IsLoading" ShowRefreshButton="true" OnRefresh="OnRefresh">
+    @if (Result != null)
+    {
+        <div class="mb-3">
+            <div class="d-flex align-items-center mb-2">
+                <h5>Estado de Elegibilidad</h5>
+                @if (Result.IsEligible)
+                {
+                    <span class="badge bg-success ms-2">Elegible</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger ms-2">No Elegible</span>
+                }
+            </div>
+            <p>@Result.Message</p>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="small text-muted mb-1">Rango Actual</div>
+                <h5>@Result.CurrentRank</h5>
+            </div>
+            <div class="col-md-6">
+                <div class="small text-muted mb-1">Rango Objetivo</div>
+                <h5>@Result.TargetRank</h5>
+            </div>
+        </div>
+
+        <hr />
+
+        <h6 class="mb-3">Cumplimiento de Requisitos</h6>
+
+        <div class="row">
+            @foreach (var requirement in Result.RequirementsMet)
+            {
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex p-3 border rounded @(requirement.Value ? "border-success bg-success bg-opacity-10" : "border-danger bg-danger bg-opacity-10")">
+                        <div class="me-3">
+                            @if (requirement.Value)
+                            {
+                                <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle-fill text-danger fs-4"></i>
+                            }
+                        </div>
+                        <div>
+                            <div class="fw-bold @(requirement.Value ? "text-success" : "text-danger")">
+                                @GetRequirementName(requirement.Key)
+                            </div>
+                            <div class="small">
+                                @GetRequirementDescription(requirement.Key, requirement.Value)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</DataCard>
+
+@code {
+    [Parameter] public PromotionEligibilityResultDto Result { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    private string GetRequirementName(string key)
+    {
+        return key switch
+        {
+            "YearsInCurrentRank" => "Tiempo en Rango Actual",
+            "MinimumWorks" => "Obras Mínimas",
+            "EvaluationScore" => "Puntaje de Evaluación",
+            "TrainingHours" => "Horas de Capacitación",
+            "ResearchTime" => "Tiempo en Investigación",
+            _ => key
+        };
+    }
+
+    private string GetRequirementDescription(string key, bool isMet)
+    {
+        if (Result == null) return string.Empty;
+
+        return key switch
+        {
+            "YearsInCurrentRank" => isMet 
+                ? $"Cumple con los 4 años requeridos" 
+                : "Se requieren 4 años en el rango actual",
+            
+            "MinimumWorks" => isMet 
+                ? $"Cumple con las obras requeridas" 
+                : $"No cumple con el mínimo de obras",
+            
+            "EvaluationScore" => isMet 
+                ? "Puntaje suficiente (mínimo 75%)" 
+                : "Se requiere un puntaje mínimo de 75%",
+            
+            "TrainingHours" => isMet 
+                ? "Horas de capacitación completas" 
+                : "Faltan horas de capacitación",
+            
+            "ResearchTime" => isMet 
+                ? "Tiempo de investigación completo" 
+                : "Tiempo de investigación insuficiente",
+            
+            _ => isMet ? "Requisito cumplido" : "Requisito no cumplido"
+        };
+    }
+}

@@ -72,8 +72,16 @@ namespace SGA.BlazorClient.Services
             return createdDocument.Id;
         }
 
-        public async Task AddObservationAsync(int documentId, AddDocumentObservationDto observation)
+        public async Task<int> CreateDocumentAsync(DocumentDto document)
         {
+            var response = await _httpClient.PostAsJsonAsync(ApiUrl, document);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DocumentDto>();
+            return result?.Id ?? 0;
+        }        public async Task AddObservationAsync(int documentId, AddDocumentObservationDto observation)
+        {
+            // Asegurar que el DocumentId esté establecido
+            observation.DocumentId = documentId;
             var response = await _httpClient.PostAsJsonAsync($"{ApiUrl}/{documentId}/observation", observation);
             response.EnsureSuccessStatusCode();
         }

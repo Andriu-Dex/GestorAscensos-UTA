@@ -1,0 +1,117 @@
+@namespace SGA.BlazorClient.Shared
+
+<div class="alert alert-@GetAlertClass fade show @(IsVisible ? "d-block" : "d-none")" role="alert">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <h4 class="alert-heading">@Title</h4>
+    }
+    <p class="mb-0">@Message</p>
+    @if (IsAutoDismiss)
+    {
+        <div class="progress mt-2" style="height: 4px;">
+            <div class="progress-bar" style="width: @_progressValue%" role="progressbar"></div>
+        </div>
+    }
+    @if (IsCloseable)
+    {
+        <button type="button" class="btn-close" @onclick="Hide" aria-label="Close"></button>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Message { get; set; }
+    [Parameter] public AlertType Type { get; set; } = AlertType.Info;
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsCloseable { get; set; } = true;
+    [Parameter] public bool IsAutoDismiss { get; set; }
+    [Parameter] public int AutoDismissSeconds { get; set; } = 5;
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private System.Threading.Timer _timer;
+    private int _progressValue = 100;
+    private int _timeLeft;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && IsAutoDismiss)
+        {
+            StartTimer();
+        }
+    }
+
+    private void StartTimer()
+    {
+        _timeLeft = AutoDismissSeconds * 1000;
+        _progressValue = 100;
+
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(TimerCallback, null, 0, 100);
+    }
+
+    private async void TimerCallback(object state)
+    {
+        _timeLeft -= 100;
+        _progressValue = (int)(_timeLeft / (AutoDismissSeconds * 10.0));
+
+        if (_timeLeft <= 0)
+        {
+            _timer?.Dispose();
+            _timer = null;
+            await InvokeAsync(async () => 
+            {
+                IsVisible = false;
+                await OnClosed.InvokeAsync();
+                StateHasChanged();
+            });
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Show(string message, AlertType type = AlertType.Info, bool autoDismiss = false)
+    {
+        Message = message;
+        Type = type;
+        IsAutoDismiss = autoDismiss;
+        IsVisible = true;
+        
+        if (autoDismiss)
+        {
+            StartTimer();
+        }
+        
+        StateHasChanged();
+    }
+
+    public async Task Hide()
+    {
+        IsVisible = false;
+        _timer?.Dispose();
+        _timer = null;
+        await OnClosed.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private string GetAlertClass()
+    {
+        return Type switch
+        {
+            AlertType.Success => "success",
+            AlertType.Warning => "warning",
+            AlertType.Error => "danger",
+            AlertType.Info => "info",
+            _ => "info"
+        };
+    }
+
+    public enum AlertType
+    {
+        Success,
+        Warning,
+        Error,
+        Info
+    }
+}

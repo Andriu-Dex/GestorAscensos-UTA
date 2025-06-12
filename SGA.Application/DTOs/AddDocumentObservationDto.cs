@@ -11,6 +11,9 @@ namespace SGA.Application.DTOs
         public string Description { get; set; }
         
         [Required]
+        public int DocumentId { get; set; }
+        
+        [Required]
         public int ReviewerId { get; set; }
     }
 }
