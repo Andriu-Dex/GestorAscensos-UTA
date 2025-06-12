@@ -12,10 +12,10 @@ namespace SGA.Tests.Application.Services
 {
     [TestClass]
     public class ImprovedPromotionServiceTests
-    {
-        // Usando null! para indicar al compilador que estos campos serán inicializados en el método TestInitialize
+    {        // Usando null! para indicar al compilador que estos campos serán inicializados en el método TestInitialize
         private Mock<ITeacherRepository> _mockTeacherRepository = null!;
         private Mock<IPromotionRequestRepository> _mockPromotionRequestRepository = null!;
+        private Mock<IDocumentRepository> _mockDocumentRepository = null!;
         private PromotionService _promotionService = null!;
 
         [TestInitialize]
@@ -23,7 +23,8 @@ namespace SGA.Tests.Application.Services
         {
             _mockTeacherRepository = new Mock<ITeacherRepository>();
             _mockPromotionRequestRepository = new Mock<IPromotionRequestRepository>();
-            _promotionService = new PromotionService(_mockTeacherRepository.Object, _mockPromotionRequestRepository.Object);
+            _mockDocumentRepository = new Mock<IDocumentRepository>();
+            _promotionService = new PromotionService(_mockTeacherRepository.Object, _mockPromotionRequestRepository.Object, _mockDocumentRepository.Object);
         }
         
         [TestMethod]
@@ -45,14 +46,16 @@ namespace SGA.Tests.Application.Services
 
         [TestMethod]
         public async Task CheckEligibilityAsync_TeacherEligible_ReturnsEligibleResult()
-        {
-            // Arrange
+        {            // Arrange
             int teacherId = 1;
+            var userType = new UserType("Profesor", "Descripción del profesor");
             var teacher = new Teacher(
                 "1234567890", // identificationNumber
                 "John",       // firstName
                 "Doe",        // lastName
                 "john.doe@example.com", // email
+                "password123", // password
+                userType,     // userType
                 AcademicRank.Titular1   // initialRank
             )
             {

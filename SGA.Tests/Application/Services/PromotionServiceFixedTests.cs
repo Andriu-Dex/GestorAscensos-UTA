@@ -13,18 +13,18 @@ namespace SGA.Tests.Application.Services
     [TestClass]
     public class PromotionServiceFixedTests
     {
-        // Declaramos los campos como no nulos utilizando el operador !
-        private Mock<ITeacherRepository> _mockTeacherRepository = null!;
-        private Mock<IPromotionRequestRepository> _mockPromotionRequestRepository = null!;
-        private PromotionService _promotionService = null!;
-
-        [TestInitialize]
-        public void Initialize()
-        {
-            _mockTeacherRepository = new Mock<ITeacherRepository>();
-            _mockPromotionRequestRepository = new Mock<IPromotionRequestRepository>();
-            _promotionService = new PromotionService(_mockTeacherRepository.Object, _mockPromotionRequestRepository.Object);
-        }        [TestMethod]
+    // Declaramos los campos como no nulos utilizando el operador !
+    private Mock<ITeacherRepository> _mockTeacherRepository = null!;
+    private Mock<IPromotionRequestRepository> _mockPromotionRequestRepository = null!;
+    private Mock<IDocumentRepository> _mockDocumentRepository = null!;
+    private PromotionService _promotionService = null!;    [TestInitialize]
+    public void Initialize()
+    {
+        _mockTeacherRepository = new Mock<ITeacherRepository>();
+        _mockPromotionRequestRepository = new Mock<IPromotionRequestRepository>();
+        _mockDocumentRepository = new Mock<IDocumentRepository>();
+        _promotionService = new PromotionService(_mockTeacherRepository.Object, _mockPromotionRequestRepository.Object, _mockDocumentRepository.Object);
+    }[TestMethod]
         public async Task CheckEligibilityAsync_TeacherNotFound_ReturnsNotEligible()
         {
             // Arrange
@@ -43,14 +43,16 @@ namespace SGA.Tests.Application.Services
             Assert.AreEqual("Teacher not found", result.Message);
         }[TestMethod]
         public async Task CheckEligibilityAsync_TeacherEligible_ReturnsEligibleResult()
-        {
-            // Arrange
+        {            // Arrange
             int teacherId = 1;
+            var userType = new UserType("Profesor", "Descripción del profesor");
             var teacher = new Teacher(
                 "1234567890", // identificationNumber
                 "John",       // firstName
                 "Doe",        // lastName
                 "john.doe@example.com", // email
+                "password123", // password
+                userType,     // userType
                 AcademicRank.Titular1   // initialRank
             )
             {
@@ -69,11 +71,13 @@ namespace SGA.Tests.Application.Services
                 { "Works", true },
                 { "EvaluationScore", true },
                 { "TrainingHours", true }
-            };
-
-            // Mock del repositorio para devolver el teacher
+            };            // Mock del repositorio para devolver el teacher
             _mockTeacherRepository.Setup(repo => repo.GetByIdAsync(teacherId))
                 .ReturnsAsync(teacher);
+                
+            // Configurar mock del repositorio de documentos (para evitar warning de no uso)
+            _mockDocumentRepository.Setup(repo => repo.GetByTeacherIdAsync(teacherId))
+                .ReturnsAsync(new List<Document>());
 
             // Act
             var result = await _promotionService.CheckEligibilityAsync(teacherId);
