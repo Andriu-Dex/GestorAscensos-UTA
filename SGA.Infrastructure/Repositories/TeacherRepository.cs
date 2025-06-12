@@ -15,23 +15,26 @@ namespace SGA.Infrastructure.Repositories
         public TeacherRepository(AppDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-        }
-
-        public async Task<Teacher> GetByIdAsync(int id)
+        }        public async Task<Teacher> GetByIdAsync(int id)
         {
             return await _context.Teachers
+                .Include(t => t.UserType)
+                .Include(t => t.AcademicDegrees)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }
 
         public async Task<Teacher> GetByIdentificationNumberAsync(string identificationNumber)
         {
             return await _context.Teachers
+                .Include(t => t.UserType)
                 .FirstOrDefaultAsync(t => t.IdentificationNumber == identificationNumber);
         }
 
         public async Task<IEnumerable<Teacher>> GetAllAsync()
         {
-            return await _context.Teachers.ToListAsync();
+            return await _context.Teachers
+                .Include(t => t.UserType)
+                .ToListAsync();
         }
 
         public async Task AddAsync(Teacher teacher)

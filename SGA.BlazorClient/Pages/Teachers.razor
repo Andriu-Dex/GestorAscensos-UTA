@@ -1,0 +1,158 @@
+@page "/teachers"
+@using SGA.Application.DTOs
+@using SGA.BlazorClient.Services
+@inject ITeacherService TeacherService
+
+<h3>Listado de Docentes</h3>
+
+@if (teachers == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (!teachers.Any())
+{
+    <p>No hay docentes registrados.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Identificación</th>
+                <th>Nombre</th>
+                <th>Rango Actual</th>
+                <th>Puntaje Evaluación</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var teacher in teachers)
+            {
+                <tr>
+                    <td>@teacher.Id</td>
+                    <td>@teacher.IdentificationNumber</td>
+                    <td>@teacher.FullName</td>
+                    <td>@teacher.CurrentRank</td>
+                    <td>@teacher.EvaluationScore</td>
+                    <td>
+                        <a href="/teacher/@teacher.Id" class="btn btn-info btn-sm">Detalles</a>
+                        <button class="btn btn-primary btn-sm" @onclick="() => CheckEligibility(teacher.Id)">Verificar Elegibilidad</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (eligibilityResult != null)
+{
+    <div class="mt-4">
+        <h4>Resultado de Elegibilidad</h4>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Docente: @selectedTeacher?.FullName</h5>
+                <p class="card-text">
+                    <strong>Estado:</strong> @(eligibilityResult.IsEligible ? "Elegible" : "No Elegible")<br />
+                    <strong>Mensaje:</strong> @eligibilityResult.Message<br />
+                    <strong>Rango Actual:</strong> @eligibilityResult.CurrentRank<br />
+                    <strong>Rango Objetivo:</strong> @eligibilityResult.TargetRank
+                </p>
+                
+                <h6>Requisitos:</h6>
+                <ul>
+                    @foreach (var requirement in eligibilityResult.RequirementsMet)
+                    {
+                        <li>
+                            @requirement.Key: 
+                            @if (requirement.Value)
+                            {
+                                <span class="text-success">Cumplido</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger">No Cumplido</span>
+                            }
+                        </li>
+                    }
+                </ul>
+                
+                @if (eligibilityResult.IsEligible)
+                {
+                    <button class="btn btn-success" @onclick="() => CreatePromotionRequest(selectedTeacherId)">
+                        Crear Solicitud de Ascenso
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3">
+        @message
+    </div>
+}
+
+@code {
+    private IEnumerable<TeacherDto>? teachers;
+    private PromotionEligibilityResultDto? eligibilityResult;
+    private TeacherDto? selectedTeacher;
+    private int selectedTeacherId;
+    private string message = string.Empty;
+    private bool isSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeachers();
+    }
+
+    private async Task LoadTeachers()
+    {
+        try
+        {
+            teachers = await TeacherService.GetAllTeachersAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error al cargar docentes: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private async Task CheckEligibility(int teacherId)
+    {
+        try
+        {
+            selectedTeacherId = teacherId;
+            selectedTeacher = teachers?.FirstOrDefault(t => t.Id == teacherId);
+            eligibilityResult = await TeacherService.CheckEligibilityAsync(teacherId);
+            message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            message = $"Error al verificar elegibilidad: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private async Task CreatePromotionRequest(int teacherId)
+    {
+        try
+        {
+            var result = await TeacherService.CreatePromotionRequestAsync(teacherId);
+            message = "Solicitud de ascenso creada exitosamente.";
+            isSuccess = true;
+            
+            // Recargar datos
+            await LoadTeachers();
+            eligibilityResult = null;
+        }
+        catch (Exception ex)
+        {
+            message = $"Error al crear solicitud: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+}

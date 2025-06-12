@@ -1,5 +1,6 @@
 using SGA.Domain.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace SGA.Domain.Entities
 {
@@ -18,21 +19,31 @@ namespace SGA.Domain.Entities
         public DateTime? ProcessedDate { get; set; } // Cambiado a público para pruebas
         public string? Comments { get; set; } // Renombrado de RejectionReason para ser más general
         
+        // Relation with Documents
+        public int? DocumentId { get; set; }
+        public Document? Document { get; set; }
+        
+        // Relation with reviewer
+        public int? ReviewerId { get; set; }
+        public Teacher? Reviewer { get; set; }
+        
+        // Navigation property
+        public ICollection<PromotionObservation> Observations { get; private set; } = new List<PromotionObservation>();
+        
         // Constructor vacío para pruebas y EF Core
         public PromotionRequest() { }
         
         /// <summary>
         /// Creates a new promotion request with all required properties
         /// </summary>
-        public static PromotionRequest Create(Teacher teacher, AcademicRank targetRank)
-        {
+        public static PromotionRequest Create(Teacher teacher, AcademicRank targetRank, Document document = null)        {
             if (teacher == null)
                 throw new ArgumentNullException(nameof(teacher));
                 
             if ((int)targetRank != (int)teacher.CurrentRank + 1)
                 throw new ArgumentException("Target rank must be the next sequential rank", nameof(targetRank));
                 
-            return new PromotionRequest
+            var request = new PromotionRequest
             {
                 Teacher = teacher,
                 TeacherId = teacher.Id,
@@ -41,6 +52,26 @@ namespace SGA.Domain.Entities
                 Status = PromotionRequestStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
+            
+            if (document != null)
+            {
+                request.Document = document;
+                request.DocumentId = document.Id;
+            }
+            
+            return request;
+        }
+        
+        /// <summary>
+        /// Assigns a reviewer to the promotion request
+        /// </summary>
+        public void AssignReviewer(Teacher reviewer)
+        {
+            if (reviewer == null)
+                throw new ArgumentNullException(nameof(reviewer));
+                
+            Reviewer = reviewer;
+            ReviewerId = reviewer.Id;
         }
         
         /// <summary>
@@ -86,8 +117,19 @@ namespace SGA.Domain.Entities
                 throw new ArgumentException("Rejection reason cannot be empty", nameof(comments));
                 
             Status = PromotionRequestStatus.Rejected;
-            Comments = comments;
-            ProcessedDate = DateTime.UtcNow;
+            Comments = comments;            ProcessedDate = DateTime.UtcNow;
+        }
+        
+        /// <summary>
+        /// Adds an observation to the promotion request
+        /// </summary>
+        public void AddObservation(string description)
+        {
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("Observation description cannot be empty", nameof(description));
+                
+            var observation = new PromotionObservation(description, this);
+            Observations.Add(observation);
         }
     }
 }

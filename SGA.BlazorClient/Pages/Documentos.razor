@@ -1,0 +1,367 @@
+@page "/documentos"
+@using SGA.Application.DTOs
+@using SGA.BlazorClient.Services
+@inject IDocumentService DocumentService
+@inject ITeacherService TeacherService
+
+<h3>Gestión de Documentos</h3>
+
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-primary" @onclick="MostrarFormularioCarga">Cargar Nuevo Documento</button>
+    </div>
+</div>
+
+@if (cargando)
+{
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+}
+else if (documentos == null || !documentos.Any())
+{
+    <div class="alert alert-info">No hay documentos disponibles.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Institución</th>
+                    <th>Fecha Inicio</th>
+                    <th>Fecha Fin</th>
+                    <th>Profesor</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var documento in documentos)
+                {
+                    <tr>
+                        <td>@documento.Name</td>
+                        <td>@documento.DocumentType</td>
+                        <td>@documento.IssuingInstitution</td>
+                        <td>@documento.StartDate.ToShortDateString()</td>
+                        <td>@documento.EndDate.ToShortDateString()</td>
+                        <td>@documento.TeacherFullName</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" @onclick="() => VerDetallesDocumento(documento.Id)">Detalles</button>
+                            <button class="btn btn-sm btn-success" @onclick="() => DescargarDocumento(documento.Id)">Descargar</button>
+                            <button class="btn btn-sm btn-warning" @onclick="() => AgregarObservacion(documento.Id)">Observación</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarFormularioCarga)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Cargar Nuevo Documento</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@nuevoDocumento" OnValidSubmit="CargarDocumento">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="teacherId" class="form-label">Profesor</label>
+                    <select id="teacherId" @bind="nuevoDocumento.TeacherId" class="form-control">
+                        <option value="0">Seleccione un profesor</option>
+                        @if (profesores != null)
+                        {
+                            @foreach (var profesor in profesores)
+                            {
+                                <option value="@profesor.Id">@profesor.FirstName @profesor.LastName</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Nombre del Documento</label>
+                    <InputText id="name" @bind-Value="nuevoDocumento.Name" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Descripción</label>
+                    <InputTextArea id="description" @bind-Value="nuevoDocumento.Description" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="documentType" class="form-label">Tipo de Documento</label>
+                    <InputText id="documentType" @bind-Value="nuevoDocumento.DocumentType" class="form-control" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="startDate" class="form-label">Fecha de Inicio</label>
+                        <InputDate id="startDate" @bind-Value="nuevoDocumento.StartDate" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="endDate" class="form-label">Fecha de Fin</label>
+                        <InputDate id="endDate" @bind-Value="nuevoDocumento.EndDate" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="department" class="form-label">Departamento</label>
+                    <InputText id="department" @bind-Value="nuevoDocumento.Department" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="issuingInstitution" class="form-label">Institución Emisora</label>
+                    <InputText id="issuingInstitution" @bind-Value="nuevoDocumento.IssuingInstitution" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="durationHours" class="form-label">Duración (horas)</label>
+                    <InputNumber id="durationHours" @bind-Value="nuevoDocumento.DurationHours" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="fileUpload" class="form-label">Archivo</label>
+                    <InputFile id="fileUpload" OnChange="OnFileChange" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-primary me-2">Cargar Documento</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCarga">Cancelar</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (mostrarDetalles && documentoSeleccionado != null)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Detalles del Documento</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Nombre:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.Name</dd>
+
+                <dt class="col-sm-3">Descripción:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.Description</dd>
+
+                <dt class="col-sm-3">Tipo:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.DocumentType</dd>
+
+                <dt class="col-sm-3">Fecha de Inicio:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.StartDate.ToShortDateString()</dd>
+
+                <dt class="col-sm-3">Fecha de Fin:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.EndDate.ToShortDateString()</dd>
+
+                <dt class="col-sm-3">Fecha de Carga:</dt>
+                <dd class="col-sm-9">@(documentoSeleccionado.UploadDate?.ToShortDateString() ?? "N/A")</dd>
+
+                <dt class="col-sm-3">Departamento:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.Department</dd>
+
+                <dt class="col-sm-3">Institución Emisora:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.IssuingInstitution</dd>
+
+                <dt class="col-sm-3">Duración (horas):</dt>
+                <dd class="col-sm-9">@(documentoSeleccionado.DurationHours?.ToString() ?? "N/A")</dd>
+
+                <dt class="col-sm-3">Profesor:</dt>
+                <dd class="col-sm-9">@documentoSeleccionado.TeacherFullName</dd>
+
+                <dt class="col-sm-3">Revisor:</dt>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(documentoSeleccionado.ReviewerFullName) ? "Sin asignar" : documentoSeleccionado.ReviewerFullName)</dd>
+            </dl>
+
+            <button class="btn btn-secondary" @onclick="CerrarDetalles">Cerrar</button>
+        </div>
+    </div>
+}
+
+@if (mostrarFormularioObservacion)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Agregar Observación</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@nuevaObservacion" OnValidSubmit="GuardarObservacion">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="descripcion" class="form-label">Descripción</label>
+                    <InputTextArea id="descripcion" @bind-Value="nuevaObservacion.Description" class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="revisor" class="form-label">Revisor</label>
+                    <select id="revisor" @bind="nuevaObservacion.ReviewerId" class="form-control">
+                        <option value="0">Seleccione un revisor</option>
+                        @if (profesores != null)
+                        {
+                            @foreach (var profesor in profesores)
+                            {
+                                <option value="@profesor.Id">@profesor.FirstName @profesor.LastName</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary me-2">Guardar Observación</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarObservacion">Cancelar</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<DocumentDto> documentos;
+    private IEnumerable<TeacherDto> profesores;
+    private DocumentDto documentoSeleccionado;
+    private int documentoIdSeleccionado;
+    private bool cargando = true;
+    private bool mostrarFormularioCarga = false;
+    private bool mostrarDetalles = false;
+    private bool mostrarFormularioObservacion = false;
+    
+    private UploadDocumentDto nuevoDocumento = new()
+    {
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today.AddDays(30)
+    };
+    
+    private AddDocumentObservationDto nuevaObservacion = new();
+    private IBrowserFile archivoSeleccionado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        try
+        {
+            documentos = await DocumentService.GetAllDocumentsAsync();
+            profesores = await TeacherService.GetAllTeachersAsync();
+        }
+        catch (Exception ex)
+        {
+            // Aquí manejaríamos errores
+            Console.WriteLine($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void MostrarFormularioCarga()
+    {
+        nuevoDocumento = new UploadDocumentDto
+        {
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddDays(30)
+        };
+        archivoSeleccionado = null;
+        mostrarFormularioCarga = true;
+    }
+
+    private void CancelarCarga()
+    {
+        mostrarFormularioCarga = false;
+    }
+
+    private async Task CargarDocumento()
+    {
+        if (archivoSeleccionado == null)
+        {
+            // Mostrar mensaje de error
+            return;
+        }
+
+        try
+        {
+            // Aquí implementaríamos la lógica para cargar el archivo
+            // nuevoDocumento.File = archivoSeleccionado;
+            // await DocumentService.UploadDocumentAsync(nuevoDocumento);
+            
+            await CargarDatos();
+            mostrarFormularioCarga = false;
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al cargar documento: {ex.Message}");
+        }
+    }
+
+    private async Task VerDetallesDocumento(int id)
+    {
+        documentoSeleccionado = await DocumentService.GetDocumentByIdAsync(id);
+        mostrarDetalles = true;
+    }
+
+    private void CerrarDetalles()
+    {
+        mostrarDetalles = false;
+        documentoSeleccionado = null;
+    }
+
+    private async Task DescargarDocumento(int id)
+    {
+        try
+        {
+            var contenido = await DocumentService.DownloadDocumentAsync(id);
+            var documento = documentos.FirstOrDefault(d => d.Id == id);
+            
+            // Aquí implementaríamos la lógica para descargar el archivo
+            // Por ejemplo, usando JSRuntime para invocar código JavaScript que descargue el archivo
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al descargar documento: {ex.Message}");
+        }
+    }
+
+    private void AgregarObservacion(int id)
+    {
+        documentoIdSeleccionado = id;
+        nuevaObservacion = new AddDocumentObservationDto();
+        mostrarFormularioObservacion = true;
+    }
+
+    private void CancelarObservacion()
+    {
+        mostrarFormularioObservacion = false;
+    }
+
+    private async Task GuardarObservacion()
+    {
+        try
+        {
+            await DocumentService.AddObservationAsync(documentoIdSeleccionado, nuevaObservacion);
+            await CargarDatos();
+            mostrarFormularioObservacion = false;
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al guardar observación: {ex.Message}");
+        }
+    }
+
+    private void OnFileChange(InputFileChangeEventArgs e)
+    {
+        archivoSeleccionado = e.File;
+    }
+}

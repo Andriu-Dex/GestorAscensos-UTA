@@ -1,0 +1,181 @@
+@page "/observaciones-promocion/{SolicitudId:int}"
+@using SGA.Application.DTOs
+@using SGA.BlazorClient.Services
+@inject IPromotionRequestService PromotionRequestService
+@inject NavigationManager NavigationManager
+
+<h3>Observaciones de Solicitud de Promoción</h3>
+
+@if (cargando)
+{
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+}
+else if (solicitud == null)
+{
+    <div class="alert alert-danger">Solicitud no encontrada.</div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Detalles de la Solicitud</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Profesor:</dt>
+                <dd class="col-sm-9">@solicitud.TeacherFullName</dd>
+
+                <dt class="col-sm-3">Rango Actual:</dt>
+                <dd class="col-sm-9">@solicitud.CurrentRank</dd>
+
+                <dt class="col-sm-3">Rango Objetivo:</dt>
+                <dd class="col-sm-9">@solicitud.TargetRank</dd>
+
+                <dt class="col-sm-3">Estado:</dt>
+                <dd class="col-sm-9">
+                    <span class="@GetStatusClass(solicitud.Status)">@solicitud.Status</span>
+                </dd>
+
+                <dt class="col-sm-3">Fecha de Creación:</dt>
+                <dd class="col-sm-9">@solicitud.CreatedAt.ToShortDateString()</dd>
+
+                <dt class="col-sm-3">Comentarios:</dt>
+                <dd class="col-sm-9">@(string.IsNullOrEmpty(solicitud.Comments) ? "Sin comentarios" : solicitud.Comments)</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <button class="btn btn-primary" @onclick="MostrarFormularioObservacion">Agregar Observación</button>
+            <button class="btn btn-secondary" @onclick="VolverASolicitudes">Volver a Solicitudes</button>
+        </div>
+    </div>
+
+    @if (solicitud.Observations != null && solicitud.Observations.Any())
+    {
+        <h4>Observaciones</h4>
+        <div class="list-group">
+            @foreach (var observacion in solicitud.Observations.OrderByDescending(o => o.CreatedAt))
+            {
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">Observación</h5>
+                        <small>@observacion.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                    </div>
+                    <p class="mb-1">@observacion.Description</p>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">No hay observaciones para esta solicitud.</div>
+    }
+}
+
+@if (mostrarFormularioObservacion)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Agregar Observación</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@nuevaObservacion" OnValidSubmit="GuardarObservacion">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="descripcion" class="form-label">Descripción</label>
+                    <InputTextArea id="descripcion" @bind-Value="nuevaObservacion.Description" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-primary me-2">Guardar Observación</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarObservacion">Cancelar</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int SolicitudId { get; set; }
+
+    private PromotionRequestDto solicitud;
+    private bool cargando = true;
+    private bool mostrarFormularioObservacion = false;
+    private CreatePromotionObservationDto nuevaObservacion = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        try
+        {
+            solicitud = await PromotionRequestService.GetRequestByIdAsync(SolicitudId);
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void MostrarFormularioObservacion()
+    {
+        nuevaObservacion = new CreatePromotionObservationDto
+        {
+            PromotionRequestId = SolicitudId
+        };
+        mostrarFormularioObservacion = true;
+    }
+
+    private void CancelarObservacion()
+    {
+        mostrarFormularioObservacion = false;
+    }
+
+    private async Task GuardarObservacion()
+    {
+        try
+        {
+            // Aquí implementaríamos la lógica para guardar la observación
+            // await PromotionObservationService.CreateObservationAsync(nuevaObservacion);
+            
+            await CargarDatos();
+            mostrarFormularioObservacion = false;
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al guardar observación: {ex.Message}");
+        }
+    }
+
+    private void VolverASolicitudes()
+    {
+        NavigationManager.NavigateTo("/solicitudes");
+    }
+
+    private string GetStatusClass(SGA.Domain.Enums.PromotionRequestStatus status)
+    {
+        return status switch
+        {
+            SGA.Domain.Enums.PromotionRequestStatus.Pending => "badge bg-warning",
+            SGA.Domain.Enums.PromotionRequestStatus.InProgress => "badge bg-info",
+            SGA.Domain.Enums.PromotionRequestStatus.Approved => "badge bg-success",
+            SGA.Domain.Enums.PromotionRequestStatus.Rejected => "badge bg-danger",
+            _ => "badge bg-secondary"
+        };
+    }
+}

@@ -8,22 +8,32 @@ namespace SGA.Domain.Entities
     /// Represents a teacher in the promotion management system
     /// </summary>
     public class Teacher
-    {        public int Id { get; set; } // Cambiado a público para pruebas
+    {        
+        public int Id { get; set; } // Cambiado a público para pruebas
         public string? IdentificationNumber { get; set; } // Cambiado a público para pruebas
         public string? FirstName { get; set; } // Cambiado a público para pruebas
         public string? LastName { get; set; } // Cambiado a público para pruebas
         public string? Email { get; set; } // Cambiado a público para pruebas
+        public string? Password { get; set; } // Nuevo campo para contraseña
         public AcademicRank CurrentRank { get; set; } // Cambiado a público para pruebas
         public DateTime StartDateInCurrentRank { get; set; } // Cambiado a público para pruebas
-          // Indicators for promotion requirements
+        public int DaysInCurrentRank { get; set; } // Nuevo campo para días en el cargo actual
+        
+        // Foreign key for UserType
+        public int UserTypeId { get; set; }
+        public UserType? UserType { get; set; }
+          
+        // Indicators for promotion requirements
         public int Works { get; set; } // Cambiado de AcademicWorksCount para simplificar
         public decimal EvaluationScore { get; set; } // Percentage (0-100)
         public int TrainingHours { get; set; }
         public int ResearchMonths { get; set; }
         public int YearsInCurrentRank { get; set; } // Nueva propiedad para simplificar pruebas
         
-        // Navigation property for promotion requests
+        // Navigation properties
         public ICollection<PromotionRequest> PromotionRequests { get; private set; } = new List<PromotionRequest>();
+        public ICollection<AcademicDegree> AcademicDegrees { get; private set; } = new List<AcademicDegree>();
+        public ICollection<Document> Documents { get; private set; } = new List<Document>();
         
         // Private constructor for EF Core
         private Teacher() { }
@@ -33,24 +43,40 @@ namespace SGA.Domain.Entities
             string firstName,
             string lastName,
             string email,
+            string password,
+            UserType userType,
             AcademicRank initialRank)
         {
             ValidateIdentificationNumber(identificationNumber);
             ValidateName(firstName, nameof(firstName));
             ValidateName(lastName, nameof(lastName));
             ValidateEmail(email);
+            ValidatePassword(password);
             
             IdentificationNumber = identificationNumber;
             FirstName = firstName;
             LastName = lastName;
             Email = email;
+            Password = password;
+            UserType = userType;
+            UserTypeId = userType.Id;
             CurrentRank = initialRank;
             StartDateInCurrentRank = DateTime.UtcNow;
-              // Initialize counters
+            DaysInCurrentRank = 0;
+              
+            // Initialize counters
             Works = 0;
-            EvaluationScore = 0;
-            TrainingHours = 0;
+            EvaluationScore = 0;            TrainingHours = 0;
             ResearchMonths = 0;
+        }
+        
+        private void ValidatePassword(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("Password cannot be empty", nameof(password));
+                
+            if (password.Length < 8)
+                throw new ArgumentException("Password must be at least 8 characters long", nameof(password));
         }
         
         /// <summary>

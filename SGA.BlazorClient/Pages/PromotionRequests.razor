@@ -1,0 +1,252 @@
+@page "/promotion-requests"
+@using SGA.Application.DTOs
+@using SGA.Domain.Enums
+@using SGA.BlazorClient.Services
+@inject IPromotionRequestService PromotionRequestService
+
+<h3>Solicitudes de Ascenso</h3>
+
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <button class="btn @(currentFilter == null ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterRequests(null)">Todas</button>
+        <button class="btn @(currentFilter == PromotionRequestStatus.Pending ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterRequests(PromotionRequestStatus.Pending)">Pendientes</button>
+        <button class="btn @(currentFilter == PromotionRequestStatus.InProgress ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterRequests(PromotionRequestStatus.InProgress)">En Progreso</button>
+        <button class="btn @(currentFilter == PromotionRequestStatus.Approved ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterRequests(PromotionRequestStatus.Approved)">Aprobadas</button>
+        <button class="btn @(currentFilter == PromotionRequestStatus.Rejected ? "btn-primary" : "btn-outline-primary")" @onclick="() => FilterRequests(PromotionRequestStatus.Rejected)">Rechazadas</button>
+    </div>
+</div>
+
+@if (requests == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (!requests.Any())
+{
+    <p>No hay solicitudes de ascenso que coincidan con el filtro actual.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Docente</th>
+                <th>Rango Actual</th>
+                <th>Rango Objetivo</th>
+                <th>Estado</th>
+                <th>Fecha de Creación</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var request in requests)
+            {
+                <tr>
+                    <td>@request.Id</td>
+                    <td>@request.TeacherFullName</td>
+                    <td>@request.CurrentRank</td>
+                    <td>@request.TargetRank</td>
+                    <td>
+                        <span class="badge @GetStatusBadgeClass(request.Status)">
+                            @request.Status
+                        </span>
+                    </td>
+                    <td>@request.CreatedAt.ToShortDateString()</td>
+                    <td>
+                        <button class="btn btn-info btn-sm" @onclick="() => ViewDetails(request)">Ver Detalles</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (selectedRequest != null)
+{
+    <div class="modal" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles de Solicitud de Ascenso</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>ID:</strong> @selectedRequest.Id<br>
+                            <strong>Docente:</strong> @selectedRequest.TeacherFullName<br>
+                            <strong>Rango Actual:</strong> @selectedRequest.CurrentRank<br>
+                            <strong>Rango Objetivo:</strong> @selectedRequest.TargetRank<br>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Estado:</strong> @selectedRequest.Status<br>
+                            <strong>Fecha de Creación:</strong> @selectedRequest.CreatedAt.ToShortDateString()<br>
+                            <strong>Fecha de Procesamiento:</strong> 
+                            @(selectedRequest.ProcessedDate.HasValue ? selectedRequest.ProcessedDate.Value.ToShortDateString() : "No procesada")<br>
+                            <strong>Comentarios:</strong> @(string.IsNullOrEmpty(selectedRequest.Comments) ? "Ninguno" : selectedRequest.Comments)<br>
+                        </div>
+                    </div>
+
+                    @if (selectedRequest.Status == PromotionRequestStatus.Pending || selectedRequest.Status == PromotionRequestStatus.InProgress)
+                    {
+                        <div class="form-group mb-3">
+                            <label for="newStatus">Cambiar Estado:</label>
+                            <select id="newStatus" class="form-control" @bind="newStatus">
+                                @if (selectedRequest.Status == PromotionRequestStatus.Pending)
+                                {
+                                    <option value="@PromotionRequestStatus.InProgress">En Progreso</option>
+                                }
+                                <option value="@PromotionRequestStatus.Approved">Aprobar</option>
+                                <option value="@PromotionRequestStatus.Rejected">Rechazar</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="comments">Comentarios:</label>
+                            <textarea id="comments" class="form-control" rows="3" @bind="comments"></textarea>
+                            @if (newStatus == PromotionRequestStatus.Rejected && string.IsNullOrWhiteSpace(comments))
+                            {
+                                <div class="text-danger">Se requieren comentarios para rechazar una solicitud.</div>
+                            }
+                        </div>
+
+                        <button class="btn btn-primary" @onclick="ProcessRequest" 
+                                disabled="@(newStatus == PromotionRequestStatus.Rejected && string.IsNullOrWhiteSpace(comments))">
+                            Procesar Solicitud
+                        </button>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3">
+        @message
+    </div>
+}
+
+@code {
+    private IEnumerable<PromotionRequestDto>? requests;
+    private PromotionRequestStatus? currentFilter;
+    private PromotionRequestDto? selectedRequest;
+    private PromotionRequestStatus newStatus;
+    private string comments = string.Empty;
+    private string message = string.Empty;
+    private bool isSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRequests();
+    }
+
+    private async Task LoadRequests()
+    {
+        try
+        {
+            if (currentFilter.HasValue)
+            {
+                requests = await PromotionRequestService.GetRequestsByStatusAsync(currentFilter.Value);
+            }
+            else
+            {
+                requests = await PromotionRequestService.GetAllRequestsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error al cargar solicitudes: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private async Task FilterRequests(PromotionRequestStatus? status)
+    {
+        currentFilter = status;
+        await LoadRequests();
+    }
+
+    private void ViewDetails(PromotionRequestDto request)
+    {
+        selectedRequest = request;
+        comments = string.Empty;
+        
+        // Establecer el estado predeterminado según el estado actual
+        if (request.Status == PromotionRequestStatus.Pending)
+        {
+            newStatus = PromotionRequestStatus.InProgress;
+        }
+        else
+        {
+            newStatus = PromotionRequestStatus.Approved;
+        }
+    }
+
+    private void CloseModal()
+    {
+        selectedRequest = null;
+    }
+
+    private async Task ProcessRequest()
+    {
+        if (selectedRequest == null) return;
+
+        // Validar que haya comentarios para el rechazo
+        if (newStatus == PromotionRequestStatus.Rejected && string.IsNullOrWhiteSpace(comments))
+        {
+            return;
+        }
+
+        try
+        {
+            var success = await PromotionRequestService.ProcessRequestAsync(selectedRequest.Id, newStatus, comments);
+            
+            if (success)
+            {
+                message = $"Solicitud {GetStatusText(newStatus)} exitosamente.";
+                isSuccess = true;
+                CloseModal();
+                await LoadRequests();
+            }
+            else
+            {
+                message = "Error al procesar la solicitud.";
+                isSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error al procesar solicitud: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private string GetStatusBadgeClass(PromotionRequestStatus status)
+    {
+        return status switch
+        {
+            PromotionRequestStatus.Pending => "bg-warning text-dark",
+            PromotionRequestStatus.InProgress => "bg-info text-dark",
+            PromotionRequestStatus.Approved => "bg-success",
+            PromotionRequestStatus.Rejected => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText(PromotionRequestStatus status)
+    {
+        return status switch
+        {
+            PromotionRequestStatus.Pending => "pendiente",
+            PromotionRequestStatus.InProgress => "en progreso",
+            PromotionRequestStatus.Approved => "aprobada",
+            PromotionRequestStatus.Rejected => "rechazada",
+            _ => "actualizada"
+        };
+    }
+}

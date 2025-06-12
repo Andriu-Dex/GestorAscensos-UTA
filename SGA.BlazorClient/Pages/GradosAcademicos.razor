@@ -1,0 +1,182 @@
+@page "/grados-academicos"
+@page "/grados-academicos/profesor/{ProfesorId:int}"
+@using SGA.Application.DTOs
+@using SGA.BlazorClient.Services
+@inject IAcademicDegreeService AcademicDegreeService
+@inject ITeacherService TeacherService
+@inject NavigationManager NavigationManager
+
+<h3>Grados Académicos</h3>
+
+@if (ProfesorId > 0)
+{
+    <h4>Profesor: @nombreProfesor</h4>
+}
+
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-primary" @onclick="MostrarFormularioCreacion">Agregar Grado Académico</button>
+    </div>
+</div>
+
+@if (cargando)
+{
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+}
+else if (gradosAcademicos == null || !gradosAcademicos.Any())
+{
+    <div class="alert alert-info">No hay grados académicos registrados.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Tipo de Grado</th>
+                    <th>Título</th>
+                    <th>Institución</th>
+                    <th>Profesor</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var grado in gradosAcademicos)
+                {
+                    <tr>
+                        <td>@grado.DegreeType</td>
+                        <td>@grado.Title</td>
+                        <td>@grado.IssuingInstitution</td>
+                        <td>@grado.TeacherFullName</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" @onclick="() => VerDetallesGrado(grado.Id)">Detalles</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarDetalles && gradoSeleccionado != null)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Detalles del Grado Académico</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Tipo de Grado:</dt>
+                <dd class="col-sm-9">@gradoSeleccionado.DegreeType</dd>
+
+                <dt class="col-sm-3">Título:</dt>
+                <dd class="col-sm-9">@gradoSeleccionado.Title</dd>
+
+                <dt class="col-sm-3">Institución:</dt>
+                <dd class="col-sm-9">@gradoSeleccionado.IssuingInstitution</dd>
+
+                <dt class="col-sm-3">Profesor:</dt>
+                <dd class="col-sm-9">@gradoSeleccionado.TeacherFullName</dd>
+            </dl>
+
+            <button class="btn btn-secondary" @onclick="CerrarDetalles">Cerrar</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int ProfesorId { get; set; }
+
+    private string nombreProfesor = "";
+    private IEnumerable<AcademicDegreeDto> gradosAcademicos;
+    private AcademicDegreeDto gradoSeleccionado;
+    private bool cargando = true;
+    private bool mostrarFormularioCreacion = false;
+    private bool mostrarDetalles = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProfesorId > 0)
+        {
+            var profesor = await TeacherService.GetTeacherByIdAsync(ProfesorId);
+            if (profesor != null)
+            {
+                nombreProfesor = $"{profesor.FirstName} {profesor.LastName}";
+            }
+            
+            // Cargar los grados académicos del profesor específico
+            gradosAcademicos = await AcademicDegreeService.GetAcademicDegreesByTeacherIdAsync(ProfesorId);
+        }
+        else
+        {
+            await CargarDatos();
+        }
+        
+        cargando = false;
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        try
+        {
+            if (ProfesorId > 0)
+            {
+                gradosAcademicos = await AcademicDegreeService.GetAcademicDegreesByTeacherIdAsync(ProfesorId);
+                
+                // Obtener nombre del profesor
+                var profesor = await TeacherService.GetTeacherByIdAsync(ProfesorId);
+                if (profesor != null)
+                {
+                    nombreProfesor = $"{profesor.FirstName} {profesor.LastName}";
+                }
+            }
+            else
+            {
+                gradosAcademicos = await AcademicDegreeService.GetAllAcademicDegreesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Manejar error
+            Console.WriteLine($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void MostrarFormularioCreacion()
+    {
+        // En este ejemplo, redirigimos a una página separada para la creación
+        if (ProfesorId > 0)
+        {
+            NavigationManager.NavigateTo($"/grados-academicos/crear/{ProfesorId}");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/grados-academicos/crear");
+        }
+    }
+
+    private async Task VerDetallesGrado(int id)
+    {
+        gradoSeleccionado = await AcademicDegreeService.GetAcademicDegreeByIdAsync(id);
+        mostrarDetalles = true;
+    }
+
+    private void CerrarDetalles()
+    {
+        mostrarDetalles = false;
+        gradoSeleccionado = null;
+    }
+}

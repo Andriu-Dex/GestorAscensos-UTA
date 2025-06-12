@@ -17,26 +17,28 @@ namespace SGA.Infrastructure.Repositories
         public PromotionRequestRepository(AppDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-        }
-
-        public async Task<PromotionRequest> GetByIdAsync(int id)
+        }        public async Task<PromotionRequest> GetByIdAsync(int id)
         {
             return await _context.PromotionRequests
                 .Include(pr => pr.Teacher)
+                .Include(pr => pr.Reviewer)
+                .Include(pr => pr.Document)
+                .Include(pr => pr.Observations)
                 .FirstOrDefaultAsync(pr => pr.Id == id);
         }
 
         public async Task<IEnumerable<PromotionRequest>> GetByTeacherIdAsync(int teacherId)
         {
             return await _context.PromotionRequests
+                .Include(pr => pr.Document)
+                .Include(pr => pr.Reviewer)
                 .Where(pr => pr.TeacherId == teacherId)
                 .OrderByDescending(pr => pr.CreatedAt)
                 .ToListAsync();
-        }
-
-        public async Task<PromotionRequest> GetActiveRequestByTeacherIdAsync(int teacherId)
+        }        public async Task<PromotionRequest> GetActiveRequestByTeacherIdAsync(int teacherId)
         {
             return await _context.PromotionRequests
+                .Include(pr => pr.Document)
                 .Where(pr => pr.TeacherId == teacherId && 
                       (pr.Status == PromotionRequestStatus.Pending || 
                        pr.Status == PromotionRequestStatus.InProgress))
@@ -48,6 +50,8 @@ namespace SGA.Infrastructure.Repositories
         {
             return await _context.PromotionRequests
                 .Include(pr => pr.Teacher)
+                .Include(pr => pr.Reviewer)
+                .Include(pr => pr.Document)
                 .Where(pr => pr.Status == status)
                 .OrderByDescending(pr => pr.CreatedAt)
                 .ToListAsync();
@@ -57,6 +61,8 @@ namespace SGA.Infrastructure.Repositories
         {
             return await _context.PromotionRequests
                 .Include(pr => pr.Teacher)
+                .Include(pr => pr.Reviewer)
+                .Include(pr => pr.Document)
                 .OrderByDescending(pr => pr.CreatedAt)
                 .ToListAsync();
         }

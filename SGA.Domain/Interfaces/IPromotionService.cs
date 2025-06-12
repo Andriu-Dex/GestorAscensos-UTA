@@ -14,11 +14,15 @@ namespace SGA.Domain.Interfaces
         /// Checks if a teacher is eligible for promotion and returns detailed requirements status
         /// </summary>
         Task<PromotionEligibilityResult> CheckEligibilityAsync(int teacherId);
-        
-        /// <summary>
+          /// <summary>
         /// Creates a new promotion request for a teacher
         /// </summary>
         Task<PromotionRequestResult> CreatePromotionRequestAsync(int teacherId);
+
+        /// <summary>
+        /// Creates a new promotion request for a teacher with an associated document
+        /// </summary>
+        Task<PromotionRequestResult> CreatePromotionRequestWithDocumentAsync(int teacherId, int documentId);
           /// <summary>
         /// Processes a promotion request by changing its status (Approve, Reject, InProgress)
         /// </summary>
