@@ -6,7 +6,7 @@ namespace SGA.BlazorClient.Services
 {
     public interface IUserTypeService
     {
-        Task<IEnumerable<UserTypeDto>> GetAllUserTypesAsync();
-        Task<UserTypeDto> GetUserTypeByIdAsync(int id);
+        Task<IEnumerable<UserTypeDto>?> GetAllUserTypesAsync();
+        Task<UserTypeDto?> GetUserTypeByIdAsync(int id);
     }
 }

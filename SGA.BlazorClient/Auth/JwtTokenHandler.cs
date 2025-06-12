@@ -20,9 +20,7 @@ namespace SGA.BlazorApp.Client.Auth
         public JwtTokenHandler(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
-        }
-
-        public async Task<string> GetTokenAsync()
+        }        public async Task<string?> GetTokenAsync()
         {
             return await GetFromLocalStorageAsync(TOKEN_KEY);
         }
@@ -37,7 +35,7 @@ namespace SGA.BlazorApp.Client.Auth
             await SaveToLocalStorageAsync(USER_INFO_KEY, userInfo);
         }
 
-        public async Task<string> GetUserInfoAsync()
+        public async Task<string?> GetUserInfoAsync()
         {
             return await GetFromLocalStorageAsync(USER_INFO_KEY);
         }
@@ -52,9 +50,7 @@ namespace SGA.BlazorApp.Client.Auth
         public IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
         {
             if (string.IsNullOrEmpty(jwt))
-                return new List<Claim>();
-
-            var handler = new JwtSecurityTokenHandler();
+                return new List<Claim>();            var handler = new JwtSecurityTokenHandler();
             if (handler.CanReadToken(jwt))
             {
                 var token = handler.ReadJwtToken(jwt);
@@ -69,7 +65,7 @@ namespace SGA.BlazorApp.Client.Auth
 
             if (keyValuePairs != null)
             {
-                claims.AddRange(keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value.ToString())));
+                claims.AddRange(keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value?.ToString() ?? string.Empty)));
             }
 
             return claims;
@@ -83,9 +79,7 @@ namespace SGA.BlazorApp.Client.Auth
                 case 3: base64 += "="; break;
             }
             return Convert.FromBase64String(base64);
-        }
-
-        private async Task<string> GetFromLocalStorageAsync(string key)
+        }        private async Task<string?> GetFromLocalStorageAsync(string key)
         {
             try
             {

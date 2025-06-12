@@ -6,7 +6,7 @@ namespace SGA.BlazorClient.Services
 {
     public interface IRequirementService
     {
-        Task<IEnumerable<RequirementDto>> GetAllRequirementsAsync();
-        Task<RequirementDto> GetRequirementByIdAsync(int id);
+        Task<IEnumerable<RequirementDto>?> GetAllRequirementsAsync();
+        Task<RequirementDto?> GetRequirementByIdAsync(int id);
     }
 }

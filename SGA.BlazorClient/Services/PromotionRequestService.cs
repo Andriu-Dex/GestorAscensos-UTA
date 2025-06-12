@@ -16,30 +16,26 @@ namespace SGA.BlazorClient.Services
         public PromotionRequestService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-        }
-
-        public async Task<IEnumerable<PromotionRequestDto>> GetAllRequestsAsync()
+        }        public async Task<IEnumerable<PromotionRequestDto>?> GetAllRequestsAsync()
         {
             var requests = await _httpClient.GetFromJsonAsync<IEnumerable<PromotionRequestDto>>(ApiEndpoint);
             return requests ?? new List<PromotionRequestDto>();
         }
 
-        public async Task<PromotionRequestDto> GetRequestByIdAsync(int id)
+        public async Task<PromotionRequestDto?> GetRequestByIdAsync(int id)
         {
             return await _httpClient.GetFromJsonAsync<PromotionRequestDto>($"{ApiEndpoint}/{id}");
         }
 
-        public async Task<IEnumerable<PromotionRequestDto>> GetRequestsByTeacherIdAsync(int teacherId)
+        public async Task<IEnumerable<PromotionRequestDto>?> GetRequestsByTeacherIdAsync(int teacherId)
         {
             var requests = await _httpClient.GetFromJsonAsync<IEnumerable<PromotionRequestDto>>($"{ApiEndpoint}/teacher/{teacherId}");
             return requests ?? new List<PromotionRequestDto>();
-        }
-
-        public async Task<IEnumerable<PromotionRequestDto>> GetRequestsByStatusAsync(PromotionRequestStatus status)
+        }        public async Task<IEnumerable<PromotionRequestDto>?> GetRequestsByStatusAsync(PromotionRequestStatus status)
         {
             var requests = await _httpClient.GetFromJsonAsync<IEnumerable<PromotionRequestDto>>($"{ApiEndpoint}/status/{(int)status}");
             return requests ?? new List<PromotionRequestDto>();
-        }        public async Task<bool> ProcessRequestAsync(int requestId, PromotionRequestStatus newStatus, string comments)
+        }public async Task<bool> ProcessRequestAsync(int requestId, PromotionRequestStatus newStatus, string comments)
         {
             var processRequest = new ProcessPromotionRequestDto
             {

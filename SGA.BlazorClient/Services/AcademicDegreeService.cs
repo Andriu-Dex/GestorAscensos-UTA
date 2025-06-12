@@ -15,19 +15,17 @@ namespace SGA.BlazorClient.Services
         public AcademicDegreeService(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        }
-
-        public async Task<IEnumerable<AcademicDegreeDto>> GetAllAcademicDegreesAsync()
+        }        public async Task<IEnumerable<AcademicDegreeDto>?> GetAllAcademicDegreesAsync()
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<AcademicDegreeDto>>(ApiUrl);
         }
 
-        public async Task<AcademicDegreeDto> GetAcademicDegreeByIdAsync(int id)
+        public async Task<AcademicDegreeDto?> GetAcademicDegreeByIdAsync(int id)
         {
             return await _httpClient.GetFromJsonAsync<AcademicDegreeDto>($"{ApiUrl}/{id}");
         }
 
-        public async Task<IEnumerable<AcademicDegreeDto>> GetAcademicDegreesByTeacherIdAsync(int teacherId)
+        public async Task<IEnumerable<AcademicDegreeDto>?> GetAcademicDegreesByTeacherIdAsync(int teacherId)
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<AcademicDegreeDto>>($"{ApiUrl}/teacher/{teacherId}");
         }

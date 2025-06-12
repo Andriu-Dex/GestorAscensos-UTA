@@ -6,8 +6,8 @@ namespace SGA.BlazorClient.Services
 {
     public interface IAcademicDegreeService
     {
-        Task<IEnumerable<AcademicDegreeDto>> GetAllAcademicDegreesAsync();
-        Task<AcademicDegreeDto> GetAcademicDegreeByIdAsync(int id);
-        Task<IEnumerable<AcademicDegreeDto>> GetAcademicDegreesByTeacherIdAsync(int teacherId);
+        Task<IEnumerable<AcademicDegreeDto>?> GetAllAcademicDegreesAsync();
+        Task<AcademicDegreeDto?> GetAcademicDegreeByIdAsync(int id);
+        Task<IEnumerable<AcademicDegreeDto>?> GetAcademicDegreesByTeacherIdAsync(int teacherId);
     }
 }

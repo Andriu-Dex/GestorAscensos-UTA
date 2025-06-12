@@ -502,9 +502,7 @@ else
             mensaje = $"Error al guardar observación: {ex.Message}";
             mensajeExitoso = false;
         }
-    }
-
-    private async Task OnFileChange(InputFileChangeEventArgs e)
+    }    private void OnFileChange(InputFileChangeEventArgs e)
     {
         archivo = e.File;
         if (archivo != null)

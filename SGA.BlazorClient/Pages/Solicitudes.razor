@@ -160,9 +160,9 @@ else
 }
 
 @code {
-    private IEnumerable<PromotionRequestDto> solicitudes;
-    private IEnumerable<TeacherDto> profesores;
-    private IEnumerable<DocumentDto> documentos;
+    private IEnumerable<PromotionRequestDto>? solicitudes;
+    private IEnumerable<TeacherDto>? profesores;
+    private IEnumerable<DocumentDto>? documentos;
     private bool cargando = true;
     private bool mostrarFormularioCreacion = false;
     private bool mostrarFormularioProcesar = false;
@@ -195,12 +195,10 @@ else
         {
             cargando = false;
         }
-    }
-
-    private async Task FiltrarPorEstado(ChangeEventArgs e)
+    }    private async Task FiltrarPorEstado(ChangeEventArgs e)
     {
         int estadoId;
-        if (int.TryParse(e.Value.ToString(), out estadoId) && estadoId >= 0)
+        if (e.Value != null && int.TryParse(e.Value.ToString(), out estadoId) && estadoId >= 0)
         {
             cargando = true;
             solicitudes = await PromotionRequestService.GetRequestsByStatusAsync((PromotionRequestStatus)estadoId);
@@ -223,12 +221,10 @@ else
     private void CancelarCreacion()
     {
         mostrarFormularioCreacion = false;
-    }
-
-    private async Task OnProfesorSeleccionado(ChangeEventArgs e)
+    }    private async Task OnProfesorSeleccionado(ChangeEventArgs e)
     {
         int id;
-        if (int.TryParse(e.Value.ToString(), out id) && id > 0)
+        if (e.Value != null && int.TryParse(e.Value.ToString(), out id) && id > 0)
         {
             profesorId = id;
             if (incluirDocumento)
@@ -236,11 +232,9 @@ else
                 documentos = await DocumentService.GetDocumentsByTeacherIdAsync(profesorId);
             }
         }
-    }
-
-    private async Task OnIncluirDocumentoChanged(ChangeEventArgs e)
+    }    private async Task OnIncluirDocumentoChanged(ChangeEventArgs e)
     {
-        incluirDocumento = (bool)e.Value;
+        incluirDocumento = e.Value != null && (bool)e.Value;
         if (incluirDocumento && profesorId > 0)
         {
             documentos = await DocumentService.GetDocumentsByTeacherIdAsync(profesorId);

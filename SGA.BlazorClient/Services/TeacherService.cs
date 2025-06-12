@@ -14,25 +14,23 @@ namespace SGA.BlazorClient.Services
         public TeacherService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-        }
-
-        public async Task<IEnumerable<TeacherDto>> GetAllTeachersAsync()
+        }        public async Task<IEnumerable<TeacherDto>?> GetAllTeachersAsync()
         {
             var teachers = await _httpClient.GetFromJsonAsync<IEnumerable<TeacherDto>>(ApiEndpoint);
             return teachers ?? new List<TeacherDto>();
         }
 
-        public async Task<TeacherDto> GetTeacherByIdAsync(int id)
+        public async Task<TeacherDto?> GetTeacherByIdAsync(int id)
         {
             return await _httpClient.GetFromJsonAsync<TeacherDto>($"{ApiEndpoint}/{id}");
         }
 
-        public async Task<PromotionEligibilityResultDto> CheckEligibilityAsync(int teacherId)
+        public async Task<PromotionEligibilityResultDto?> CheckEligibilityAsync(int teacherId)
         {
             return await _httpClient.GetFromJsonAsync<PromotionEligibilityResultDto>($"{ApiEndpoint}/{teacherId}/eligibility");
         }
 
-        public async Task<PromotionRequestDto> CreatePromotionRequestAsync(int teacherId)
+        public async Task<PromotionRequestDto?> CreatePromotionRequestAsync(int teacherId)
         {
             var response = await _httpClient.PostAsync($"{ApiEndpoint}/{teacherId}/promotion-requests", null);
             response.EnsureSuccessStatusCode();

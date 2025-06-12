@@ -1,6 +1,6 @@
 @namespace SGA.BlazorClient.Shared
 
-<div class="alert alert-@GetAlertClass fade show @(IsVisible ? "d-block" : "d-none")" role="alert">
+<div class="alert alert-@GetAlertClass() fade show @(IsVisible ? "d-block" : "d-none")" role="alert">
     @if (!string.IsNullOrEmpty(Title))
     {
         <h4 class="alert-heading">@Title</h4>
@@ -19,8 +19,8 @@
 </div>
 
 @code {
-    [Parameter] public string Title { get; set; }
-    [Parameter] public string Message { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Message { get; set; }
     [Parameter] public AlertType Type { get; set; } = AlertType.Info;
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public bool IsCloseable { get; set; } = true;
@@ -28,7 +28,7 @@
     [Parameter] public int AutoDismissSeconds { get; set; } = 5;
     [Parameter] public EventCallback OnClosed { get; set; }
 
-    private System.Threading.Timer _timer;
+    private System.Threading.Timer? _timer;
     private int _progressValue = 100;
     private int _timeLeft;
 
@@ -43,13 +43,11 @@
     private void StartTimer()
     {
         _timeLeft = AutoDismissSeconds * 1000;
-        _progressValue = 100;
-
-        _timer?.Dispose();
+        _progressValue = 100;        _timer?.Dispose();
         _timer = new System.Threading.Timer(TimerCallback, null, 0, 100);
     }
 
-    private async void TimerCallback(object state)
+    private async void TimerCallback(object? state)
     {
         _timeLeft -= 100;
         _progressValue = (int)(_timeLeft / (AutoDismissSeconds * 10.0));
@@ -84,9 +82,7 @@
         }
         
         StateHasChanged();
-    }
-
-    public async Task Hide()
+    }    public async Task Hide()
     {
         IsVisible = false;
         _timer?.Dispose();

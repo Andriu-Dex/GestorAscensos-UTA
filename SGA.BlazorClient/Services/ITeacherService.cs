@@ -6,9 +6,9 @@ namespace SGA.BlazorClient.Services
 {
     public interface ITeacherService
     {
-        Task<IEnumerable<TeacherDto>> GetAllTeachersAsync();
-        Task<TeacherDto> GetTeacherByIdAsync(int id);
-        Task<PromotionEligibilityResultDto> CheckEligibilityAsync(int teacherId);
-        Task<PromotionRequestDto> CreatePromotionRequestAsync(int teacherId);
+        Task<IEnumerable<TeacherDto>?> GetAllTeachersAsync();
+        Task<TeacherDto?> GetTeacherByIdAsync(int id);
+        Task<PromotionEligibilityResultDto?> CheckEligibilityAsync(int teacherId);
+        Task<PromotionRequestDto?> CreatePromotionRequestAsync(int teacherId);
     }
 }

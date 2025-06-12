@@ -15,14 +15,12 @@ namespace SGA.BlazorClient.Services
         public UserTypeService(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        }
-
-        public async Task<IEnumerable<UserTypeDto>> GetAllUserTypesAsync()
+        }        public async Task<IEnumerable<UserTypeDto>?> GetAllUserTypesAsync()
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<UserTypeDto>>(ApiUrl);
         }
 
-        public async Task<UserTypeDto> GetUserTypeByIdAsync(int id)
+        public async Task<UserTypeDto?> GetUserTypeByIdAsync(int id)
         {
             return await _httpClient.GetFromJsonAsync<UserTypeDto>($"{ApiUrl}/{id}");
         }

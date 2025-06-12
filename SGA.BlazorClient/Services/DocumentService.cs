@@ -15,29 +15,26 @@ namespace SGA.BlazorClient.Services
         public DocumentService(HttpClient httpClient)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        }
-
-        public async Task<IEnumerable<DocumentDto>> GetAllDocumentsAsync()
+        }        public async Task<IEnumerable<DocumentDto>?> GetAllDocumentsAsync()
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<DocumentDto>>(ApiUrl);
         }
 
-        public async Task<DocumentDto> GetDocumentByIdAsync(int id)
-        {
-            return await _httpClient.GetFromJsonAsync<DocumentDto>($"{ApiUrl}/{id}");
+        public async Task<DocumentDto?> GetDocumentByIdAsync(int id)
+        {            return await _httpClient.GetFromJsonAsync<DocumentDto>($"{ApiUrl}/{id}");
         }
 
-        public async Task<IEnumerable<DocumentDto>> GetDocumentsByTeacherIdAsync(int teacherId)
+        public async Task<IEnumerable<DocumentDto>?> GetDocumentsByTeacherIdAsync(int teacherId)
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<DocumentDto>>($"{ApiUrl}/teacher/{teacherId}");
         }
 
-        public async Task<IEnumerable<DocumentDto>> GetDocumentsByRequirementIdAsync(int requirementId)
+        public async Task<IEnumerable<DocumentDto>?> GetDocumentsByRequirementIdAsync(int requirementId)
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<DocumentDto>>($"{ApiUrl}/requirement/{requirementId}");
         }
 
-        public async Task<IEnumerable<DocumentDto>> GetDocumentsByTypeAsync(string documentType)
+        public async Task<IEnumerable<DocumentDto>?> GetDocumentsByTypeAsync(string documentType)
         {
             return await _httpClient.GetFromJsonAsync<IEnumerable<DocumentDto>>($"{ApiUrl}/type/{documentType}");
         }
@@ -64,12 +61,11 @@ namespace SGA.BlazorClient.Services
             // Agregar el archivo
             var fileContent = new StreamContent(document.File.OpenReadStream());
             formData.Add(fileContent, "File", document.File.FileName);
-            
-            var response = await _httpClient.PostAsync(ApiUrl, formData);
+              var response = await _httpClient.PostAsync(ApiUrl, formData);
             response.EnsureSuccessStatusCode();
             
             var createdDocument = await response.Content.ReadFromJsonAsync<DocumentDto>();
-            return createdDocument.Id;
+            return createdDocument?.Id ?? 0;
         }
 
         public async Task<int> CreateDocumentAsync(DocumentDto document)

@@ -65,7 +65,7 @@
 </DataCard>
 
 @code {
-    [Parameter] public PromotionEligibilityResultDto Result { get; set; }
+    [Parameter] public PromotionEligibilityResultDto? Result { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
 

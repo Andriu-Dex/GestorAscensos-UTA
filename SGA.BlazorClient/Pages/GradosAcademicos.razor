@@ -86,15 +86,12 @@ else
     </div>
 }
 
-@code {
-    [Parameter]
-    public int ProfesorId { get; set; }
+@code {    [Parameter]    public int ProfesorId { get; set; }
 
     private string nombreProfesor = "";
-    private IEnumerable<AcademicDegreeDto> gradosAcademicos;
-    private AcademicDegreeDto gradoSeleccionado;
+    private IEnumerable<AcademicDegreeDto>? gradosAcademicos;
+    private AcademicDegreeDto? gradoSeleccionado;
     private bool cargando = true;
-    private bool mostrarFormularioCreacion = false;
     private bool mostrarDetalles = false;
 
     protected override async Task OnInitializedAsync()
@@ -172,9 +169,7 @@ else
     {
         gradoSeleccionado = await AcademicDegreeService.GetAcademicDegreeByIdAsync(id);
         mostrarDetalles = true;
-    }
-
-    private void CerrarDetalles()
+    }    private void CerrarDetalles()
     {
         mostrarDetalles = false;
         gradoSeleccionado = null;

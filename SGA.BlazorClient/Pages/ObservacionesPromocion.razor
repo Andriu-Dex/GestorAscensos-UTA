@@ -99,11 +99,10 @@ else
     </div>
 }
 
-@code {
-    [Parameter]
+@code {    [Parameter]
     public int SolicitudId { get; set; }
 
-    private PromotionRequestDto solicitud;
+    private PromotionRequestDto? solicitud;
     private bool cargando = true;
     private bool mostrarFormularioObservacion = false;
     private CreatePromotionObservationDto nuevaObservacion = new();

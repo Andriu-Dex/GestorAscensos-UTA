@@ -23,9 +23,7 @@ namespace SGA.BlazorApp.Client.Auth
             _httpClient = httpClient;
             _authStateProvider = authStateProvider;
             _tokenHandler = tokenHandler;
-        }
-
-        public async Task<LoginResponseDto> Login(LoginRequestDto request)
+        }        public async Task<LoginResponseDto?> Login(LoginRequestDto request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/auth/login", request);
             
@@ -63,10 +61,10 @@ namespace SGA.BlazorApp.Client.Auth
         public async Task<bool> IsUserAuthenticated()
         {
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
-            return authState.User.Identity.IsAuthenticated;
+            return authState.User.Identity?.IsAuthenticated ?? false;
         }
 
-        public async Task<string> GetUserRole()
+        public async Task<string?> GetUserRole()
         {
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
             return authState.User.FindFirst(ClaimTypes.Role)?.Value;
