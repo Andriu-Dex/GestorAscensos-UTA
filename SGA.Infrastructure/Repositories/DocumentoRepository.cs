@@ -7,12 +7,11 @@ using SGA.Domain.Entities;
 using SGA.Infrastructure.Data;
 
 namespace SGA.Infrastructure.Repositories
-{
-    public interface IDocumentoRepository
+{    public interface IDocumentoRepository
     {
-        Task<Documento> GetByIdAsync(int id);
+        Task<Documento?> GetByIdAsync(int id);
         Task<IEnumerable<Documento>> GetByDocenteIdAsync(int docenteId);
-        Task<IEnumerable<Documento>> GetByTipoAsync(int docenteId, TipoDocumento tipo);
+        Task<IEnumerable<Documento>> GetByTipoAsync(int docenteId, int tipoDocumentoId);
         Task AddAsync(Documento documento);
         Task UpdateAsync(Documento documento);
         Task DeleteAsync(int id);
@@ -25,9 +24,7 @@ namespace SGA.Infrastructure.Repositories
         public DocumentoRepository(AppDbContext context)
         {
             _context = context;
-        }
-
-        public async Task<Documento> GetByIdAsync(int id)
+        }        public async Task<Documento?> GetByIdAsync(int id)
         {
             return await _context.Documentos.FindAsync(id);
         }
@@ -37,12 +34,10 @@ namespace SGA.Infrastructure.Repositories
             return await _context.Documentos
                 .Where(d => d.DocenteId == docenteId)
                 .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Documento>> GetByTipoAsync(int docenteId, TipoDocumento tipo)
+        }        public async Task<IEnumerable<Documento>> GetByTipoAsync(int docenteId, int tipoDocumentoId)
         {
             return await _context.Documentos
-                .Where(d => d.DocenteId == docenteId && d.Tipo == tipo)
+                .Where(d => d.DocenteId == docenteId && d.TipoDocumentoId == tipoDocumentoId)
                 .ToListAsync();
         }
 

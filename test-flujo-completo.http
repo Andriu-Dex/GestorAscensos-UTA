@@ -1,0 +1,66 @@
+### Test del Flujo Completo de Solicitudes de Ascenso
+### Sistema de Gestión de Ascensos UTA
+
+### 1. Login para obtener token
+POST http://localhost:5115/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "maria.garcia@uta.edu.ec",
+  "password": "Password123!"
+}
+
+### 2. Obtener información del usuario autenticado
+GET http://localhost:5115/api/auth/me
+Authorization: Bearer {{token}}
+
+### 3. Consultar solicitudes existentes del usuario
+GET http://localhost:5115/api/SolicitudAscenso
+Authorization: Bearer {{token}}
+
+### 4. Crear nueva solicitud de ascenso
+POST http://localhost:5115/api/SolicitudAscenso
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "documentosIds": [],
+  "observaciones": "Completé mis estudios de maestría y tengo 3 años de experiencia docente. He publicado 2 artículos en revistas indexadas y he participado en proyectos de investigación."
+}
+
+### 5. Consultar tipos de documento disponibles
+GET http://localhost:5115/api/TipoDocumento
+Authorization: Bearer {{token}}
+
+### 6. Obtener todas las solicitudes pendientes (para administrador)
+GET http://localhost:5115/api/SolicitudAscenso/pendientes
+Authorization: Bearer {{token}}
+
+### 7. Consultar estados de solicitud disponibles
+GET http://localhost:5115/api/EstadoSolicitud
+Authorization: Bearer {{token}}
+
+### 8. Revisar estado de solicitud (ID será reemplazado dinámicamente)
+PUT http://localhost:5115/api/SolicitudAscenso/1/revisar
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "estadoSolicitudId": 2,
+  "motivoRechazo": null,
+  "observaciones": "Solicitud revisada inicialmente. Documentación completa."
+}
+
+### 9. Consultar una solicitud específica por ID
+GET http://localhost:5115/api/SolicitudAscenso/1
+Authorization: Bearer {{token}}
+
+### 10. Crear solicitud con documentos (ejemplo)
+POST http://localhost:5115/api/SolicitudAscenso
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "documentosIds": [1, 2, 3],
+  "observaciones": "Solicitud de ascenso con documentos de respaldo adjuntos."
+}

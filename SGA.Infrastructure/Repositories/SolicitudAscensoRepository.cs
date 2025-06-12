@@ -7,13 +7,12 @@ using SGA.Domain.Entities;
 using SGA.Infrastructure.Data;
 
 namespace SGA.Infrastructure.Repositories
-{
-    public interface ISolicitudAscensoRepository
+{    public interface ISolicitudAscensoRepository
     {
-        Task<SolicitudAscenso> GetByIdAsync(int id);
+        Task<SolicitudAscenso?> GetByIdAsync(int id);
         Task<IEnumerable<SolicitudAscenso>> GetByDocenteIdAsync(int docenteId);
         Task<IEnumerable<SolicitudAscenso>> GetAllPendientesAsync();
-        Task<IEnumerable<SolicitudAscenso>> GetByEstadoAsync(EstadoSolicitud estado);
+        Task<IEnumerable<SolicitudAscenso>> GetByEstadoAsync(int estadoId);
         Task AddAsync(SolicitudAscenso solicitud);
         Task UpdateAsync(SolicitudAscenso solicitud);
     }
@@ -25,12 +24,11 @@ namespace SGA.Infrastructure.Repositories
         public SolicitudAscensoRepository(AppDbContext context)
         {
             _context = context;
-        }
-
-        public async Task<SolicitudAscenso> GetByIdAsync(int id)
+        }        public async Task<SolicitudAscenso?> GetByIdAsync(int id)
         {
             return await _context.SolicitudesAscenso
                 .Include(s => s.Docente)
+                .Include(s => s.EstadoSolicitud)
                 .Include(s => s.Documentos)
                     .ThenInclude(d => d.Documento)
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -43,23 +41,24 @@ namespace SGA.Infrastructure.Repositories
                 .Include(s => s.Documentos)
                     .ThenInclude(d => d.Documento)
                 .ToListAsync();
-        }
-
-        public async Task<IEnumerable<SolicitudAscenso>> GetAllPendientesAsync()
+        }        public async Task<IEnumerable<SolicitudAscenso>> GetAllPendientesAsync()
         {
+            // Estados Enviada=1 y EnProceso=2 según los datos seed
             return await _context.SolicitudesAscenso
-                .Where(s => s.Estado == EstadoSolicitud.Enviada || s.Estado == EstadoSolicitud.EnProceso)
+                .Where(s => s.EstadoSolicitudId == 1 || s.EstadoSolicitudId == 2)
                 .Include(s => s.Docente)
+                .Include(s => s.EstadoSolicitud)
                 .Include(s => s.Documentos)
                     .ThenInclude(d => d.Documento)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<SolicitudAscenso>> GetByEstadoAsync(EstadoSolicitud estado)
+        public async Task<IEnumerable<SolicitudAscenso>> GetByEstadoAsync(int estadoId)
         {
             return await _context.SolicitudesAscenso
-                .Where(s => s.Estado == estado)
+                .Where(s => s.EstadoSolicitudId == estadoId)
                 .Include(s => s.Docente)
+                .Include(s => s.EstadoSolicitud)
                 .Include(s => s.Documentos)
                     .ThenInclude(d => d.Documento)
                 .ToListAsync();

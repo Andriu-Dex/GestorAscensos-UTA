@@ -1,0 +1,49 @@
+# Prueba de Integración TTHH (Talento Humano)
+# Sistema de Gestión de Ascensos UTA
+
+### POST /api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "maria.garcia@uta.edu.ec",
+  "password": "Password123!"
+}
+
+### 
+# Esta consulta debería activar la búsqueda en TTHH para la cédula 1804567890
+# Según los logs observados:
+# info: SGA.Api.Controllers.AuthController[0]
+#       Solicitando datos TTHH para cédula: 1804567890
+
+### Verificar datos TTHH disponibles (si existe endpoint)
+GET {{host}}/api/DatosTTHH/1804567890
+Content-Type: application/json
+
+### Verificar estado de sincronización (si existe endpoint)
+GET {{host}}/api/TTHH/estado/1804567890
+Content-Type: application/json
+
+@host = http://localhost:5115
+@hostHttps = https://localhost:7030
+
+### Prueba con protocolo HTTPS
+GET {{hostHttps}}/api/Facultad
+Content-Type: application/json
+
+### Prueba con protocolo HTTP
+GET {{host}}/api/Facultad
+Content-Type: application/json
+
+### Datos del usuario que activa consultas TTHH
+# Basado en temp_register.json:
+# {
+#   "cedula": "1804567890",
+#   "nombres": "María Elena",
+#   "apellidos": "García Rodríguez", 
+#   "email": "maria.garcia@uta.edu.ec",
+#   "telefono": "0987654321",
+#   "facultad": "FISEI",
+#   "username": "mgarcia",
+#   "password": "Password123!",
+#   "confirmPassword": "Password123!"
+# }

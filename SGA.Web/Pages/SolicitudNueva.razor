@@ -1,0 +1,414 @@
+@page "/solicitudes/nueva"
+@attribute [Authorize]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Nueva Solicitud de Ascenso</h3>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Formulario de Solicitud</h5>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center my-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="@solicitud" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    <h5>Información Docente</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Nombre completo:</label>
+                                <input type="text" class="form-control" value="@($"{userInfo?.Nombres} {userInfo?.Apellidos}")" disabled />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Nivel actual:</label>
+                                <input type="text" class="form-control" value="@($"Titular {userInfo?.NivelActual}")" disabled />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4">Indicadores Académicos</h5>
+                    <div class="alert alert-info">
+                        Los siguientes indicadores serán verificados automáticamente con los servicios universitarios. 
+                        Si algún valor no es correcto, contacte a la unidad correspondiente.
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Tiempo en rol actual:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" @bind="solicitud.TiempoRol" disabled="@true" />
+                                    <span class="input-group-text">meses</span>
+                                </div>
+                                <div class="@GetValidationClass(solicitud.CumpleTiempoRol)">
+                                    @(solicitud.CumpleTiempoRol ? "Cumple" : "No cumple")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Número de obras:</label>
+                                <input type="text" class="form-control" @bind="solicitud.NumeroObras" disabled="@true" />
+                                <div class="@GetValidationClass(solicitud.CumpleObras)">
+                                    @(solicitud.CumpleObras ? "Cumple" : "No cumple")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Puntaje evaluación:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" @bind="solicitud.PuntajeEvaluacion" disabled="@true" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <div class="@GetValidationClass(solicitud.CumpleEvaluacion)">
+                                    @(solicitud.CumpleEvaluacion ? "Cumple" : "No cumple")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Horas capacitación:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" @bind="solicitud.HorasCapacitacion" disabled="@true" />
+                                    <span class="input-group-text">horas</span>
+                                </div>
+                                <div class="@GetValidationClass(solicitud.CumpleCapacitacion)">
+                                    @(solicitud.CumpleCapacitacion ? "Cumple" : "No cumple")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Tiempo investigación:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" @bind="solicitud.TiempoInvestigacion" disabled="@true" />
+                                    <span class="input-group-text">meses</span>
+                                </div>
+                                <div class="@GetValidationClass(solicitud.CumpleInvestigacion)">
+                                    @(solicitud.CumpleInvestigacion ? "Cumple" : "No cumple")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Nivel solicitado:</label>
+                                <input type="text" class="form-control" value="@($"Titular {solicitud.NivelSolicitado}")" disabled />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4">Documentos de Respaldo</h5>
+                    <div class="alert @(cumpleTodosRequisitos ? "alert-success" : "alert-warning")">
+                        @if (cumpleTodosRequisitos)
+                        {
+                            <p>¡Felicidades! Cumple con todos los requisitos para solicitar el ascenso.</p>
+                        }
+                        else
+                        {
+                            <p>No cumple con todos los requisitos necesarios para el ascenso. Puede continuar con la solicitud, pero es probable que sea rechazada.</p>
+                        }
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha</th>
+                                    <th>Seleccionar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (documentos != null && documentos.Any())
+                                {
+                                    @foreach (var doc in documentos)
+                                    {
+                                        <tr>
+                                            <td>@doc.Nombre</td>
+                                            <td>@doc.TipoDocumento?.Nombre</td>
+                                            <td>@doc.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           @onchange="e => ToggleDocumentSelection(doc.Id, (bool)e.Value)" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center">
+                                            No tiene documentos disponibles. <a href="/documentos">Subir documentos</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="form-group mt-4">
+                        <label for="observaciones">Observaciones adicionales:</label>
+                        <textarea id="observaciones" class="form-control" rows="3" @bind="solicitud.Observaciones"></textarea>
+                    </div>
+                    
+                    <div class="form-group mt-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmacion" @bind="aceptaTerminos" />
+                            <label class="form-check-label" for="confirmacion">
+                                Confirmo que la información proporcionada es verdadera y autorizo su verificación
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-secondary" @onclick="GoBack">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@(!aceptaTerminos || isSubmitting || documentosSeleccionados.Count == 0)">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                <span> Enviando...</span>
+                            }
+                            else
+                            {
+                                <span>Enviar Solicitud</span>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserInfoModel userInfo;
+    private CrearSolicitudAscensoDto solicitud = new CrearSolicitudAscensoDto();
+    private List<DocumentoDto> documentos;
+    private List<int> documentosSeleccionados = new List<int>();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool aceptaTerminos = false;
+    private bool cumpleTodosRequisitos = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            // Cargar información del usuario
+            userInfo = await Http.GetFromJsonAsync<UserInfoModel>("api/auth/me");
+            
+            // Cargar documentos del usuario
+            documentos = await Http.GetFromJsonAsync<List<DocumentoDto>>("api/documento/mis-documentos");
+            
+            // Cargar indicadores y validar requisitos
+            await CargarIndicadores();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private async Task CargarIndicadores()
+    {
+        try
+        {
+            var indicadoresResponse = await Http.GetFromJsonAsync<IndicadoresResponse>("api/docente/indicadores");
+            
+            // Asignar valores a la solicitud
+            solicitud.TiempoRol = indicadoresResponse.TiempoRol;
+            solicitud.NumeroObras = indicadoresResponse.NumeroObras;
+            solicitud.PuntajeEvaluacion = indicadoresResponse.PuntajeEvaluacion;
+            solicitud.HorasCapacitacion = indicadoresResponse.HorasCapacitacion;
+            solicitud.TiempoInvestigacion = indicadoresResponse.TiempoInvestigacion;
+            
+            // Establecer nivel actual y solicitado
+            solicitud.NivelActual = userInfo.NivelActual;
+            solicitud.NivelSolicitado = userInfo.NivelActual + 1;
+            
+            // Validar requisitos
+            var requisitosResponse = await Http.GetFromJsonAsync<RequisitosResponse>($"api/validacion/requisitos?nivelActual={solicitud.NivelActual}");
+            
+            solicitud.CumpleTiempoRol = requisitosResponse.CumpleTiempoRol;
+            solicitud.CumpleObras = requisitosResponse.CumpleObras;
+            solicitud.CumpleEvaluacion = requisitosResponse.CumpleEvaluacion;
+            solicitud.CumpleCapacitacion = requisitosResponse.CumpleCapacitacion;
+            solicitud.CumpleInvestigacion = requisitosResponse.CumpleInvestigacion;
+            
+            cumpleTodosRequisitos = solicitud.CumpleTiempoRol && 
+                                    solicitud.CumpleObras && 
+                                    solicitud.CumpleEvaluacion && 
+                                    solicitud.CumpleCapacitacion && 
+                                    solicitud.CumpleInvestigacion;
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar indicadores: {ex.Message}");
+        }
+    }
+    
+    private void ToggleDocumentSelection(int documentoId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            if (!documentosSeleccionados.Contains(documentoId))
+            {
+                documentosSeleccionados.Add(documentoId);
+            }
+        }
+        else
+        {
+            if (documentosSeleccionados.Contains(documentoId))
+            {
+                documentosSeleccionados.Remove(documentoId);
+            }
+        }
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        if (documentosSeleccionados.Count == 0)
+        {
+            ToastService.ShowWarning("Debe seleccionar al menos un documento de respaldo.");
+            return;
+        }
+        
+        if (!aceptaTerminos)
+        {
+            ToastService.ShowWarning("Debe aceptar los términos para continuar.");
+            return;
+        }
+        
+        try
+        {
+            isSubmitting = true;
+            
+            solicitud.DocumentosIds = documentosSeleccionados;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PostAsJsonAsync("api/solicitudascenso", solicitud);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Solicitud de ascenso enviada con éxito");
+                NavigationManager.NavigateTo("/solicitudes");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al enviar solicitud: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al enviar solicitud: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/solicitudes");
+    }
+    
+    private string GetValidationClass(bool cumple)
+    {
+        return cumple ? "text-success mt-1" : "text-danger mt-1";
+    }
+    
+    public class UserInfoModel
+    {
+        public int Id { get; set; }
+        public string Nombres { get; set; }
+        public string Apellidos { get; set; }
+        public string Email { get; set; }
+        public int NivelActual { get; set; }
+        public DateTime FechaIngresoNivelActual { get; set; }
+    }
+    
+    public class DocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public TipoDocumentoDto TipoDocumento { get; set; }
+        public DateTime FechaCreacion { get; set; }
+    }
+    
+    public class TipoDocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+    
+    public class IndicadoresResponse
+    {
+        public int TiempoRol { get; set; }
+        public int NumeroObras { get; set; }
+        public decimal PuntajeEvaluacion { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int TiempoInvestigacion { get; set; }
+    }
+    
+    public class RequisitosResponse
+    {
+        public bool CumpleTiempoRol { get; set; }
+        public bool CumpleObras { get; set; }
+        public bool CumpleEvaluacion { get; set; }
+        public bool CumpleCapacitacion { get; set; }
+        public bool CumpleInvestigacion { get; set; }
+    }
+    
+    public class CrearSolicitudAscensoDto
+    {
+        public int NivelActual { get; set; }
+        public int NivelSolicitado { get; set; }
+        public int TiempoRol { get; set; }
+        public int NumeroObras { get; set; }
+        public decimal PuntajeEvaluacion { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int TiempoInvestigacion { get; set; }
+        public bool CumpleTiempoRol { get; set; }
+        public bool CumpleObras { get; set; }
+        public bool CumpleEvaluacion { get; set; }
+        public bool CumpleCapacitacion { get; set; }
+        public bool CumpleInvestigacion { get; set; }
+        public string Observaciones { get; set; }
+        public List<int> DocumentosIds { get; set; } = new List<int>();
+    }
+}

@@ -1,0 +1,401 @@
+@page "/solicitudes"
+@attribute [Authorize]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Mis Solicitudes de Ascenso</h3>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Solicitudes</h5>
+            <button class="btn btn-light" @onclick="() => NavigateToCreateSolicitud()">
+                <i class="bi bi-plus-circle"></i> Nueva Solicitud
+            </button>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center my-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            }
+            else if (solicitudes == null || !solicitudes.Any())
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene solicitudes de ascenso registradas. Utilice el botón "Nueva Solicitud" para crear una solicitud de ascenso.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Nivel Actual</th>
+                                <th>Nivel Solicitado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var solicitud in solicitudes)
+                            {
+                                <tr @onclick="() => ViewSolicitudDetails(solicitud.Id)" style="cursor: pointer;">
+                                    <td>@solicitud.NumeroSolicitud</td>
+                                    <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <span class="badge" style="background-color: @solicitud.EstadoSolicitud?.Color">
+                                            @solicitud.EstadoSolicitud?.Nombre
+                                        </span>
+                                    </td>
+                                    <td>Titular @solicitud.NivelActual</td>
+                                    <td>Titular @solicitud.NivelSolicitado</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-primary" @onclick="() => ViewSolicitudDetails(solicitud.Id)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            @if (solicitud.EstadoSolicitudId == 1) // Si está en estado "ENVIADA"
+                                            {
+                                                <button class="btn btn-sm btn-danger" @onclick="() => CancelSolicitud(solicitud.Id)">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm btn-info" @onclick="() => GenerateReport(solicitud.Id)">
+                                                <i class="bi bi-file-pdf"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (showDetails && selectedSolicitud != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Solicitud #@selectedSolicitud.NumeroSolicitud</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDetailsModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Información General</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Fecha de Solicitud:</span>
+                                    <strong>@selectedSolicitud.FechaCreacion.ToString("dd/MM/yyyy")</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Estado:</span>
+                                    <span class="badge" style="background-color: @selectedSolicitud.EstadoSolicitud?.Color">
+                                        @selectedSolicitud.EstadoSolicitud?.Nombre
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Nivel Actual:</span>
+                                    <strong>Titular @selectedSolicitud.NivelActual</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Nivel Solicitado:</span>
+                                    <strong>Titular @selectedSolicitud.NivelSolicitado</strong>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Indicadores Académicos</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Tiempo en Rol Actual:</span>
+                                    <strong>@selectedSolicitud.TiempoRol meses</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Número de Obras:</span>
+                                    <strong>@selectedSolicitud.NumeroObras</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Puntaje Evaluación:</span>
+                                    <strong>@selectedSolicitud.PuntajeEvaluacion%</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Horas Capacitación:</span>
+                                    <strong>@selectedSolicitud.HorasCapacitacion horas</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Tiempo Investigación:</span>
+                                    <strong>@selectedSolicitud.TiempoInvestigacion meses</strong>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <h6>Documentos Adjuntos</h6>
+                    @if (selectedSolicitud.DocumentosSolicitud != null && selectedSolicitud.DocumentosSolicitud.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var docSolicitud in selectedSolicitud.DocumentosSolicitud)
+                                    {
+                                        <tr>
+                                            <td>@docSolicitud.Documento.Nombre</td>
+                                            <td>@docSolicitud.Documento.TipoDocumento?.Nombre</td>
+                                            <td>@docSolicitud.FechaAsociacion.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary" @onclick="() => DownloadDocument(docSolicitud.Documento.Id)">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">No hay documentos adjuntos a esta solicitud.</div>
+                    }
+                    
+                    @if (selectedSolicitud.EstadoSolicitudId == 4) // Si está rechazada
+                    {
+                        <div class="mt-3">
+                            <h6>Motivo de Rechazo</h6>
+                            <div class="alert alert-danger">
+                                @selectedSolicitud.MotivoRechazo
+                            </div>
+                        </div>
+                    }
+                    
+                    @if (selectedSolicitud.FechaRevision.HasValue)
+                    {
+                        <div class="mt-3">
+                            <h6>Información de Revisión</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Fecha de Revisión:</span>
+                                    <strong>@selectedSolicitud.FechaRevision.Value.ToString("dd/MM/yyyy")</strong>
+                                </li>
+                                @if (selectedSolicitud.RevisorId.HasValue)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Revisado por:</span>
+                                        <strong>@(selectedSolicitud.Revisor?.Nombres) @(selectedSolicitud.Revisor?.Apellidos)</strong>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => GenerateReport(selectedSolicitud.Id)">
+                        <i class="bi bi-file-pdf"></i> Generar Reporte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<SolicitudAscensoDto> solicitudes;
+    private bool isLoading = true;
+    private bool showDetails = false;
+    private SolicitudAscensoDto selectedSolicitud;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSolicitudes();
+    }
+    
+    private async Task LoadSolicitudes()
+    {
+        try
+        {
+            isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            solicitudes = await Http.GetFromJsonAsync<List<SolicitudAscensoDto>>("api/solicitudascenso/mis-solicitudes");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void NavigateToCreateSolicitud()
+    {
+        NavigationManager.NavigateTo("/solicitudes/nueva");
+    }
+    
+    private async Task ViewSolicitudDetails(int solicitudId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            selectedSolicitud = await Http.GetFromJsonAsync<SolicitudAscensoDto>($"api/solicitudascenso/{solicitudId}");
+            showDetails = true;
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar detalles de la solicitud: {ex.Message}");
+        }
+    }
+    
+    private void CloseDetailsModal()
+    {
+        showDetails = false;
+    }
+    
+    private async Task CancelSolicitud(int solicitudId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea cancelar esta solicitud?"))
+            return;
+            
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.DeleteAsync($"api/solicitudascenso/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Solicitud cancelada con éxito");
+                await LoadSolicitudes();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al cancelar solicitud: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cancelar solicitud: {ex.Message}");
+        }
+    }
+    
+    private async Task GenerateReport(int solicitudId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            var url = $"api/reporte/solicitud/{solicitudId}?token={token}";
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al generar reporte: {ex.Message}");
+        }
+    }
+    
+    private async Task DownloadDocument(int documentoId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            var url = $"api/documento/{documentoId}/download?token={token}";
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
+        }
+    }
+    
+    public class SolicitudAscensoDto
+    {
+        public int Id { get; set; }
+        public string NumeroSolicitud { get; set; }
+        public int DocenteId { get; set; }
+        public DocenteDto Docente { get; set; }
+        public int NivelActual { get; set; }
+        public int NivelSolicitado { get; set; }
+        public int EstadoSolicitudId { get; set; }
+        public EstadoSolicitudDto EstadoSolicitud { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaRevision { get; set; }
+        public int? RevisorId { get; set; }
+        public DocenteDto Revisor { get; set; }
+        public string MotivoRechazo { get; set; }
+        public int TiempoRol { get; set; }
+        public int NumeroObras { get; set; }
+        public decimal PuntajeEvaluacion { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int TiempoInvestigacion { get; set; }
+        public bool CumpleTiempoRol { get; set; }
+        public bool CumpleObras { get; set; }
+        public bool CumpleEvaluacion { get; set; }
+        public bool CumpleCapacitacion { get; set; }
+        public bool CumpleInvestigacion { get; set; }
+        public List<DocumentoSolicitudDto> DocumentosSolicitud { get; set; }
+    }
+    
+    public class DocumentoSolicitudDto
+    {
+        public int Id { get; set; }
+        public int SolicitudAscensoId { get; set; }
+        public int DocumentoId { get; set; }
+        public DocumentoDto Documento { get; set; }
+        public DateTime FechaAsociacion { get; set; }
+    }
+    
+    public class DocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public TipoDocumentoDto TipoDocumento { get; set; }
+    }
+    
+    public class TipoDocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+    
+    public class DocenteDto
+    {
+        public int Id { get; set; }
+        public string Nombres { get; set; }
+        public string Apellidos { get; set; }
+    }
+    
+    public class EstadoSolicitudDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Color { get; set; }
+    }
+}

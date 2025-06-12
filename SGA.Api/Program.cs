@@ -60,6 +60,8 @@ builder.Services.Configure<CookiePolicyOptions>(options =>
 // Registrar servicios de aplicación e infraestructura
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 
 // Agregar controladores
 builder.Services.AddControllers();

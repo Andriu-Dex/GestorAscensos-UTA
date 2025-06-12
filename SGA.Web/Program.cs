@@ -1,33 +1,29 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.AspNetCore.Components.Authorization;
 using SGA.Web;
-using System.Text.Json;
+using Blazored.LocalStorage;
+using Blazored.Toast;
 using SGA.Web.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Obtener la URL de la API desde appsettings.json
-var http = new HttpClient();
-using var response = await http.GetAsync($"{builder.HostEnvironment.BaseAddress}appsettings.json");
-using var stream = await response.Content.ReadAsStreamAsync();
-var config = await JsonSerializer.DeserializeAsync<JsonElement>(stream);
-var apiBaseUrl = config.GetProperty("API").GetProperty("BaseUrl").GetString();
+// Configure HttpClient
+builder.Services.AddScoped(sp => new HttpClient 
+{ 
+    BaseAddress = new Uri("https://localhost:7242/") 
+});
 
-// Configurar HttpClient con la URL de la API
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl ?? "https://localhost:7030") });
+// Add Blazored services
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddBlazoredToast();
 
-// Registrar servicios de autenticación
-builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
-builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
+// Add custom services
+builder.Services.AddScoped<SGA.Web.Services.ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<AuthService>();
-
-// Agregar la autenticación
-builder.Services.AddAuthorizationCore();
-
-// Registrar el servicio de API
-builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddScoped<ApiService>();
+builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
 
 await builder.Build().RunAsync();

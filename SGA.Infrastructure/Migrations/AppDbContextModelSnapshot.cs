@@ -22,6 +22,104 @@ namespace SGA.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("SGA.Domain.Entities.ConfiguracionSistema", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Clave")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("EsEditable")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GrupoConfiguracion")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TipoDato")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Valor")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Clave")
+                        .IsUnique();
+
+                    b.ToTable("ConfiguracionesSistema");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Clave = "TIEMPO_BLOQUEO_MINUTOS",
+                            Descripcion = "Tiempo de bloqueo en minutos después de 3 intentos fallidos",
+                            EsEditable = true,
+                            FechaActualizacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            GrupoConfiguracion = "Seguridad",
+                            TipoDato = "int",
+                            Valor = "15"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Clave = "INTENTOS_MAXIMOS_LOGIN",
+                            Descripcion = "Número máximo de intentos de login antes del bloqueo",
+                            EsEditable = true,
+                            FechaActualizacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            GrupoConfiguracion = "Seguridad",
+                            TipoDato = "int",
+                            Valor = "3"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Clave = "TOKEN_EXPIRACION_HORAS",
+                            Descripcion = "Tiempo de expiración del token JWT en horas",
+                            EsEditable = true,
+                            FechaActualizacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            GrupoConfiguracion = "Seguridad",
+                            TipoDato = "int",
+                            Valor = "8"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Clave = "TAMAÑO_MAXIMO_ARCHIVO_MB",
+                            Descripcion = "Tamaño máximo permitido para archivos en MB",
+                            EsEditable = true,
+                            FechaActualizacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            GrupoConfiguracion = "Documentos",
+                            TipoDato = "int",
+                            Valor = "20"
+                        });
+                });
+
             modelBuilder.Entity("SGA.Domain.Entities.DatosTTHH", b =>
                 {
                     b.Property<int>("Id")
@@ -30,29 +128,65 @@ namespace SGA.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Apellidos")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Cedula")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
-                    b.Property<string>("Facultad")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Celular")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("EmailPersonal")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("EstadoCivil")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("FacultadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaIngreso")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaNacimiento")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Nombres")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TelefonoConvencional")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Cedula")
                         .IsUnique();
+
+                    b.HasIndex("FacultadId");
 
                     b.ToTable("DatosTTHH");
                 });
@@ -65,27 +199,35 @@ namespace SGA.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Apellidos")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("Bloqueado")
                         .HasColumnType("bit");
 
                     b.Property<string>("Cedula")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("EsAdministrador")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Facultad")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("FacultadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FechaBaja")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaBloqueo")
                         .HasColumnType("datetime2");
@@ -96,47 +238,45 @@ namespace SGA.Infrastructure.Migrations
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("HorasCapacitacion")
-                        .HasColumnType("int");
-
                     b.Property<int>("IntentosFallidos")
                         .HasColumnType("int");
+
+                    b.Property<string>("MotivoBaja")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("NivelActual")
                         .HasColumnType("int");
 
                     b.Property<string>("NombreUsuario")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Nombres")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("NumeroObras")
-                        .HasColumnType("int");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("PuntajeEvaluacion")
-                        .HasColumnType("decimal(18,2)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("TelefonoContacto")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TiempoEnRolActual")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TiempoInvestigacion")
-                        .HasColumnType("int");
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Cedula")
                         .IsUnique();
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("FacultadId");
 
                     b.HasIndex("NombreUsuario")
                         .IsUnique();
@@ -152,37 +292,66 @@ namespace SGA.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("Contenido")
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Descripcion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("DocenteId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaSubida")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FechaValidacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HashSHA256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ObservacionesValidacion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<long>("TamanioBytes")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("Tipo")
+                    b.Property<int>("TipoDocumentoId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Validado")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ValidadoPorId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DocenteId");
+
+                    b.HasIndex("TipoDocumentoId");
+
+                    b.HasIndex("ValidadoPorId");
 
                     b.ToTable("Documentos");
                 });
@@ -198,6 +367,16 @@ namespace SGA.Infrastructure.Migrations
                     b.Property<int>("DocumentoId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("EsObligatorio")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaAsociacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int>("SolicitudId")
                         .HasColumnType("int");
 
@@ -210,7 +389,210 @@ namespace SGA.Infrastructure.Migrations
                     b.ToTable("DocumentosSolicitud");
                 });
 
-            modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
+            modelBuilder.Entity("SGA.Domain.Entities.EstadoSolicitud", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("EsActivo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EsEstadoFinal")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RequiereRevision")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("EstadosSolicitud");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Codigo = "ENVIADA",
+                            Color = "#FFA500",
+                            Descripcion = "Solicitud enviada y pendiente de revisión",
+                            EsActivo = true,
+                            EsEstadoFinal = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Enviada",
+                            Orden = 1,
+                            RequiereRevision = false
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Codigo = "EN_PROCESO",
+                            Color = "#0066CC",
+                            Descripcion = "Solicitud en proceso de revisión",
+                            EsActivo = true,
+                            EsEstadoFinal = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "En Proceso",
+                            Orden = 2,
+                            RequiereRevision = false
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Codigo = "APROBADA",
+                            Color = "#28A745",
+                            Descripcion = "Solicitud aprobada",
+                            EsActivo = true,
+                            EsEstadoFinal = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Aprobada",
+                            Orden = 3,
+                            RequiereRevision = false
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Codigo = "RECHAZADA",
+                            Color = "#DC3545",
+                            Descripcion = "Solicitud rechazada",
+                            EsActivo = true,
+                            EsEstadoFinal = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Rechazada",
+                            Orden = 4,
+                            RequiereRevision = false
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Codigo = "ARCHIVADA",
+                            Color = "#6C757D",
+                            Descripcion = "Solicitud archivada",
+                            EsActivo = true,
+                            EsEstadoFinal = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Archivada",
+                            Orden = 5,
+                            RequiereRevision = false
+                        });
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.Facultad", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("EsActiva")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("Facultades");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Codigo = "FISEI",
+                            EsActiva = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Facultad de Ingeniería en Sistemas, Electrónica e Industrial"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Codigo = "FCIAL",
+                            EsActiva = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Facultad de Ciencias de la Alimentación"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Codigo = "FCHE",
+                            EsActiva = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Facultad de Ciencias Humanas y de la Educación"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Codigo = "FCA",
+                            EsActiva = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Facultad de Contabilidad y Auditoría"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Codigo = "FCJSE",
+                            EsActiva = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Facultad de Ciencias Jurídicas y Sociales"
+                        });
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.IndicadorDocente", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -221,8 +603,250 @@ namespace SGA.Infrastructure.Migrations
                     b.Property<int>("DocenteId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Estado")
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaActualizacionCapacitacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaActualizacionEvaluacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaActualizacionInvestigacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaActualizacionObras")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FuenteCapacitacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FuenteEvaluacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FuenteInvestigacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FuenteObras")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("HorasCapacitacion")
                         .HasColumnType("int");
+
+                    b.Property<int>("NumeroObras")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PuntajeEvaluacion")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("TiempoEnRolActual")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TiempoInvestigacion")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocenteId")
+                        .IsUnique();
+
+                    b.ToTable("IndicadoresDocente");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.LogAuditoria", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DireccionIP")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<int?>("DocenteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Entidad")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("EntidadId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ValoresAnteriores")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ValoresNuevos")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocenteId");
+
+                    b.ToTable("LogsAuditoria");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.ServicioExterno", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaUltimaConexion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TimeoutSegundos")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UltimoError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("UrlBase")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("ServiciosExternos");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Codigo = "DITIC",
+                            Descripcion = "Servicio para obtener datos de capacitación",
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "DITIC - Cursos",
+                            TimeoutSegundos = 30,
+                            UrlBase = "https://api.ditic.uta.edu.ec"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Codigo = "DAC",
+                            Descripcion = "Servicio para obtener evaluaciones docente",
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "DAC - Evaluaciones",
+                            TimeoutSegundos = 30,
+                            UrlBase = "https://api.dac.uta.edu.ec"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Codigo = "TTHH",
+                            Descripcion = "Servicio de Talento Humano",
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "TTHH - Acción Personal",
+                            TimeoutSegundos = 30,
+                            UrlBase = "https://api.tthh.uta.edu.ec"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            Codigo = "INVESTIGACION",
+                            Descripcion = "Servicio para obtener datos de investigación",
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Dirección de Investigación",
+                            TimeoutSegundos = 30,
+                            UrlBase = "https://api.investigacion.uta.edu.ec"
+                        });
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CumpleCapacitacion")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CumpleEvaluacion")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CumpleInvestigacion")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CumpleObras")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CumpleTiempo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("DocenteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EstadoSolicitudId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaRevision")
                         .HasColumnType("datetime2");
@@ -234,8 +858,8 @@ namespace SGA.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("MotivoRechazo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("NivelActual")
                         .HasColumnType("int");
@@ -246,8 +870,12 @@ namespace SGA.Infrastructure.Migrations
                     b.Property<int>("NumeroObras")
                         .HasColumnType("int");
 
+                    b.Property<string>("ObservacionesRevisor")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<decimal>("PuntajeEvaluacion")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int?>("RevisorId")
                         .HasColumnType("int");
@@ -262,7 +890,144 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("DocenteId");
 
+                    b.HasIndex("EstadoSolicitudId");
+
+                    b.HasIndex("RevisorId");
+
                     b.ToTable("SolicitudesAscenso");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.TipoDocumento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("EsActivo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FormatoEsperado")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("RequiereValidacion")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("TamanoMaximoMB")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.ToTable("TiposDocumento");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Codigo = "OBRA",
+                            Descripcion = "Documentos que acreditan obras publicadas",
+                            EsActivo = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FormatoEsperado = "PDF",
+                            Nombre = "Obra Publicada",
+                            RequiereValidacion = false,
+                            TamanoMaximoMB = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Codigo = "CAPACITACION",
+                            Descripcion = "Certificados de capacitación y cursos",
+                            EsActivo = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FormatoEsperado = "PDF",
+                            Nombre = "Capacitación",
+                            RequiereValidacion = false,
+                            TamanoMaximoMB = 5
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Codigo = "INVESTIGACION",
+                            Descripcion = "Documentos relacionados a proyectos de investigación",
+                            EsActivo = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FormatoEsperado = "PDF",
+                            Nombre = "Investigación",
+                            RequiereValidacion = false,
+                            TamanoMaximoMB = 15
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Codigo = "EVALUACION",
+                            Descripcion = "Resultados de evaluación docente",
+                            EsActivo = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FormatoEsperado = "PDF",
+                            Nombre = "Evaluación Docente",
+                            RequiereValidacion = false,
+                            TamanoMaximoMB = 5
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Codigo = "ACCION_PERSONAL",
+                            Descripcion = "Documentos de TTHH",
+                            EsActivo = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FormatoEsperado = "PDF",
+                            Nombre = "Acción de Personal",
+                            RequiereValidacion = false,
+                            TamanoMaximoMB = 5
+                        });
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.DatosTTHH", b =>
+                {
+                    b.HasOne("SGA.Domain.Entities.Facultad", "Facultad")
+                        .WithMany("DatosTTHH")
+                        .HasForeignKey("FacultadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Facultad");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.Docente", b =>
+                {
+                    b.HasOne("SGA.Domain.Entities.Facultad", "Facultad")
+                        .WithMany("Docentes")
+                        .HasForeignKey("FacultadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Facultad");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.Documento", b =>
@@ -273,13 +1038,28 @@ namespace SGA.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SGA.Domain.Entities.TipoDocumento", "TipoDocumento")
+                        .WithMany("Documentos")
+                        .HasForeignKey("TipoDocumentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGA.Domain.Entities.Docente", "ValidadoPor")
+                        .WithMany()
+                        .HasForeignKey("ValidadoPorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Docente");
+
+                    b.Navigation("TipoDocumento");
+
+                    b.Navigation("ValidadoPor");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.DocumentoSolicitud", b =>
                 {
                     b.HasOne("SGA.Domain.Entities.Documento", "Documento")
-                        .WithMany()
+                        .WithMany("DocumentosSolicitud")
                         .HasForeignKey("DocumentoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -295,25 +1075,87 @@ namespace SGA.Infrastructure.Migrations
                     b.Navigation("Solicitud");
                 });
 
-            modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
+            modelBuilder.Entity("SGA.Domain.Entities.IndicadorDocente", b =>
                 {
                     b.HasOne("SGA.Domain.Entities.Docente", "Docente")
-                        .WithMany("Solicitudes")
-                        .HasForeignKey("DocenteId")
+                        .WithOne("Indicadores")
+                        .HasForeignKey("SGA.Domain.Entities.IndicadorDocente", "DocenteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Docente");
                 });
 
+            modelBuilder.Entity("SGA.Domain.Entities.LogAuditoria", b =>
+                {
+                    b.HasOne("SGA.Domain.Entities.Docente", "Docente")
+                        .WithMany("LogsAuditoria")
+                        .HasForeignKey("DocenteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Docente");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
+                {
+                    b.HasOne("SGA.Domain.Entities.Docente", "Docente")
+                        .WithMany("Solicitudes")
+                        .HasForeignKey("DocenteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGA.Domain.Entities.EstadoSolicitud", "EstadoSolicitud")
+                        .WithMany("SolicitudesAscenso")
+                        .HasForeignKey("EstadoSolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGA.Domain.Entities.Docente", "Revisor")
+                        .WithMany()
+                        .HasForeignKey("RevisorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Docente");
+
+                    b.Navigation("EstadoSolicitud");
+
+                    b.Navigation("Revisor");
+                });
+
             modelBuilder.Entity("SGA.Domain.Entities.Docente", b =>
                 {
                     b.Navigation("Documentos");
 
+                    b.Navigation("Indicadores");
+
+                    b.Navigation("LogsAuditoria");
+
                     b.Navigation("Solicitudes");
                 });
 
+            modelBuilder.Entity("SGA.Domain.Entities.Documento", b =>
+                {
+                    b.Navigation("DocumentosSolicitud");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.EstadoSolicitud", b =>
+                {
+                    b.Navigation("SolicitudesAscenso");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.Facultad", b =>
+                {
+                    b.Navigation("DatosTTHH");
+
+                    b.Navigation("Docentes");
+                });
+
             modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
+                {
+                    b.Navigation("Documentos");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.TipoDocumento", b =>
                 {
                     b.Navigation("Documentos");
                 });

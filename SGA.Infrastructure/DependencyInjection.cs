@@ -19,6 +19,7 @@ namespace SGA.Infrastructure
             services.AddScoped<IDocumentoRepository, DocumentoRepository>();
             services.AddScoped<ISolicitudAscensoRepository, SolicitudAscensoRepository>();
             services.AddScoped<IDatosTTHHRepository, DatosTTHHRepository>();
+            services.AddScoped<IServicioExternoRepository, ServicioExternoRepository>();
             
             return services;
         }

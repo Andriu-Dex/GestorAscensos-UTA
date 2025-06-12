@@ -1,0 +1,672 @@
+@page "/perfil"
+@attribute [Authorize]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Mi Perfil</h3>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Información Personal</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="d-flex justify-content-center my-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (userInfo != null)
+                    {
+                        <div class="text-center mb-4">
+                            <div class="avatar-circle mx-auto mb-3">
+                                <span class="avatar-initials">@GetInitials()</span>
+                            </div>
+                            <h4>@userInfo.Nombres @userInfo.Apellidos</h4>
+                            <p class="text-muted">Docente Titular @userInfo.NivelActual</p>
+                        </div>
+                        
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Cédula:</span>
+                                <span class="fw-bold">@userInfo.Cedula</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Email:</span>
+                                <span class="fw-bold">@userInfo.Email</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Teléfono:</span>
+                                <span class="fw-bold">@userInfo.TelefonoContacto</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Facultad:</span>
+                                <span class="fw-bold">@(userInfo.Facultad?.Nombre ?? "No asignada")</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Fecha de ingreso:</span>
+                                <span class="fw-bold">@userInfo.FechaIngresoNivelActual.ToString("dd/MM/yyyy")</span>
+                            </li>
+                        </ul>
+                        
+                        <div class="d-grid gap-2 mt-3">
+                            <button class="btn btn-outline-primary" @onclick="() => showEditModal = true">
+                                <i class="bi bi-pencil"></i> Editar Perfil
+                            </button>
+                            <button class="btn btn-outline-secondary" @onclick="() => showPasswordModal = true">
+                                <i class="bi bi-key"></i> Cambiar Contraseña
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Indicadores Académicos</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="d-flex justify-content-center my-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (indicadores != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h1 class="display-4">@indicadores.TiempoRol</h1>
+                                        <p class="text-muted">Meses en nivel actual</p>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: @GetPercentage(indicadores.TiempoRol, 48)%;" 
+                                                 aria-valuenow="@indicadores.TiempoRol" aria-valuemin="0" aria-valuemax="48"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 48 meses</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h1 class="display-4">@indicadores.NumeroObras</h1>
+                                        <p class="text-muted">Obras académicas</p>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: @GetPercentage(indicadores.NumeroObras, 3)%;" 
+                                                 aria-valuenow="@indicadores.NumeroObras" aria-valuemin="0" aria-valuemax="3"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 3 obras</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h1 class="display-4">@indicadores.PuntajeEvaluacion%</h1>
+                                        <p class="text-muted">Evaluación docente</p>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar @GetEvaluationColorClass(indicadores.PuntajeEvaluacion)" role="progressbar" 
+                                                 style="width: @indicadores.PuntajeEvaluacion%;" 
+                                                 aria-valuenow="@indicadores.PuntajeEvaluacion" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 80%</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h1 class="display-4">@indicadores.HorasCapacitacion</h1>
+                                        <p class="text-muted">Horas de capacitación</p>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: @GetPercentage(indicadores.HorasCapacitacion, 120)%;" 
+                                                 aria-valuenow="@indicadores.HorasCapacitacion" aria-valuemin="0" aria-valuemax="120"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 120 horas</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h1 class="display-4">@indicadores.TiempoInvestigacion</h1>
+                                        <p class="text-muted">Meses en investigación</p>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 style="width: @GetPercentage(indicadores.TiempoInvestigacion, 24)%;" 
+                                                 aria-valuenow="@indicadores.TiempoInvestigacion" aria-valuemin="0" aria-valuemax="24"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 24 meses</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button class="btn btn-primary" @onclick="RefreshIndicadores">
+                                <i class="bi bi-arrow-clockwise"></i> Actualizar Indicadores
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Requisitos para Ascenso</h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="d-flex justify-content-center my-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (requisitos != null)
+                    {
+                        <div class="alert @(cumpleTodosRequisitos ? "alert-success" : "alert-warning")">
+                            @if (cumpleTodosRequisitos)
+                            {
+                                <h5><i class="bi bi-check-circle"></i> ¡Felicidades!</h5>
+                                <p>Cumple con todos los requisitos para solicitar un ascenso a Titular @(userInfo.NivelActual + 1).</p>
+                                <a href="/solicitudes/nueva" class="btn btn-success">Iniciar Solicitud de Ascenso</a>
+                            }
+                            else
+                            {
+                                <h5><i class="bi bi-info-circle"></i> Atención</h5>
+                                <p>Aún no cumple con todos los requisitos necesarios para el ascenso. Por favor, revise los requisitos pendientes.</p>
+                            }
+                        </div>
+                        
+                        <div class="table-responsive mt-3">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Requisito</th>
+                                        <th>Estado</th>
+                                        <th>Detalle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Tiempo en rol actual</td>
+                                        <td>
+                                            <span class="badge @(requisitos.CumpleTiempoRol ? "bg-success" : "bg-danger")">
+                                                @(requisitos.CumpleTiempoRol ? "Cumple" : "No cumple")
+                                            </span>
+                                        </td>
+                                        <td>@indicadores.TiempoRol meses (mínimo 48 meses)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Obras académicas</td>
+                                        <td>
+                                            <span class="badge @(requisitos.CumpleObras ? "bg-success" : "bg-danger")">
+                                                @(requisitos.CumpleObras ? "Cumple" : "No cumple")
+                                            </span>
+                                        </td>
+                                        <td>@indicadores.NumeroObras obras (mínimo 3 obras)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Evaluación docente</td>
+                                        <td>
+                                            <span class="badge @(requisitos.CumpleEvaluacion ? "bg-success" : "bg-danger")">
+                                                @(requisitos.CumpleEvaluacion ? "Cumple" : "No cumple")
+                                            </span>
+                                        </td>
+                                        <td>@indicadores.PuntajeEvaluacion% (mínimo 80%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Capacitación</td>
+                                        <td>
+                                            <span class="badge @(requisitos.CumpleCapacitacion ? "bg-success" : "bg-danger")">
+                                                @(requisitos.CumpleCapacitacion ? "Cumple" : "No cumple")
+                                            </span>
+                                        </td>
+                                        <td>@indicadores.HorasCapacitacion horas (mínimo 120 horas)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Investigación</td>
+                                        <td>
+                                            <span class="badge @(requisitos.CumpleInvestigacion ? "bg-success" : "bg-danger")">
+                                                @(requisitos.CumpleInvestigacion ? "Cumple" : "No cumple")
+                                            </span>
+                                        </td>
+                                        <td>@indicadores.TiempoInvestigacion meses (mínimo 24 meses)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edición de Perfil -->
+@if (showEditModal && userInfo != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Perfil</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@editUserModel" OnValidSubmit="HandleEditSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label for="nombres" class="form-label">Nombres</label>
+                            <InputText id="nombres" class="form-control" @bind-Value="editUserModel.Nombres" />
+                            <ValidationMessage For="@(() => editUserModel.Nombres)" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="apellidos" class="form-label">Apellidos</label>
+                            <InputText id="apellidos" class="form-control" @bind-Value="editUserModel.Apellidos" />
+                            <ValidationMessage For="@(() => editUserModel.Apellidos)" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <InputText id="email" class="form-control" @bind-Value="editUserModel.Email" />
+                            <ValidationMessage For="@(() => editUserModel.Email)" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label">Teléfono de Contacto</label>
+                            <InputText id="telefono" class="form-control" @bind-Value="editUserModel.TelefonoContacto" />
+                            <ValidationMessage For="@(() => editUserModel.TelefonoContacto)" />
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span> Guardando...</span>
+                                }
+                                else
+                                {
+                                    <span>Guardar Cambios</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Cambio de Contraseña -->
+@if (showPasswordModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cambiar Contraseña</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePasswordModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@passwordModel" OnValidSubmit="HandlePasswordSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Contraseña Actual</label>
+                            <InputText type="password" id="currentPassword" class="form-control" @bind-Value="passwordModel.CurrentPassword" />
+                            <ValidationMessage For="@(() => passwordModel.CurrentPassword)" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                            <InputText type="password" id="newPassword" class="form-control" @bind-Value="passwordModel.NewPassword" />
+                            <ValidationMessage For="@(() => passwordModel.NewPassword)" />
+                            <small class="form-text text-muted">
+                                La contraseña debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas, números y caracteres especiales.
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                            <InputText type="password" id="confirmPassword" class="form-control" @bind-Value="passwordModel.ConfirmPassword" />
+                            <ValidationMessage For="@(() => passwordModel.ConfirmPassword)" />
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="ClosePasswordModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span> Cambiando...</span>
+                                }
+                                else
+                                {
+                                    <span>Cambiar Contraseña</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private UserInfoModel userInfo;
+    private IndicadoresModel indicadores;
+    private RequisitosModel requisitos;
+    private EditUserModel editUserModel = new EditUserModel();
+    private ChangePasswordModel passwordModel = new ChangePasswordModel();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool showEditModal = false;
+    private bool showPasswordModal = false;
+    private bool cumpleTodosRequisitos = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserInfo();
+        await LoadIndicadores();
+        await LoadRequisitos();
+    }
+    
+    private async Task LoadUserInfo()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            userInfo = await Http.GetFromJsonAsync<UserInfoModel>("api/auth/me");
+            
+            // Inicializar modelo de edición
+            editUserModel = new EditUserModel
+            {
+                Nombres = userInfo.Nombres,
+                Apellidos = userInfo.Apellidos,
+                Email = userInfo.Email,
+                TelefonoContacto = userInfo.TelefonoContacto
+            };
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar información del usuario: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private async Task LoadIndicadores()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            indicadores = await Http.GetFromJsonAsync<IndicadoresModel>("api/docente/indicadores");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar indicadores: {ex.Message}");
+        }
+    }
+    
+    private async Task LoadRequisitos()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            if (userInfo != null)
+            {
+                requisitos = await Http.GetFromJsonAsync<RequisitosModel>($"api/validacion/requisitos?nivelActual={userInfo.NivelActual}");
+                
+                cumpleTodosRequisitos = requisitos.CumpleTiempoRol && 
+                                        requisitos.CumpleObras && 
+                                        requisitos.CumpleEvaluacion && 
+                                        requisitos.CumpleCapacitacion && 
+                                        requisitos.CumpleInvestigacion;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar requisitos: {ex.Message}");
+        }
+    }
+    
+    private async Task RefreshIndicadores()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PostAsync("api/docente/actualizar-indicadores", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Indicadores actualizados correctamente");
+                await LoadIndicadores();
+                await LoadRequisitos();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al actualizar indicadores: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al actualizar indicadores: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+    
+    private void ClosePasswordModal()
+    {
+        showPasswordModal = false;
+        passwordModel = new ChangePasswordModel();
+    }
+    
+    private async Task HandleEditSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsJsonAsync("api/docente/actualizar-perfil", editUserModel);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Perfil actualizado correctamente");
+                await LoadUserInfo();
+                CloseEditModal();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al actualizar perfil: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al actualizar perfil: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    
+    private async Task HandlePasswordSubmit()
+    {
+        if (passwordModel.NewPassword != passwordModel.ConfirmPassword)
+        {
+            ToastService.ShowError("Las contraseñas no coinciden");
+            return;
+        }
+        
+        try
+        {
+            isSubmitting = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PostAsJsonAsync("api/auth/cambiar-password", passwordModel);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Contraseña cambiada correctamente");
+                ClosePasswordModal();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al cambiar contraseña: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cambiar contraseña: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+    
+    private string GetInitials()
+    {
+        if (userInfo == null)
+            return "";
+            
+        string initials = "";
+        
+        if (!string.IsNullOrEmpty(userInfo.Nombres))
+            initials += userInfo.Nombres[0];
+            
+        if (!string.IsNullOrEmpty(userInfo.Apellidos))
+            initials += userInfo.Apellidos[0];
+            
+        return initials.ToUpper();
+    }
+    
+    private double GetPercentage(double value, double max)
+    {
+        return Math.Min(value * 100 / max, 100);
+    }
+    
+    private string GetEvaluationColorClass(decimal puntaje)
+    {
+        if (puntaje >= 90)
+            return "bg-success";
+        else if (puntaje >= 80)
+            return "bg-primary";
+        else if (puntaje >= 70)
+            return "bg-warning";
+        else
+            return "bg-danger";
+    }
+    
+    public class UserInfoModel
+    {
+        public int Id { get; set; }
+        public string Nombres { get; set; }
+        public string Apellidos { get; set; }
+        public string Cedula { get; set; }
+        public string Email { get; set; }
+        public string TelefonoContacto { get; set; }
+        public int FacultadId { get; set; }
+        public FacultadModel Facultad { get; set; }
+        public int NivelActual { get; set; }
+        public DateTime FechaIngresoNivelActual { get; set; }
+    }
+    
+    public class FacultadModel
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Codigo { get; set; }
+    }
+    
+    public class IndicadoresModel
+    {
+        public int TiempoRol { get; set; }
+        public int NumeroObras { get; set; }
+        public decimal PuntajeEvaluacion { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int TiempoInvestigacion { get; set; }
+    }
+    
+    public class RequisitosModel
+    {
+        public bool CumpleTiempoRol { get; set; }
+        public bool CumpleObras { get; set; }
+        public bool CumpleEvaluacion { get; set; }
+        public bool CumpleCapacitacion { get; set; }
+        public bool CumpleInvestigacion { get; set; }
+    }
+    
+    public class EditUserModel
+    {
+        public string Nombres { get; set; }
+        public string Apellidos { get; set; }
+        public string Email { get; set; }
+        public string TelefonoContacto { get; set; }
+    }
+    
+    public class ChangePasswordModel
+    {
+        public string CurrentPassword { get; set; }
+        public string NewPassword { get; set; }
+        public string ConfirmPassword { get; set; }
+    }
+}

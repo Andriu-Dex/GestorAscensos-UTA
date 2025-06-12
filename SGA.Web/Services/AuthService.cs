@@ -11,9 +11,9 @@ namespace SGA.Web.Services
     {
         private readonly HttpClient _httpClient;
         private readonly AuthenticationStateProvider _authStateProvider;
-        private readonly ILocalStorageService _localStorage;
+        private readonly SGA.Web.Services.ILocalStorageService _localStorage;
 
-        public AuthService(HttpClient httpClient, AuthenticationStateProvider authStateProvider, ILocalStorageService localStorage)
+        public AuthService(HttpClient httpClient, AuthenticationStateProvider authStateProvider, SGA.Web.Services.ILocalStorageService localStorage)
         {
             _httpClient = httpClient;
             _authStateProvider = authStateProvider;

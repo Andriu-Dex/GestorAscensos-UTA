@@ -1,0 +1,388 @@
+@page "/documentos"
+@attribute [Authorize]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h3>Gestión de Documentos</h3>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Mis Documentos</h5>
+            <button class="btn btn-light" @onclick="() => ShowUploadModal()">
+                <i class="bi bi-upload"></i> Subir Documento
+            </button>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center my-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            }
+            else if (documentos == null || !documentos.Any())
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene documentos registrados. Utilice el botón "Subir Documento" para añadir sus documentos.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var doc in documentos)
+                            {
+                                <tr>
+                                    <td>@doc.Nombre</td>
+                                    <td>@doc.TipoDocumento?.Nombre</td>
+                                    <td>@doc.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (doc.Verificado)
+                                        {
+                                            <span class="badge bg-success">Verificado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-primary" @onclick="() => DownloadDocument(doc)">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-info" @onclick="() => ViewDocument(doc)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            @if (!doc.Verificado)
+                                            {
+                                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteDocument(doc.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Carga -->
+@if (showUploadModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Subir Documento</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUploadModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="documentName" class="form-label">Nombre del Documento</label>
+                        <input type="text" class="form-control" id="documentName" @bind="newDocumento.Nombre" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentType" class="form-label">Tipo de Documento</label>
+                        <select class="form-select" id="documentType" @bind="newDocumento.TipoDocumentoId">
+                            <option value="0">Seleccione un tipo...</option>
+                            @if (tiposDocumento != null)
+                            {
+                                @foreach (var tipo in tiposDocumento)
+                                {
+                                    <option value="@tipo.Id">@tipo.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentFile" class="form-label">Archivo</label>
+                        <InputFile id="documentFile" OnChange="OnInputFileChange" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                        @if (uploadProgress > 0 && uploadProgress < 100)
+                        {
+                            <div class="progress mt-2">
+                                <div class="progress-bar" role="progressbar" style="width: @uploadProgress%;" aria-valuenow="@uploadProgress" aria-valuemin="0" aria-valuemax="100">@uploadProgress%</div>
+                            </div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentDescription" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="documentDescription" rows="3" @bind="newDocumento.Descripcion"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseUploadModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="UploadDocument" disabled="@(!isFileSelected || isUploading)">
+                        @if (isUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span> Subiendo...</span>
+                        }
+                        else
+                        {
+                            <span>Subir</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Visualización -->
+@if (showViewModal && selectedDocumento != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@selectedDocumento.Nombre</h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    @if (viewUrl != null)
+                    {
+                        <iframe src="@viewUrl" style="width: 100%; height: 500px;" frameborder="0"></iframe>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">No se puede previsualizar este tipo de documento.</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewModal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => DownloadDocument(selectedDocumento)">Descargar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<DocumentoDto> documentos;
+    private List<TipoDocumentoDto> tiposDocumento;
+    private bool isLoading = true;
+    private bool showUploadModal = false;
+    private bool showViewModal = false;
+    private DocumentoDto newDocumento = new DocumentoDto();
+    private DocumentoDto selectedDocumento;
+    private IBrowserFile selectedFile;
+    private bool isFileSelected = false;
+    private bool isUploading = false;
+    private int uploadProgress = 0;
+    private string viewUrl;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentos();
+        await LoadTiposDocumento();
+    }
+    
+    private async Task LoadDocumentos()
+    {
+        try
+        {
+            isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            documentos = await Http.GetFromJsonAsync<List<DocumentoDto>>("api/documento/mis-documentos");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar documentos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private async Task LoadTiposDocumento()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            tiposDocumento = await Http.GetFromJsonAsync<List<TipoDocumentoDto>>("api/tipodocumento");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar tipos de documento: {ex.Message}");
+        }
+    }
+    
+    private void ShowUploadModal()
+    {
+        newDocumento = new DocumentoDto();
+        selectedFile = null;
+        isFileSelected = false;
+        uploadProgress = 0;
+        showUploadModal = true;
+    }
+    
+    private void CloseUploadModal()
+    {
+        showUploadModal = false;
+    }
+    
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        isFileSelected = true;
+        uploadProgress = 0;
+    }
+    
+    private async Task UploadDocument()
+    {
+        if (selectedFile == null || newDocumento.TipoDocumentoId <= 0 || string.IsNullOrWhiteSpace(newDocumento.Nombre))
+        {
+            ToastService.ShowWarning("Por favor complete todos los campos obligatorios.");
+            return;
+        }
+        
+        isUploading = true;
+        uploadProgress = 0;
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var content = new MultipartFormDataContent();
+            content.Add(new StringContent(newDocumento.Nombre), "Nombre");
+            content.Add(new StringContent(newDocumento.TipoDocumentoId.ToString()), "TipoDocumentoId");
+            content.Add(new StringContent(newDocumento.Descripcion ?? ""), "Descripcion");
+            
+            var fileContent = new StreamContent(selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)); // 10 MB max
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedFile.ContentType);
+            content.Add(fileContent, "Archivo", selectedFile.Name);
+            
+            var response = await Http.PostAsync("api/documento", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Documento subido con éxito");
+                CloseUploadModal();
+                await LoadDocumentos();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al subir documento: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al subir documento: {ex.Message}");
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+    
+    private async Task DeleteDocument(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea eliminar este documento?"))
+            return;
+            
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.DeleteAsync($"api/documento/{id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Documento eliminado con éxito");
+                await LoadDocumentos();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al eliminar documento: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al eliminar documento: {ex.Message}");
+        }
+    }
+    
+    private async Task ViewDocument(DocumentoDto documento)
+    {
+        selectedDocumento = documento;
+        showViewModal = true;
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            viewUrl = $"api/documento/{documento.Id}/view?token={token}";
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al preparar visualización: {ex.Message}");
+        }
+    }
+    
+    private void CloseViewModal()
+    {
+        showViewModal = false;
+        viewUrl = null;
+    }
+    
+    private async Task DownloadDocument(DocumentoDto documento)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            var url = $"api/documento/{documento.Id}/download?token={token}";
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
+        }
+    }
+    
+    public class DocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Descripcion { get; set; }
+        public string RutaArchivo { get; set; }
+        public int TipoDocumentoId { get; set; }
+        public TipoDocumentoDto TipoDocumento { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public bool Verificado { get; set; }
+    }
+    
+    public class TipoDocumentoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Descripcion { get; set; }
+    }
+}

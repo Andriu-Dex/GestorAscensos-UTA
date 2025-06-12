@@ -1,0 +1,244 @@
+### Archivo de Pruebas Completas para el Sistema de Gestión de Ascensos UTA
+### Asegúrate de que la API esté ejecutándose en http://localhost:5115
+
+@baseUrl = http://localhost:5115/api
+@token = 
+
+### ===== PASO 1: DATOS DE REFERENCIA =====
+
+### 1.1 Obtener todas las facultades
+GET {{baseUrl}}/Facultad
+Content-Type: application/json
+
+### 1.2 Crear nueva facultad
+POST {{baseUrl}}/Facultad
+Content-Type: application/json
+
+{
+  "codigo": "FIEI",
+  "nombre": "Facultad de Ingeniería en Electrónica e Informática",
+  "descripcion": "Facultad dedicada a las ingenierías tecnológicas",
+  "color": "#0066CC",
+  "esActiva": true
+}
+
+### 1.3 Obtener tipos de documento
+GET {{baseUrl}}/TipoDocumento
+Content-Type: application/json
+
+### 1.4 Crear tipo de documento
+POST {{baseUrl}}/TipoDocumento
+Content-Type: application/json
+
+{
+  "codigo": "OBRA_PUBLICA",
+  "nombre": "Obra o Publicación Científica",
+  "descripcion": "Artículos, libros, capítulos de libro publicados",
+  "requiereValidacion": true,
+  "formatoEsperado": "PDF",
+  "tamanoMaximoMB": 10,
+  "esActivo": true
+}
+
+### 1.5 Obtener estados de solicitud
+GET {{baseUrl}}/EstadoSolicitud
+Content-Type: application/json
+
+### ===== PASO 2: REGISTRO Y AUTENTICACIÓN =====
+
+### 2.1 Registrar nuevo docente
+POST {{baseUrl}}/Auth/register
+Content-Type: application/json
+
+{
+  "cedula": "1804567890",
+  "nombres": "María Elena",
+  "apellidos": "García Rodríguez",
+  "email": "maria.garcia@uta.edu.ec",
+  "telefonoContacto": "0987654321",
+  "facultadId": 1,
+  "nombreUsuario": "mgarcia",
+  "password": "Password123!"
+}
+
+### 2.2 Login del docente
+# @name loginDocente
+POST {{baseUrl}}/Auth/login
+Content-Type: application/json
+
+{
+  "nombreUsuario": "mgarcia",
+  "password": "Password123!"
+}
+
+### 2.3 Obtener perfil del docente (requiere token)
+GET {{baseUrl}}/Docente/perfil
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### ===== PASO 3: GESTIÓN DE INDICADORES =====
+
+### 3.1 Actualizar indicadores del docente
+PUT {{baseUrl}}/Docente/indicadores
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "tiempoRol": 5,
+  "numeroObras": 3,
+  "puntajeEvaluacion": 85.5,
+  "horasCapacitacion": 120,
+  "tiempoInvestigacion": 18
+}
+
+### 3.2 Validar requisitos para ascenso
+GET {{baseUrl}}/Docente/validar-requisitos
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### ===== PASO 4: GESTIÓN DE DOCUMENTOS =====
+
+### 4.1 Subir documento (FormData - usar herramienta que soporte archivos)
+# POST {{baseUrl}}/Documento
+# Content-Type: multipart/form-data
+# Authorization: Bearer {{token}}
+# 
+# {
+#   "archivo": @"ruta/al/documento.pdf",
+#   "nombre": "Artículo Científico Ejemplo",
+#   "descripcion": "Publicación en revista indexada",
+#   "tipoDocumentoId": 1
+# }
+
+### 4.2 Obtener documentos del docente
+GET {{baseUrl}}/Documento/docente
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 4.3 Obtener documento específico
+GET {{baseUrl}}/Documento/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### ===== PASO 5: SOLICITUDES DE ASCENSO =====
+
+### 5.1 Crear solicitud de ascenso
+POST {{baseUrl}}/SolicitudAscenso
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "documentosIds": [1, 2]
+}
+
+### 5.2 Obtener solicitudes del docente
+GET {{baseUrl}}/SolicitudAscenso/docente
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 5.3 Obtener solicitudes pendientes (requiere rol administrador)
+GET {{baseUrl}}/SolicitudAscenso/pendientes
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 5.4 Revisar solicitud (requiere rol administrador)
+PUT {{baseUrl}}/SolicitudAscenso/1/revisar
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "estadoSolicitudId": 3,
+  "motivoRechazo": null,
+  "observaciones": "Solicitud aprobada. Cumple con todos los requisitos."
+}
+
+### 5.5 Rechazar solicitud (requiere rol administrador)
+PUT {{baseUrl}}/SolicitudAscenso/1/revisar
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "estadoSolicitudId": 4,
+  "motivoRechazo": "Documentación incompleta",
+  "observaciones": "Falta documento de evaluación docente actualizada."
+}
+
+### ===== PASO 6: PRUEBAS DE VALIDACIÓN =====
+
+### 6.1 Intentar registro con datos inválidos
+POST {{baseUrl}}/Auth/register
+Content-Type: application/json
+
+{
+  "cedula": "123",
+  "nombres": "",
+  "apellidos": "Test",
+  "email": "email-invalido",
+  "telefonoContacto": "123",
+  "facultadId": 999,
+  "nombreUsuario": "a",
+  "password": "123"
+}
+
+### 6.2 Intentar login con credenciales incorrectas
+POST {{baseUrl}}/Auth/login
+Content-Type: application/json
+
+{
+  "nombreUsuario": "usuario_inexistente",
+  "password": "password_incorrecto"
+}
+
+### 6.3 Acceso no autorizado (sin token)
+GET {{baseUrl}}/Docente/perfil
+Content-Type: application/json
+
+### ===== PASO 7: ADMINISTRACIÓN =====
+
+### 7.1 Registro de administrador
+POST {{baseUrl}}/Auth/register
+Content-Type: application/json
+
+{
+  "cedula": "1800000000",
+  "nombres": "Admin",
+  "apellidos": "Sistema",
+  "email": "admin@uta.edu.ec",
+  "telefonoContacto": "0999999999",
+  "facultadId": 1,
+  "nombreUsuario": "admin",
+  "password": "Admin123!",
+  "esAdministrador": true
+}
+
+### 7.2 Login como administrador
+# @name loginAdmin
+POST {{baseUrl}}/Auth/login
+Content-Type: application/json
+
+{
+  "nombreUsuario": "admin",
+  "password": "Admin123!"
+}
+
+### 7.3 Obtener todos los docentes (solo admin)
+GET {{baseUrl}}/Docente
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 7.4 Validar documento (solo admin)
+PUT {{baseUrl}}/Documento/1/validar
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "validado": true,
+  "observaciones": "Documento válido y cumple con los requisitos."
+}
+
+### ===== NOTAS IMPORTANTES =====
+# 1. Reemplaza {{token}} con el token JWT obtenido del login
+# 2. Para subir archivos, usa una herramienta como Postman o Insomnia
+# 3. Los IDs pueden cambiar según los datos en tu base de datos
+# 4. Algunos endpoints requieren rol de administrador
+# 5. La validación de requisitos se basa en las reglas definidas en ReglasAscenso.cs

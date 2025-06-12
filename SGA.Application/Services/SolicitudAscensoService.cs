@@ -7,14 +7,14 @@ using SGA.Domain.Entities;
 using SGA.Infrastructure.Repositories;
 
 namespace SGA.Application.Services
-{
-    public interface ISolicitudAscensoService
+{    public interface ISolicitudAscensoService
     {
         Task<SolicitudAscenso> GetSolicitudByIdAsync(int id);
         Task<IEnumerable<SolicitudAscenso>> GetSolicitudesByDocenteIdAsync(int docenteId);
         Task<IEnumerable<SolicitudAscenso>> GetSolicitudesPendientesAsync();
         Task<SolicitudAscenso> CrearSolicitudAscensoAsync(int docenteId, List<int> documentosIds);
-        Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string? motivoRechazo = null, int revisorId = 0);
+        Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, int estadoSolicitudId, string? motivoRechazo = null, int revisorId = 0);
+        Task<SolicitudAscenso> RevisarSolicitudAsync(int solicitudId, int revisorId, int estadoSolicitudId, string? motivoRechazo, string? observaciones);
     }
 
     public class SolicitudAscensoService : ISolicitudAscensoService
@@ -46,9 +46,7 @@ namespace SGA.Application.Services
         public async Task<IEnumerable<SolicitudAscenso>> GetSolicitudesPendientesAsync()
         {
             return await _solicitudRepository.GetAllPendientesAsync();
-        }
-
-        public async Task<SolicitudAscenso> CrearSolicitudAscensoAsync(int docenteId, List<int> documentosIds)
+        }        public async Task<SolicitudAscenso> CrearSolicitudAscensoAsync(int docenteId, List<int> documentosIds)
         {
             using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             
@@ -56,44 +54,51 @@ namespace SGA.Application.Services
             if (docente == null)
                 throw new Exception("Docente no encontrado");
 
+            // Verificar si el docente tiene indicadores
+            if (docente.Indicadores == null)
+                throw new Exception("El docente no tiene indicadores registrados");
+
             // Verificar si el docente tiene solicitudes pendientes
             var solicitudesPendientes = await _solicitudRepository.GetByDocenteIdAsync(docenteId);
-            if (solicitudesPendientes.Any(s => s.Estado == EstadoSolicitud.Enviada || s.Estado == EstadoSolicitud.EnProceso))
+            if (solicitudesPendientes.Any(s => s.EstadoSolicitudId == 1 || s.EstadoSolicitudId == 2)) // 1=Enviada, 2=EnProceso
                 throw new Exception("Ya tiene una solicitud de ascenso pendiente");
 
-            // Validar requisitos
+            // Validar requisitos usando los indicadores
             var requisito = Array.Find(ReglasAscenso.Requisitos, r => r.NivelActual == docente.NivelActual);
             if (requisito == null)
                 throw new Exception("No se encontraron requisitos para el nivel actual");
 
-            if (docente.TiempoEnRolActual < requisito.TiempoMinimo)
+            var indicadores = docente.Indicadores;
+            if (indicadores.TiempoEnRolActual < requisito.TiempoMinimo)
                 throw new Exception($"No cumple con el tiempo mínimo requerido ({requisito.TiempoMinimo} años)");
                 
-            if (docente.NumeroObras < requisito.ObrasMinimas)
+            if (indicadores.NumeroObras < requisito.ObrasMinimas)
                 throw new Exception($"No cumple con el número mínimo de obras ({requisito.ObrasMinimas})");
                 
-            if (docente.PuntajeEvaluacion < requisito.PuntajeEvaluacionMinimo)
+            if (indicadores.PuntajeEvaluacion < requisito.PuntajeEvaluacionMinimo)
                 throw new Exception($"No cumple con el puntaje mínimo de evaluación ({requisito.PuntajeEvaluacionMinimo}%)");
                 
-            if (docente.HorasCapacitacion < requisito.HorasCapacitacionMinimas)
+            if (indicadores.HorasCapacitacion < requisito.HorasCapacitacionMinimas)
                 throw new Exception($"No cumple con las horas mínimas de capacitación ({requisito.HorasCapacitacionMinimas} horas)");
                 
-            if (docente.TiempoInvestigacion < requisito.TiempoInvestigacionMinimo)
+            if (indicadores.TiempoInvestigacion < requisito.TiempoInvestigacionMinimo)
                 throw new Exception($"No cumple con el tiempo mínimo de investigación ({requisito.TiempoInvestigacionMinimo} meses)");
 
             // Crear la solicitud
             var solicitud = new SolicitudAscenso
             {
                 DocenteId = docenteId,
+                Docente = docente,
+                EstadoSolicitudId = 1, // 1 = Enviada
+                EstadoSolicitud = null!, // Se asignará por Entity Framework
                 FechaSolicitud = DateTime.Now,
                 NivelActual = docente.NivelActual,
                 NivelSolicitado = docente.NivelActual + 1,
-                Estado = EstadoSolicitud.Enviada,
-                TiempoEnRol = docente.TiempoEnRolActual,
-                NumeroObras = docente.NumeroObras,
-                PuntajeEvaluacion = docente.PuntajeEvaluacion,
-                HorasCapacitacion = docente.HorasCapacitacion,
-                TiempoInvestigacion = docente.TiempoInvestigacion,
+                TiempoEnRol = indicadores.TiempoEnRolActual,
+                NumeroObras = indicadores.NumeroObras,
+                PuntajeEvaluacion = indicadores.PuntajeEvaluacion,
+                HorasCapacitacion = indicadores.HorasCapacitacion,
+                TiempoInvestigacion = indicadores.TiempoInvestigacion,
                 Documentos = new List<DocumentoSolicitud>()
             };
 
@@ -107,6 +112,7 @@ namespace SGA.Application.Services
                 solicitud.Documentos.Add(new DocumentoSolicitud
                 {
                     DocumentoId = documentoId,
+                    Documento = null!, // Se asignará por Entity Framework
                     Solicitud = solicitud
                 });
             }
@@ -115,9 +121,7 @@ namespace SGA.Application.Services
             scope.Complete();
             
             return solicitud;
-        }
-
-        public async Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, EstadoSolicitud nuevoEstado, string? motivoRechazo = null, int revisorId = 0)
+        }        public async Task<SolicitudAscenso> ProcesarSolicitudAsync(int solicitudId, int estadoSolicitudId, string? motivoRechazo = null, int revisorId = 0)
         {
             using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             
@@ -125,14 +129,14 @@ namespace SGA.Application.Services
             if (solicitud == null)
                 throw new Exception("Solicitud no encontrada");
 
-            if (solicitud.Estado == EstadoSolicitud.Aprobada || solicitud.Estado == EstadoSolicitud.Rechazada)
+            if (solicitud.EstadoSolicitudId == 3 || solicitud.EstadoSolicitudId == 4) // 3=Aprobada, 4=Rechazada
                 throw new Exception("Esta solicitud ya fue procesada");
 
-            solicitud.Estado = nuevoEstado;
+            solicitud.EstadoSolicitudId = estadoSolicitudId;
             solicitud.FechaRevision = DateTime.Now;
             solicitud.RevisorId = revisorId;
 
-            if (nuevoEstado == EstadoSolicitud.Rechazada)
+            if (estadoSolicitudId == 4) // Rechazada
             {
                 if (string.IsNullOrWhiteSpace(motivoRechazo))
                     throw new Exception("Debe especificar el motivo del rechazo");
@@ -140,7 +144,7 @@ namespace SGA.Application.Services
                 solicitud.MotivoRechazo = motivoRechazo;
             }
             
-            if (nuevoEstado == EstadoSolicitud.Aprobada)
+            if (estadoSolicitudId == 3) // Aprobada
             {
                 // Actualizar nivel del docente
                 var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
@@ -149,10 +153,65 @@ namespace SGA.Application.Services
                     docente.NivelActual = solicitud.NivelSolicitado;
                     docente.FechaIngresoNivelActual = DateTime.Now;
                     
-                    // Reiniciar contadores
-                    docente.NumeroObras = 0;
-                    docente.HorasCapacitacion = 0;
-                    docente.TiempoInvestigacion = 0;
+                    // Reiniciar contadores en los indicadores
+                    if (docente.Indicadores != null)
+                    {
+                        docente.Indicadores.NumeroObras = 0;
+                        docente.Indicadores.HorasCapacitacion = 0;
+                        docente.Indicadores.TiempoInvestigacion = 0;
+                        docente.Indicadores.FechaActualizacion = DateTime.Now;
+                    }
+                    
+                    await _docenteRepository.UpdateAsync(docente);
+                }
+            }
+
+            await _solicitudRepository.UpdateAsync(solicitud);
+            scope.Complete();
+              return solicitud;
+        }
+
+        public async Task<SolicitudAscenso> RevisarSolicitudAsync(int solicitudId, int revisorId, int estadoSolicitudId, string? motivoRechazo, string? observaciones)
+        {
+            using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+                throw new Exception("Solicitud no encontrada");
+
+            if (solicitud.EstadoSolicitudId == 3 || solicitud.EstadoSolicitudId == 4) // 3=Aprobada, 4=Rechazada
+                throw new Exception("Esta solicitud ya fue procesada");
+
+            solicitud.EstadoSolicitudId = estadoSolicitudId;
+            solicitud.FechaRevision = DateTime.Now;
+            solicitud.RevisorId = revisorId;
+            solicitud.ObservacionesRevisor = observaciones;
+
+            if (estadoSolicitudId == 4) // Rechazada
+            {
+                if (string.IsNullOrWhiteSpace(motivoRechazo))
+                    throw new Exception("Debe especificar el motivo del rechazo");
+                    
+                solicitud.MotivoRechazo = motivoRechazo;
+            }
+            
+            if (estadoSolicitudId == 3) // Aprobada
+            {
+                // Actualizar nivel del docente
+                var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
+                if (docente != null)
+                {
+                    docente.NivelActual = solicitud.NivelSolicitado;
+                    docente.FechaIngresoNivelActual = DateTime.Now;
+                    
+                    // Reiniciar contadores en los indicadores
+                    if (docente.Indicadores != null)
+                    {
+                        docente.Indicadores.NumeroObras = 0;
+                        docente.Indicadores.HorasCapacitacion = 0;
+                        docente.Indicadores.TiempoInvestigacion = 0;
+                        docente.Indicadores.FechaActualizacion = DateTime.Now;
+                    }
                     
                     await _docenteRepository.UpdateAsync(docente);
                 }

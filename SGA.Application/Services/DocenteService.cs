@@ -34,9 +34,7 @@ namespace SGA.Application.Services
         public async Task<Docente> GetDocenteByEmailAsync(string email)
         {
             return await _docenteRepository.GetByEmailAsync(email);
-        }
-
-        public async Task<bool> ValidarRequisitosAscensoAsync(int docenteId)
+        }        public async Task<bool> ValidarRequisitosAscensoAsync(int docenteId)
         {
             var docente = await _docenteRepository.GetByIdAsync(docenteId);
             if (docente == null)
@@ -49,14 +47,17 @@ namespace SGA.Application.Services
             if (requisito == null)
                 return false;
 
-            return docente.TiempoEnRolActual >= requisito.TiempoMinimo &&
-                   docente.NumeroObras >= requisito.ObrasMinimas &&
-                   docente.PuntajeEvaluacion >= requisito.PuntajeEvaluacionMinimo &&
-                   docente.HorasCapacitacion >= requisito.HorasCapacitacionMinimas &&
-                   docente.TiempoInvestigacion >= requisito.TiempoInvestigacionMinimo;
-        }
+            // Los indicadores ahora están en la entidad IndicadorDocente relacionada
+            var indicador = docente.Indicadores;
+            if (indicador == null)
+                return false;
 
-        public async Task<Dictionary<string, bool>> ObtenerEstadoRequisitosAsync(int docenteId)
+            return indicador.TiempoEnRolActual >= requisito.TiempoMinimo &&
+                   indicador.NumeroObras >= requisito.ObrasMinimas &&
+                   indicador.PuntajeEvaluacion >= requisito.PuntajeEvaluacionMinimo &&
+                   indicador.HorasCapacitacion >= requisito.HorasCapacitacionMinimas &&
+                   indicador.TiempoInvestigacion >= requisito.TiempoInvestigacionMinimo;
+        }        public async Task<Dictionary<string, bool>> ObtenerEstadoRequisitosAsync(int docenteId)
         {
             var docente = await _docenteRepository.GetByIdAsync(docenteId);
             if (docente == null)
@@ -66,53 +67,74 @@ namespace SGA.Application.Services
             if (requisito == null)
                 return new Dictionary<string, bool>();
 
+            // Los indicadores ahora están en la entidad IndicadorDocente relacionada
+            var indicador = docente.Indicadores;
+            if (indicador == null)
+                return new Dictionary<string, bool>();
+
             return new Dictionary<string, bool>
             {
-                { "TiempoEnRol", docente.TiempoEnRolActual >= requisito.TiempoMinimo },
-                { "NumeroObras", docente.NumeroObras >= requisito.ObrasMinimas },
-                { "PuntajeEvaluacion", docente.PuntajeEvaluacion >= requisito.PuntajeEvaluacionMinimo },
-                { "HorasCapacitacion", docente.HorasCapacitacion >= requisito.HorasCapacitacionMinimas },
-                { "TiempoInvestigacion", docente.TiempoInvestigacion >= requisito.TiempoInvestigacionMinimo }
+                { "TiempoEnRol", indicador.TiempoEnRolActual >= requisito.TiempoMinimo },
+                { "NumeroObras", indicador.NumeroObras >= requisito.ObrasMinimas },
+                { "PuntajeEvaluacion", indicador.PuntajeEvaluacion >= requisito.PuntajeEvaluacionMinimo },
+                { "HorasCapacitacion", indicador.HorasCapacitacion >= requisito.HorasCapacitacionMinimas },
+                { "TiempoInvestigacion", indicador.TiempoInvestigacion >= requisito.TiempoInvestigacionMinimo }
             };
-        }
-
-        public async Task ActualizarIndicadoresAsync(int docenteId, int tiempoRol, int numeroObras, decimal puntajeEvaluacion, int horasCapacitacion, int tiempoInvestigacion)
+        }        public async Task ActualizarIndicadoresAsync(int docenteId, int tiempoRol, int numeroObras, decimal puntajeEvaluacion, int horasCapacitacion, int tiempoInvestigacion)
         {
             var docente = await _docenteRepository.GetByIdAsync(docenteId);
             if (docente == null)
                 throw new Exception("Docente no encontrado");
 
-            docente.TiempoEnRolActual = tiempoRol;
-            docente.NumeroObras = numeroObras;
-            docente.PuntajeEvaluacion = puntajeEvaluacion;
-            docente.HorasCapacitacion = horasCapacitacion;
-            docente.TiempoInvestigacion = tiempoInvestigacion;
+            // Actualizar o crear los indicadores del docente
+            if (docente.Indicadores == null)
+            {
+                docente.Indicadores = new IndicadorDocente
+                {
+                    DocenteId = docenteId,
+                    Docente = docente,
+                    TiempoEnRolActual = tiempoRol,
+                    NumeroObras = numeroObras,
+                    PuntajeEvaluacion = puntajeEvaluacion,
+                    HorasCapacitacion = horasCapacitacion,
+                    TiempoInvestigacion = tiempoInvestigacion,
+                    FechaActualizacion = DateTime.UtcNow
+                };
+            }
+            else
+            {
+                docente.Indicadores.TiempoEnRolActual = tiempoRol;
+                docente.Indicadores.NumeroObras = numeroObras;
+                docente.Indicadores.PuntajeEvaluacion = puntajeEvaluacion;
+                docente.Indicadores.HorasCapacitacion = horasCapacitacion;
+                docente.Indicadores.TiempoInvestigacion = tiempoInvestigacion;
+                docente.Indicadores.FechaActualizacion = DateTime.UtcNow;
+            }
 
             await _docenteRepository.UpdateAsync(docente);
-        }
-
-        public async Task UpdateDocenteAsync(Docente docente)
+        }        public async Task UpdateDocenteAsync(Docente docente)
         {
             var existingDocente = await _docenteRepository.GetByIdAsync(docente.Id);
             if (existingDocente == null)
-                throw new Exception("Docente no encontrado");            existingDocente.Cedula = docente.Cedula;
+                throw new Exception("Docente no encontrado");
+
+            existingDocente.Cedula = docente.Cedula;
             existingDocente.Nombres = docente.Nombres;
             existingDocente.Apellidos = docente.Apellidos;
             existingDocente.Email = docente.Email;
             existingDocente.TelefonoContacto = docente.TelefonoContacto;
-            existingDocente.Facultad = docente.Facultad;
+            existingDocente.FacultadId = docente.FacultadId;
             existingDocente.NivelActual = docente.NivelActual;
-            existingDocente.TiempoEnRolActual = docente.TiempoEnRolActual;
-            existingDocente.NumeroObras = docente.NumeroObras;
-            existingDocente.PuntajeEvaluacion = docente.PuntajeEvaluacion;
-            existingDocente.HorasCapacitacion = docente.HorasCapacitacion;
-            existingDocente.TiempoInvestigacion = docente.TiempoInvestigacion;
+            existingDocente.FechaIngresoNivelActual = docente.FechaIngresoNivelActual;
             existingDocente.NombreUsuario = docente.NombreUsuario;
             existingDocente.PasswordHash = docente.PasswordHash;
             existingDocente.IntentosFallidos = docente.IntentosFallidos;
             existingDocente.Bloqueado = docente.Bloqueado;
             existingDocente.FechaBloqueo = docente.FechaBloqueo;
             existingDocente.EsAdministrador = docente.EsAdministrador;
+            existingDocente.Activo = docente.Activo;
+            existingDocente.FechaBaja = docente.FechaBaja;
+            existingDocente.MotivoBaja = docente.MotivoBaja;
 
             await _docenteRepository.UpdateAsync(existingDocente);
         }

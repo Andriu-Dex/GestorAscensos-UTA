@@ -187,12 +187,9 @@ namespace SGA.Api.Controllers
                 if (existingDocente != null)
                 {
                     return BadRequest(new { message = "Ya existe un docente registrado con esta cédula" });
-                }
-
-                // Verificar si existen datos de TTHH para esta cédula
+                }                // Verificar si existen datos de TTHH para esta cédula
                 var datosTTHH = await _datosTTHHService.GetDatosByCedulaAsync(model.Cedula);
-                
-                // Si no existen datos en TTHH, registrarlos
+                  // Si no existen datos en TTHH, registrarlos
                 if (datosTTHH == null)
                 {
                     var nuevosDatosTTHH = new DatosTTHH
@@ -200,7 +197,9 @@ namespace SGA.Api.Controllers
                         Cedula = model.Cedula,
                         Nombres = model.Nombres,
                         Apellidos = model.Apellidos,
-                        Facultad = model.Facultad,
+                        FacultadId = 1, // Por defecto FISEI, debe ajustarse según el modelo
+                        Facultad = null!, // Se asignará por Entity Framework
+                        FechaIngreso = DateTime.Now,
                         FechaRegistro = DateTime.Now
                     };
                     await _datosTTHHService.CreateDatosTTHHAsync(nuevosDatosTTHH);
@@ -214,7 +213,8 @@ namespace SGA.Api.Controllers
                     Apellidos = model.Apellidos,
                     Email = model.Email,
                     TelefonoContacto = model.Telefono,
-                    Facultad = model.Facultad,
+                    FacultadId = 1, // Por defecto FISEI, debe ajustarse según el modelo
+                    Facultad = null!, // Se asignará por Entity Framework
                     NivelActual = 1, // Por defecto, todos inician en Titular 1
                     FechaIngresoNivelActual = DateTime.Now,
                     NombreUsuario = model.Username,

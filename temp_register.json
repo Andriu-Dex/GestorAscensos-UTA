@@ -1,0 +1,11 @@
+{
+  "cedula": "1804567890",
+  "nombres": "María Elena",
+  "apellidos": "García Rodríguez",
+  "email": "maria.garcia@uta.edu.ec",
+  "telefono": "0987654321",
+  "facultad": "FISEI",
+  "username": "mgarcia",
+  "password": "Password123!",
+  "confirmPassword": "Password123!"
+}

@@ -1,0 +1,206 @@
+@page "/reportes"
+@using SGA.Web.Services
+@using SGA.Web.Models
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="container mt-4">
+    <h2 class="mb-4">Reportes del Sistema</h2>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Reporte de Estado Docente</h4>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Este reporte muestra el estado actual del docente, incluyendo:
+                    </p>
+                    <ul>
+                        <li>Información personal y de facultad</li>
+                        <li>Nivel actual y tiempo en el nivel</li>
+                        <li>Estado de los indicadores para ascenso</li>
+                        <li>Historial de solicitudes realizadas</li>
+                    </ul>
+                    <button @onclick="DescargarReporteDocente" class="btn btn-primary mt-3" disabled="@descargando">
+                        @if (descargando)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span> Generando reporte...</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-file-pdf me-2"></i>
+                            <span>Descargar Reporte</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            @if (esAdmin)
+            {
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0">Reportes Administrativos</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>
+                            Como administrador, puede generar reportes adicionales:
+                        </p>
+
+                        <div class="mt-3">
+                            <label class="form-label">Reporte por Docente:</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" @bind="docenteIdSeleccionado" 
+                                       placeholder="Ingrese ID del docente" />
+                                <button class="btn btn-info" @onclick="DescargarReporteDocenteEspecifico" disabled="@descargando">
+                                    <i class="fas fa-download me-2"></i>Generar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Reporte de Solicitud:</label>
+                            <div class="input-group mb-3">
+                                <input type="number" class="form-control" @bind="solicitudIdSeleccionada" 
+                                       placeholder="Ingrese ID de la solicitud" />
+                                <button class="btn btn-info" @onclick="DescargarReporteSolicitud" disabled="@descargando">
+                                    <i class="fas fa-download me-2"></i>Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">Ayuda</h4>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Los reportes se generan en formato PDF y contienen información actualizada 
+                        sobre el estado del docente y sus procesos de ascenso.
+                    </p>
+                    <p>
+                        Los reportes generados son documentos oficiales que pueden ser utilizados
+                        para verificar el estado actual de los requisitos de ascenso.
+                    </p>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Puede guardar los reportes generados para 
+                        referencia futura o imprimirlos si es necesario.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool descargando = false;
+    private bool esAdmin = false;
+    private int docenteIdSeleccionado;
+    private int solicitudIdSeleccionada;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            esAdmin = user.IsInRole("Administrador");
+        }
+    }
+
+    private async Task DescargarReporteDocente()
+    {
+        try
+        {
+            descargando = true;
+            
+            // Obtener el reporte del docente actual
+            var response = await ApiService.GetAsync<byte[]>("api/reporte/mi-reporte");
+            
+            if (response != null)
+            {
+                // Convertir el arreglo de bytes a un Blob en JavaScript
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", "MiReporte.pdf", response);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error al generar el reporte: {ex.Message}");
+        }
+        finally
+        {
+            descargando = false;
+        }
+    }
+
+    private async Task DescargarReporteDocenteEspecifico()
+    {
+        if (docenteIdSeleccionado <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Debe ingresar un ID de docente válido");
+            return;
+        }
+
+        try
+        {
+            descargando = true;
+            
+            // Obtener el reporte de un docente específico
+            var response = await ApiService.GetAsync<byte[]>($"api/reporte/docente/{docenteIdSeleccionado}");
+            
+            if (response != null)
+            {
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", $"ReporteDocente_{docenteIdSeleccionado}.pdf", response);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error al generar el reporte: {ex.Message}");
+        }
+        finally
+        {
+            descargando = false;
+        }
+    }
+
+    private async Task DescargarReporteSolicitud()
+    {
+        if (solicitudIdSeleccionada <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Debe ingresar un ID de solicitud válido");
+            return;
+        }
+
+        try
+        {
+            descargando = true;
+            
+            // Obtener el reporte de una solicitud específica
+            var response = await ApiService.GetAsync<byte[]>($"api/reporte/solicitud/{solicitudIdSeleccionada}");
+            
+            if (response != null)
+            {
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", $"ReporteSolicitud_{solicitudIdSeleccionada}.pdf", response);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error al generar el reporte: {ex.Message}");
+        }
+        finally
+        {
+            descargando = false;
+        }
+    }
+}

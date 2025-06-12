@@ -7,10 +7,10 @@ namespace SGA.Web.Services
 {
     public class ApiAuthenticationStateProvider : AuthenticationStateProvider
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly SGA.Web.Services.ILocalStorageService _localStorage;
         private readonly HttpClient _httpClient;
 
-        public ApiAuthenticationStateProvider(ILocalStorageService localStorage, HttpClient httpClient)
+        public ApiAuthenticationStateProvider(SGA.Web.Services.ILocalStorageService localStorage, HttpClient httpClient)
         {
             _localStorage = localStorage;
             _httpClient = httpClient;
