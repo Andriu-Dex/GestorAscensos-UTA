@@ -83,7 +83,8 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-// Apply database migrations
+// Apply database migrations - Temporarily disabled for JWT testing
+/*
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -100,6 +101,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while applying database migrations");
     }
 }
+*/
 
 app.UseHttpsRedirection();
 app.UseCors("AllowBlazorClient");
