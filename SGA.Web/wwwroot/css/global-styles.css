@@ -1,0 +1,177 @@
+/* Estilos globales para mejorar la apariencia de la aplicación */
+
+/* Estilos generales */
+:root {
+  --uta-primary: #8a1538;
+  --uta-secondary: #741230;
+  --uta-accent: #d4af37;
+  --uta-text: #333333;
+  --uta-light: #f8f9fa;
+  --uta-dark: #212529;
+  --uta-success: #28a745;
+  --uta-info: #17a2b8;
+  --uta-warning: #ffc107;
+  --uta-danger: #dc3545;
+}
+
+body {
+  transition: all 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Estilo de tarjetas */
+.card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+}
+
+/* Botones */
+.btn {
+  border-radius: 5px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: var(--uta-primary);
+  border-color: var(--uta-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--uta-secondary);
+  border-color: var(--uta-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(138, 21, 56, 0.3);
+}
+
+/* Input fields */
+.form-control {
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: var(--uta-primary);
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+/* Animaciones */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Headers y títulos */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  color: var(--uta-dark);
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Links */
+a {
+  color: var(--uta-primary);
+  transition: color 0.3s ease;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--uta-secondary);
+  text-decoration: underline;
+}
+
+/* Navegación */
+.nav-link {
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  transform: translateY(-2px);
+}
+
+/* Alerts */
+.alert {
+  border-radius: 5px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Tablas */
+.table {
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: var(--uta-primary);
+  color: white;
+}
+
+/* Cargar estilos con una animación */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--uta-primary),
+    var(--uta-accent),
+    var(--uta-primary)
+  );
+  z-index: 9999;
+  animation: loadingBar 1.5s linear;
+  opacity: 0;
+}
+
+@keyframes loadingBar {
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}

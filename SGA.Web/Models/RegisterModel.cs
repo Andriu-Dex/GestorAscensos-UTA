@@ -27,13 +27,13 @@ namespace SGA.Web.Models
         public string Telefono { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La facultad es obligatoria")]
-        public string Facultad { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        public string Facultad { get; set; } = string.Empty;        [Required(ErrorMessage = "La contraseña es obligatoria")]
         [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener entre 8 y 100 caracteres")]
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
             ErrorMessage = "La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial")]
-        public string Password { get; set; }= string.Empty;        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
+        public string Password { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
         [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
         public string ConfirmPassword { get; set; } = string.Empty;
 

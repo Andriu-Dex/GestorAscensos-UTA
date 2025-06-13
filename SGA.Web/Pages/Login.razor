@@ -5,55 +5,56 @@
 @inject NavigationManager NavigationManager
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
-<div class="container">
+<div class="container login-container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card mt-5">
-                <div class="card-header bg-primary text-white">
+        <div class="col-md-8">
+            <div class="card login-card">
+                <div class="login-header">
                     <h3 class="text-center">Iniciar Sesión</h3>
                 </div>
-                <div class="card-body">
+                <div class="login-body">
                     <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
                         <DataAnnotationsValidator />
-                        <ValidationSummary />
+                        <ValidationSummary class="text-danger" />
 
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="alert alert-danger">
+                            <div class="login-error">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
                                 @errorMessage
                             </div>
                         }
 
-                        <div class="form-group mb-3">
-                            <label for="email">Correo Electrónico:</label>
-                            <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
-                            <ValidationMessage For="@(() => loginModel.Email)" />
+                        <div class="login-form-group">
+                            <label for="email" class="login-label">Correo Electrónico:</label>
+                            <InputText id="email" class="form-control login-input" @bind-Value="loginModel.Email" />
+                            <ValidationMessage For="@(() => loginModel.Email)" class="login-validation-message" />
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label for="password">Contraseña:</label>
-                            <div class="input-group">
+                        <div class="login-form-group">
+                            <label for="password" class="login-label">Contraseña:</label>
+                            <div class="position-relative">
                                 <InputText id="password" 
-                                         class="form-control" 
+                                         class="form-control login-input" 
                                          type="@(showPassword ? "text" : "password")" 
                                          @bind-Value="loginModel.Password" />
                                 <button type="button" 
-                                        class="btn btn-outline-secondary" 
+                                        class="btn position-absolute end-0 top-0 h-100 text-white" 
+                                        style="background-color: #8A1538; border-radius: 0 5px 5px 0;" 
                                         @onclick="TogglePasswordVisibility">
-                                    <i class="@(showPassword ? "fas fa-eye-slash" : "fas fa-eye")"></i>
+                                    <i class="bi bi-@(showPassword ? "eye-slash" : "eye")"></i>
                                 </button>
                             </div>
-                            <ValidationMessage For="@(() => loginModel.Password)" />
+                            <ValidationMessage For="@(() => loginModel.Password)" class="login-validation-message" />
                         </div>
 
-                        <div class="form-group mb-3">
-                            <div class="form-text text-info">
-                                <small>Nota: Después de 3 intentos fallidos, la cuenta se bloqueará por 15 minutos.</small>
-                            </div>
+                        <div class="login-note">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <span>Nota: Después de 3 intentos fallidos, la cuenta se bloqueará por 15 minutos.</span>
                         </div>
 
-                        <div class="form-group d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                        <div class="form-group d-grid gap-2 mt-4">
+                            <button type="submit" class="login-btn animate-pulse" disabled="@isLoading">
                                 @if (isLoading)
                                 {
                                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -61,14 +62,14 @@
                                 }
                                 else
                                 {
-                                    <span>Iniciar Sesión</span>
+                                    <span><i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión</span>
                                 }
                             </button>
                         </div>
                     </EditForm>
                 </div>
-                <div class="card-footer text-center">
-                    <p>¿No tienes una cuenta? <a href="/register">Regístrate aquí</a></p>
+                <div class="login-footer">
+                    <p>¿No tienes una cuenta? <a href="/register" class="login-link">Regístrate aquí</a></p>
                 </div>
             </div>
         </div>
