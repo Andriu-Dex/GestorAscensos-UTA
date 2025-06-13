@@ -111,5 +111,104 @@ namespace SGA.Web.Services
                 return null;
             }
         }
+
+        public async Task<bool> ValidateToken()
+        {
+            var savedToken = await _localStorage.GetItemAsync<string>("authToken");
+
+            if (string.IsNullOrWhiteSpace(savedToken))
+            {
+                return false;
+            }
+
+            try
+            {
+                // Validar que el token sea un JWT válido
+                var parts = savedToken.Split('.');
+                if (parts.Length != 3)
+                {
+                    return false;
+                }
+
+                // Validar que podamos parsear el payload
+                var payload = ParseBase64WithoutPadding(parts[1]);
+                if (payload == null)
+                {
+                    return false;
+                }
+
+                // Verificar si el token ha expirado
+                var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+                if (keyValuePairs == null)
+                {
+                    return false;
+                }
+
+                // Verificar si el token tiene un claim "exp" (tiempo de expiración)
+                if (keyValuePairs.TryGetValue("exp", out object? exp))
+                {
+                    if (exp != null)
+                    {
+                        // Convertir el valor de exp a un DateTimeOffset
+                        var expValue = Convert.ToInt64(exp);
+                        var expirationTime = DateTimeOffset.FromUnixTimeSeconds(expValue).DateTime;
+
+                        // Verificar si el token ha expirado
+                        if (expirationTime <= DateTime.UtcNow)
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Método para verificar si el token actual es válido
+        public async Task<bool> IsTokenValidAsync()
+        {
+            var savedToken = await _localStorage.GetItemAsync<string>("authToken");
+            
+            if (string.IsNullOrWhiteSpace(savedToken))
+            {
+                return false;
+            }
+            
+            try
+            {
+                // Verificar si podemos parsear el token y si contiene los claims esperados
+                var claims = ParseClaimsFromJwt(savedToken);
+                
+                if (claims == null || !claims.Any())
+                {
+                    return false;
+                }
+                
+                // Verificar si hay algún claim de expiración
+                var expClaim = claims.FirstOrDefault(c => c.Type == "exp");
+                
+                if (expClaim != null)
+                {
+                    // Verificar si el token ha expirado
+                    var expirationTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim.Value));
+                    
+                    if (expirationTime <= DateTimeOffset.UtcNow)
+                    {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

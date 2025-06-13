@@ -3,104 +3,280 @@
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3>Bienvenido al Sistema de Gestión de Ascensos</h3>
+<div class="container dashboard-container">
+    <div class="welcome-section animate__animated animate__fadeInDown">
+        <div class="welcome-header">
+            <div class="welcome-icon">
+                <i class="bi bi-award"></i>
+            </div>
+            <h2 class="welcome-title">¡Bienvenido al Sistema de Gestión de Ascensos!</h2>
+        </div>
+        @if (userInfo != null)
+        {
+            <h4 class="welcome-subtitle animate__animated animate__fadeIn animate__delay-1s">
+                Hola, <span class="text-primary fw-bold">@userInfo.Nombres @userInfo.Apellidos</span>
+            </h4>
+        }
+    </div>    @if (isLoading)
+    {
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6 text-center">
+                <div class="loading-container animate__animated animate__fadeIn">
+                    <div class="spinner-grow text-primary" role="status"></div>
+                    <div class="spinner-grow text-primary" role="status" style="animation-delay: 0.2s"></div>
+                    <div class="spinner-grow text-primary" role="status" style="animation-delay: 0.4s"></div>
                 </div>
-                <div class="card-body">
-                    @if (userInfo != null)
+                <p class="mt-4 loading-text animate__animated animate__fadeIn animate__delay-1s">
+                    <i class="bi bi-clock-history me-2"></i>Cargando información del usuario...
+                </p>
+            </div>
+        </div>
+    }
+    else if (userInfo != null)
+    {        <div class="row">
+            <div class="col-lg-12">
+                <div class="user-summary-bar animate__animated animate__fadeInLeft mb-4">
+                    <div class="user-avatar">
+                        <div class="avatar avatar-md">
+                            <span class="avatar-initial">@GetInitials()</span>
+                        </div>
+                    </div>
+                    <div class="user-info">
+                        <h5 class="mb-0">Titular @userInfo.NivelActual | @userInfo.Facultad</h5>
+                        <p class="text-muted mb-0"><i class="bi bi-calendar-event me-1"></i> Ingreso: @userInfo.FechaIngresoNivelActual.ToString("dd/MM/yyyy")</p>
+                    </div>
+                    <div class="user-actions">
+                        <a href="/perfil" class="btn btn-outline-primary">
+                            <i class="bi bi-person-fill me-2"></i> Mi Perfil
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-12">
+                <div class="status-section">
+                    <h4 class="section-title">Estado de Requisitos</h4>
+                    
+                    @if (requisitos != null)
                     {
-                        <h4>Hola, @userInfo.Nombres @userInfo.Apellidos</h4>
-                        <p>Nivel actual: Titular @userInfo.NivelActual</p>
-                        <p>Fecha de ingreso al nivel actual: @userInfo.FechaIngresoNivelActual.ToString("dd/MM/yyyy")</p>
-                        
-                        <div class="mt-4">
-                            <h5>Indicadores clave para ascenso:</h5>
-                            <div class="row mt-3">
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Tiempo en rol actual</h6>
-                                            <p class="fs-4">0 años</p>
-                                            <button class="btn btn-sm btn-outline-primary">Importar</button>
-                                        </div>
-                                    </div>
+                        <div class="status-card">
+                            <h5 class="status-title">
+                                <i class="bi bi-clipboard-check"></i> 
+                                Progreso para ascenso a Titular @(userInfo.NivelActual + 1)
+                            </h5>
+                              <div class="progress-container animate__animated animate__fadeInUp animate__delay-1s">
+                                <div class="progress-label">
+                                    <span><i class="bi bi-check-circle-fill me-2"></i>Requisitos cumplidos:</span>
+                                    <span class="badge bg-primary">@GetRequisitosCompletados() de 5</span>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Obras académicas</h6>
-                                            <p class="fs-4">0</p>
-                                            <button class="btn btn-sm btn-outline-primary">Importar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Evaluación docente</h6>
-                                            <p class="fs-4">0%</p>
-                                            <button class="btn btn-sm btn-outline-primary">Importar</button>
-                                        </div>
+                                <div class="progress progress-lg">
+                                    <div class="progress-bar @GetRequisitosColor()" 
+                                         role="progressbar" 
+                                         style="width: @(GetRequisitosCompletados() * 20)%;" 
+                                         aria-valuenow="@GetRequisitosCompletados()" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="5">
+                                        <span class="progress-value">@(GetRequisitosCompletados() * 20)%</span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Horas de capacitación</h6>
-                                            <p class="fs-4">0 horas</p>
-                                            <button class="btn btn-sm btn-outline-primary">Importar</button>
-                                        </div>
-                                    </div>
+                            
+                            <div class="status-badge @GetStatusBadgeClass()">
+                                @GetStatusBadgeText()
+                            </div>
+                            
+                            @if (requisitos.CumpleTiempoRol && requisitos.CumpleObras && 
+                                 requisitos.CumpleEvaluacion && requisitos.CumpleCapacitacion && requisitos.CumpleInvestigacion)
+                            {
+                                <a href="/solicitudes/nueva" class="btn btn-success">
+                                    <i class="bi bi-file-earmark-plus"></i> Iniciar Solicitud de Ascenso
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="/perfil" class="btn btn-outline-primary">
+                                    <i class="bi bi-info-circle"></i> Ver detalles completos
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+                  <div class="indicators-section">
+                    <div class="section-header mb-3">
+                        <h4 class="section-title"><i class="bi bi-graph-up me-2"></i>Indicadores Académicos</h4>
+                        <p class="text-muted">Estos son los indicadores clave para tu proceso de ascenso</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="indicator-card">
+                                <div class="card-header-mini">
+                                    <i class="bi bi-clock-history indicator-icon"></i>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Tiempo en investigación</h6>
-                                            <p class="fs-4">0 meses</p>
-                                            <button class="btn btn-sm btn-outline-primary">Importar</button>
-                                        </div>
+                                <div class="card-body">
+                                    <h6 class="indicator-title">Tiempo en rol actual</h6>
+                                    <div class="indicator-value">@(indicadores?.TiempoRol ?? 0)</div>
+                                    <div class="text-muted">meses</div>
+                                    <div class="indicator-progress">
+                                        <div class="indicator-progress-bar" 
+                                             style="width: @GetPercentage((indicadores?.TiempoRol ?? 0), 48)%;"></div>
                                     </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body text-center">
-                                            <h6>Estado de solicitud</h6>
-                                            <p class="fs-4">Sin solicitud</p>
-                                        </div>
+                                    <div class="indicator-meta">
+                                        <span>Meta: 48 meses</span>
+                                        <span>@GetPercentage((indicadores?.TiempoRol ?? 0), 48)%</span>
                                     </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(1)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-4">
-                            <button class="btn btn-primary" @onclick="HandleLogout">Cerrar Sesión</button>
+                        <div class="col-md-4 mb-4">
+                            <div class="indicator-card">
+                                <div class="card-header-mini">
+                                    <i class="bi bi-book indicator-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="indicator-title">Obras académicas</h6>
+                                    <div class="indicator-value">@(indicadores?.NumeroObras ?? 0)</div>
+                                    <div class="text-muted">obras</div>
+                                    <div class="indicator-progress">
+                                        <div class="indicator-progress-bar" 
+                                             style="width: @GetPercentage((indicadores?.NumeroObras ?? 0), 3)%;"></div>
+                                    </div>
+                                    <div class="indicator-meta">
+                                        <span>Meta: 3 obras</span>
+                                        <span>@GetPercentage((indicadores?.NumeroObras ?? 0), 3)%</span>
+                                    </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(2)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    }
-                    else
-                    {
-                        <p>Cargando información del usuario...</p>
-                    }
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="indicator-card">
+                                <div class="card-header-mini">
+                                    <i class="bi bi-star indicator-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="indicator-title">Evaluación docente</h6>
+                                    <div class="indicator-value">@(indicadores?.PuntajeEvaluacion ?? 0)%</div>
+                                    <div class="text-muted">promedio</div>
+                                    <div class="indicator-progress">
+                                        <div class="indicator-progress-bar @GetEvaluationColorClass(indicadores?.PuntajeEvaluacion ?? 0)" 
+                                             style="width: @(indicadores?.PuntajeEvaluacion ?? 0)%;"></div>
+                                    </div>
+                                    <div class="indicator-meta">
+                                        <span>Meta: 80%</span>
+                                        <span>@(indicadores?.PuntajeEvaluacion ?? 0)%</span>
+                                    </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(3)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="indicator-card">
+                                <div class="card-header-mini">
+                                    <i class="bi bi-journal-code indicator-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="indicator-title">Horas de capacitación</h6>
+                                    <div class="indicator-value">@(indicadores?.HorasCapacitacion ?? 0)</div>
+                                    <div class="text-muted">horas</div>
+                                    <div class="indicator-progress">
+                                        <div class="indicator-progress-bar" 
+                                             style="width: @GetPercentage((indicadores?.HorasCapacitacion ?? 0), 120)%;"></div>
+                                    </div>
+                                    <div class="indicator-meta">
+                                        <span>Meta: 120 horas</span>
+                                        <span>@GetPercentage((indicadores?.HorasCapacitacion ?? 0), 120)%</span>
+                                    </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(4)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                          <div class="col-md-6 mb-4">
+                            <div class="indicator-card">
+                                <div class="card-header-mini">
+                                    <i class="bi bi-search indicator-icon"></i>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="indicator-title">Tiempo en investigación</h6>
+                                    <div class="indicator-value">@(indicadores?.TiempoInvestigacion ?? 0)</div>
+                                    <div class="text-muted">meses</div>
+                                    <div class="indicator-progress">
+                                        <div class="indicator-progress-bar" 
+                                             style="width: @GetPercentage((indicadores?.TiempoInvestigacion ?? 0), 24)%;"></div>
+                                    </div>
+                                    <div class="indicator-meta">
+                                        <span>Meta: 24 meses</span>
+                                        <span>@GetPercentage((indicadores?.TiempoInvestigacion ?? 0), 24)%</span>
+                                    </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(5)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                      <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-primary btn-lg refresh-all-btn animate__animated animate__pulse animate__infinite" @onclick="RefreshIndicadores">
+                            <i class="bi bi-arrow-clockwise me-2"></i> Actualizar Todos los Indicadores
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+          <div class="row mt-5">
+            <div class="col-12 text-center">
+                <button class="logout-btn animate__animated animate__fadeInUp animate__delay-1s" @onclick="HandleLogout">
+                    <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
+                </button>
+            </div>
+            <div class="col-12 text-center mt-3">
+                <p class="text-muted small animate__animated animate__fadeIn animate__delay-2s">
+                    <i class="bi bi-info-circle-fill me-1"></i> Sistema Académico UTA • @DateTime.Now.ToString("yyyy")
+                </p>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     private UserInfoModel? userInfo;
-    
-    protected override async Task OnInitializedAsync()
+    private IndicadoresModel? indicadores;
+    private RequisitosModel? requisitos;
+    private bool isLoading = true;
+    private bool isImporting = false;    protected override async Task OnInitializedAsync()
     {
         try
         {
+            isLoading = true;
+            
+            // Configurar el header de autorización
+            await AuthService.ConfigureAuthenticationHeader();
+            
             userInfo = await AuthService.GetUserInfo();
+            
+            if (userInfo == null)
+            {
+                await HandleLogout();
+                return;
+            }
+            
+            await LoadIndicadores();
+            await LoadRequisitos();
         }
         catch (Exception)
         {
@@ -108,11 +284,282 @@
             // es posible que el token haya expirado
             await HandleLogout();
         }
+        finally
+        {
+            isLoading = false;
+            await Task.Delay(100); // Pequeño retraso para asegurar que el DOM está listo
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isLoading)
+        {
+            await JSRuntime.InvokeVoidAsync("initializeAnimations");
+        }
+    }    private async Task LoadIndicadores()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/docente/indicadores");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                indicadores = await response.Content.ReadFromJsonAsync<IndicadoresModel>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                await HandleLogout();
+            }
+            else
+            {
+                // Para otros errores, inicializar con valores predeterminados
+                indicadores = new IndicadoresModel();
+                Console.WriteLine($"Error al cargar indicadores: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // En caso de error, inicializar con valores predeterminados
+            indicadores = new IndicadoresModel();
+            Console.WriteLine($"Error al cargar indicadores: {ex.Message}");
+        }
+    }    private async Task LoadRequisitos()
+    {
+        try
+        {
+            if (userInfo != null)
+            {
+                var response = await Http.GetAsync($"api/validacion/requisitos?nivelActual={userInfo.NivelActual}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    requisitos = await response.Content.ReadFromJsonAsync<RequisitosModel>();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    await HandleLogout();
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // El endpoint no existe, inicializar con valores predeterminados
+                    requisitos = new RequisitosModel();
+                    Console.WriteLine("Endpoint de requisitos no encontrado, usando valores predeterminados");
+                }
+                else
+                {
+                    // Para otros errores, inicializar con valores predeterminados
+                    requisitos = new RequisitosModel();
+                    Console.WriteLine($"Error al cargar requisitos: {response.StatusCode}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // En caso de error, inicializar con valores predeterminados
+            requisitos = new RequisitosModel();
+            Console.WriteLine($"Error al cargar requisitos: {ex.Message}");
+        }
+    }
+    
+    private async Task RefreshIndicadores()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PostAsync("api/docente/actualizar-indicadores", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Indicadores actualizados correctamente");
+                await LoadIndicadores();
+                await LoadRequisitos();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Error al actualizar indicadores", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private async Task UpdateIndicador(int tipo)
+    {
+        if (isImporting)
+            return;
+            
+        try
+        {
+            isImporting = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            string endpoint = "";
+            
+            switch (tipo)
+            {
+                case 1: // Tiempo en rol
+                    endpoint = "api/docente/importar-tiempo-rol";
+                    break;
+                case 2: // Obras
+                    endpoint = "api/docente/importar-obras";
+                    break;
+                case 3: // Evaluación
+                    endpoint = "api/docente/importar-evaluacion";
+                    break;
+                case 4: // Capacitación
+                    endpoint = "api/docente/importar-capacitacion";
+                    break;
+                case 5: // Investigación
+                    endpoint = "api/docente/importar-investigacion";
+                    break;
+            }
+            
+            if (!string.IsNullOrEmpty(endpoint))
+            {
+                var response = await Http.PostAsync(endpoint, null);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Indicador actualizado correctamente");
+                    await LoadIndicadores();
+                    await LoadRequisitos();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Error al importar indicador", "error");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+    
+    private int GetPercentage(int value, int max)
+    {
+        return max > 0 ? Math.Min(100, (value * 100) / max) : 0;
+    }
+    
+    private string GetInitials()
+    {
+        if (userInfo == null)
+            return "";
+            
+        if (string.IsNullOrEmpty(userInfo.Nombres) || string.IsNullOrEmpty(userInfo.Apellidos))
+            return "";
+            
+        return userInfo.Nombres[0].ToString().ToUpper() + userInfo.Apellidos[0].ToString().ToUpper();
+    }
+    
+    private string GetEvaluationColorClass(decimal puntaje)
+    {
+        if (puntaje >= 90)
+            return "bg-success";
+        else if (puntaje >= 80)
+            return "bg-primary";
+        else if (puntaje >= 70)
+            return "bg-warning";
+        else
+            return "bg-danger";
+    }
+    
+    private string GetRequisitosColor()
+    {
+        int completados = GetRequisitosCompletados();
+        
+        if (completados == 5)
+            return "bg-success";
+        else if (completados >= 3)
+            return "bg-primary";
+        else if (completados >= 1)
+            return "bg-warning";
+        else
+            return "bg-danger";
+    }
+    
+    private int GetRequisitosCompletados()
+    {
+        if (requisitos == null)
+            return 0;
+            
+        int completados = 0;
+        
+        if (requisitos.CumpleTiempoRol) completados++;
+        if (requisitos.CumpleObras) completados++;
+        if (requisitos.CumpleEvaluacion) completados++;
+        if (requisitos.CumpleCapacitacion) completados++;
+        if (requisitos.CumpleInvestigacion) completados++;
+        
+        return completados;
+    }
+    
+    private string GetStatusBadgeClass()
+    {
+        int completados = GetRequisitosCompletados();
+        
+        if (completados == 5)
+            return "status-badge-success";
+        else if (completados >= 3)
+            return "status-badge-info";
+        else if (completados >= 1)
+            return "status-badge-warning";
+        else
+            return "status-badge-danger";
+    }
+    
+    private string GetStatusBadgeText()
+    {
+        int completados = GetRequisitosCompletados();
+        
+        if (completados == 5)
+            return "¡Listo para solicitar ascenso!";
+        else if (completados >= 3)
+            return "En progreso";
+        else if (completados >= 1)
+            return "Iniciado";
+        else
+            return "Requisitos no cumplidos";
     }
     
     private async Task HandleLogout()
     {
         await AuthService.Logout();
         NavigationManager.NavigateTo("/login");
+    }
+    
+    public class IndicadoresModel
+    {
+        public int TiempoRol { get; set; }
+        public int NumeroObras { get; set; }
+        public decimal PuntajeEvaluacion { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int TiempoInvestigacion { get; set; }
+    }
+    
+    public class RequisitosModel
+    {
+        public bool CumpleTiempoRol { get; set; }
+        public bool CumpleObras { get; set; }
+        public bool CumpleEvaluacion { get; set; }
+        public bool CumpleCapacitacion { get; set; }
+        public bool CumpleInvestigacion { get; set; }
     }
 }

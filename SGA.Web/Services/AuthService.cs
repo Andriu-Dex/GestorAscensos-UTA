@@ -93,12 +93,21 @@ namespace SGA.Web.Services
             {
                 return new RegisterResult { Success = false, Message = $"Error: {ex.Message}" };
             }
-        }
-
-        public async Task<UserInfoModel?> GetUserInfo()
+        }        public async Task<UserInfoModel?> GetUserInfo()
         {
             try
             {
+                // Obtener el token del localStorage
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return null;
+                }
+                
+                // Configurar el header de autorización
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                
                 var response = await _httpClient.GetAsync("api/auth/me");
 
                 if (response.IsSuccessStatusCode)
@@ -112,7 +121,7 @@ namespace SGA.Web.Services
             {
                 return null;
             }
-        }        public async Task Logout()
+        }public async Task Logout()
         {
             await _localStorage.RemoveItemAsync("authToken");
             ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsLoggedOut();
@@ -181,8 +190,52 @@ namespace SGA.Web.Services
                     Message = $"Error al verificar la cédula: {ex.Message}" 
                 };
             }
+        }        public async Task<bool> ValidateToken()
+        {
+            try
+            {
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return false;
+                }
+                
+                // Configurar el header de autorización para futuras peticiones
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                
+                // Solo verificamos si el token existe, no hacemos llamadas al servidor
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
-    }public class LoginResult
+
+        public async Task ConfigureAuthenticationHeader()
+        {
+            try
+            {
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
+                else
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = null;
+                }
+            }
+            catch
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+            }
+        }
+    }
+
+    public class LoginResult
     {
         public bool Success { get; set; }
         public string Token { get; set; } = string.Empty;
