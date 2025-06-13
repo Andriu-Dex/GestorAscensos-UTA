@@ -14,33 +14,32 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SGA.Application.Services;
 using SGA.Domain.Entities;
+using SGA.Domain.Utilities;
 
 namespace SGA.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
-    {
-        private readonly IDocenteService _docenteService;
+    {        private readonly IDocenteService _docenteService;
         private readonly IDatosTTHHService _datosTTHHService;
+        private readonly IEmailNormalizationService _emailNormalizationService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
-        private readonly IAntiforgery _antiforgery;
-
-        public AuthController(
+        private readonly IAntiforgery _antiforgery;        public AuthController(
             IDocenteService docenteService,
             IDatosTTHHService datosTTHHService,
+            IEmailNormalizationService emailNormalizationService,
             IConfiguration configuration,
             ILogger<AuthController> logger,
             IAntiforgery antiforgery)
         {
             _docenteService = docenteService;
             _datosTTHHService = datosTTHHService;
+            _emailNormalizationService = emailNormalizationService;
             _configuration = configuration;
             _logger = logger;
-            _antiforgery = antiforgery;        }
-
-        [HttpGet("tthh/{cedula}")]
+            _antiforgery = antiforgery;}        [HttpGet("tthh/{cedula}")]
         public async Task<IActionResult> GetDatosTTHH(string cedula)
         {
             try
@@ -48,11 +47,37 @@ namespace SGA.Api.Controllers
                 _logger.LogInformation($"Solicitando datos TTHH para cédula: {cedula}");
                 
                 // Buscar en la base de datos por cédula
-                var datosTTHH = await _datosTTHHService.GetDatosByCedulaAsync(cedula);
-                
-                if (datosTTHH != null)
+                var datosTTHH = await _datosTTHHService.GetDatosByCedulaAsync(cedula);                if (datosTTHH != null)
                 {
-                    return Ok(datosTTHH);
+                    // Verificar si necesita normalización del correo institucional
+                    if (string.IsNullOrEmpty(datosTTHH.EmailInstitucional))
+                    {
+                        datosTTHH.EmailInstitucional = EmailNormalizer.GenerarCorreoInstitucional(datosTTHH.Nombres, datosTTHH.Apellidos);
+                    }
+                    
+                    // Crear un DTO de respuesta que tenga el correo institucional en todos los campos de email
+                    var respuesta = new DatosTTHHResponseDto
+                    {
+                        Id = datosTTHH.Id,
+                        Cedula = datosTTHH.Cedula,
+                        Nombres = datosTTHH.Nombres,
+                        Apellidos = datosTTHH.Apellidos,
+                        FacultadId = datosTTHH.FacultadId,
+                        Celular = datosTTHH.Celular,
+                        TelefonoConvencional = datosTTHH.TelefonoConvencional,
+                        EmailPersonal = datosTTHH.EmailInstitucional, // Correo institucional
+                        EmailInstitucional = datosTTHH.EmailInstitucional, // También en este campo
+                        Direccion = datosTTHH.Direccion,
+                        FechaNacimiento = datosTTHH.FechaNacimiento,
+                        EstadoCivil = datosTTHH.EstadoCivil,
+                        FechaIngreso = datosTTHH.FechaIngreso,
+                        FechaRegistro = datosTTHH.FechaRegistro,
+                        FechaActualizacion = datosTTHH.FechaActualizacion,
+                        Activo = datosTTHH.Activo,
+                        Facultad = datosTTHH.Facultad?.Nombre ?? "FISEI" // Asegurar que tenga un valor
+                    };
+                    
+                    return Ok(respuesta);
                 }
                 
                 return NotFound(new { message = $"No se encontraron datos para la cédula {cedula}" });
@@ -62,7 +87,7 @@ namespace SGA.Api.Controllers
                 _logger.LogError(ex, $"Error al obtener datos TTHH para cédula {cedula}: {ex.Message}");
                 return StatusCode(500, new { message = "Error interno del servidor" });
             }
-        }        [HttpPost("login")]
+        }[HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             try
@@ -437,10 +462,28 @@ namespace SGA.Api.Controllers
         [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener entre 8 y 100 caracteres")]
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
             ErrorMessage = "La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial")]
-        public string Password { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
+        public string Password { get; set; } = string.Empty;        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
         [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
         public string ConfirmPassword { get; set; } = string.Empty;
+    }    // DTO para devolver datos de TTHH con el correo institucional mapeado al campo EmailPersonal
+    public class DatosTTHHResponseDto
+    {
+        public int Id { get; set; }
+        public string Cedula { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public int FacultadId { get; set; }
+        public string? Celular { get; set; }
+        public string? TelefonoConvencional { get; set; }
+        public string? EmailPersonal { get; set; } // Este campo contendrá el correo institucional
+        public string? EmailInstitucional { get; set; } // También este campo
+        public string? Direccion { get; set; }
+        public DateTime? FechaNacimiento { get; set; }
+        public string? EstadoCivil { get; set; }
+        public DateTime FechaIngreso { get; set; }
+        public DateTime FechaRegistro { get; set; }
+        public DateTime FechaActualizacion { get; set; }
+        public bool Activo { get; set; }
+        public string? Facultad { get; set; } // Cambiar a string para compatibilidad con el frontend
     }
 }

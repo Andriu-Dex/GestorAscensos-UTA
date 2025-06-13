@@ -85,9 +85,9 @@ namespace SGA.Infrastructure.Data
                 entity.Property(dt => dt.Cedula).HasMaxLength(10).IsRequired();
                 entity.Property(dt => dt.Nombres).HasMaxLength(100).IsRequired();
                 entity.Property(dt => dt.Apellidos).HasMaxLength(100).IsRequired();
-                entity.Property(dt => dt.Celular).HasMaxLength(15);
-                entity.Property(dt => dt.TelefonoConvencional).HasMaxLength(15);
+                entity.Property(dt => dt.Celular).HasMaxLength(15);                entity.Property(dt => dt.TelefonoConvencional).HasMaxLength(15);
                 entity.Property(dt => dt.EmailPersonal).HasMaxLength(150);
+                entity.Property(dt => dt.EmailInstitucional).HasMaxLength(150);
                 entity.Property(dt => dt.Direccion).HasMaxLength(300);
                 entity.Property(dt => dt.EstadoCivil).HasMaxLength(20);
                 
@@ -300,9 +300,7 @@ namespace SGA.Infrastructure.Data
                 new ServicioExterno { Id = 2, Codigo = "DAC", Nombre = "DAC - Evaluaciones", Descripcion = "Servicio para obtener evaluaciones docente", UrlBase = "https://api.dac.uta.edu.ec", Activo = true, FechaCreacion = seedDate },
                 new ServicioExterno { Id = 3, Codigo = "TTHH", Nombre = "TTHH - Acción Personal", Descripcion = "Servicio de Talento Humano", UrlBase = "https://api.tthh.uta.edu.ec", Activo = true, FechaCreacion = seedDate },
                 new ServicioExterno { Id = 4, Codigo = "INVESTIGACION", Nombre = "Dirección de Investigación", Descripcion = "Servicio para obtener datos de investigación", UrlBase = "https://api.investigacion.uta.edu.ec", Activo = true, FechaCreacion = seedDate }
-            );
-
-            // Configuraciones iniciales del sistema
+            );            // Configuraciones iniciales del sistema
             modelBuilder.Entity<ConfiguracionSistema>().HasData(
                 new ConfiguracionSistema { Id = 1, Clave = "TIEMPO_BLOQUEO_MINUTOS", Valor = "15", Descripcion = "Tiempo de bloqueo en minutos después de 3 intentos fallidos", TipoDato = "int", GrupoConfiguracion = "Seguridad", FechaCreacion = seedDate, FechaActualizacion = seedDate },
                 new ConfiguracionSistema { Id = 2, Clave = "INTENTOS_MAXIMOS_LOGIN", Valor = "3", Descripcion = "Número máximo de intentos de login antes del bloqueo", TipoDato = "int", GrupoConfiguracion = "Seguridad", FechaCreacion = seedDate, FechaActualizacion = seedDate },

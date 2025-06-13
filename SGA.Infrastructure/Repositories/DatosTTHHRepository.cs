@@ -9,6 +9,7 @@ namespace SGA.Infrastructure.Repositories
         Task<DatosTTHH> GetByCedulaAsync(string cedula);
         Task<bool> ExistsByCedulaAsync(string cedula);
         Task AddAsync(DatosTTHH datosTTHH);
+        Task UpdateAsync(DatosTTHH datosTTHH);
         Task<IEnumerable<DatosTTHH>> GetAllAsync();
     }
 
@@ -36,7 +37,15 @@ namespace SGA.Infrastructure.Repositories
         {
             await _context.DatosTTHH.AddAsync(datosTTHH);
             await _context.SaveChangesAsync();
-        }        public async Task<IEnumerable<DatosTTHH>> GetAllAsync()
+        }
+
+        public async Task UpdateAsync(DatosTTHH datosTTHH)
+        {
+            _context.DatosTTHH.Update(datosTTHH);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<DatosTTHH>> GetAllAsync()
         {
             return await _context.DatosTTHH
                 .Include(d => d.Facultad)

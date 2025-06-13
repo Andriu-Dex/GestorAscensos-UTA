@@ -83,47 +83,45 @@ namespace SGA.Web.Services
                 try 
                 {
                     return await _httpClient.GetFromJsonAsync<DatosTTHH>($"api/auth/tthh/{cedula}");
-                }
-                catch
+                }                catch
                 {
                     // Si la API no existe, usamos una implementación local simulada
                     await Task.Delay(300); // Simulamos un poco de latencia
                     
+                    // Para cualquier cédula, generamos datos con correo institucional normalizado
+                    string nombres, apellidos;
+                    
                     // Verificamos la cédula para devolver diferentes datos según el caso
                     if (cedula == "1801000000")
                     {
-                        return new DatosTTHH
-                        {
-                            Cedula = cedula,
-                            Nombres = "Andriu",
-                            Apellidos = "Dex",
-                            Facultad = "FISEI",
-                            Celular = "0987654321"
-                        };
+                        nombres = "Andriu";
+                        apellidos = "Dex";
                     }
                     else if (cedula == "1802000000")
                     {
-                        return new DatosTTHH
-                        {
-                            Cedula = cedula,
-                            Nombres = "Steven",
-                            Apellidos = "Paredes",
-                            Facultad = "FISEI",
-                            Celular = "0997654321"
-                        };
+                        nombres = "Steven";
+                        apellidos = "Paredes";
                     }
                     else
                     {
-                        // Para cualquier otra cédula, devolvemos datos genéricos
-                        return new DatosTTHH
-                        {
-                            Cedula = cedula,
-                            Nombres = "Usuario",
-                            Apellidos = "Prueba",
-                            Facultad = "FISEI",
-                            Celular = "0912345678"
-                        };
+                        nombres = "Usuario";
+                        apellidos = "Prueba";
                     }
+                    
+                    // Generar correo institucional normalizado: inicial + apellido + @uta.edu.ec
+                    string primeraInicial = nombres.Substring(0, 1).ToLower();
+                    string primerApellido = apellidos.Split(' ')[0].ToLower();
+                    string correoInstitucional = $"{primeraInicial}{primerApellido}@uta.edu.ec";
+                      return new DatosTTHH
+                    {
+                        Cedula = cedula,
+                        Nombres = nombres,
+                        Apellidos = apellidos,
+                        Facultad = "FISEI",
+                        Celular = "0912345678",
+                        EmailPersonal = correoInstitucional, // Devolver el correo institucional en EmailPersonal
+                        EmailInstitucional = correoInstitucional // También en EmailInstitucional
+                    };
                 }
             }
             catch (Exception ex)

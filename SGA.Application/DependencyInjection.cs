@@ -12,6 +12,7 @@ namespace SGA.Application
             services.AddScoped<IDocumentoService, DocumentoService>();
             services.AddScoped<ISolicitudAscensoService, SolicitudAscensoService>();
             services.AddScoped<IDatosTTHHService, DatosTTHHService>();
+            services.AddScoped<IEmailNormalizationService, EmailNormalizationService>();
             services.AddScoped<IValidacionAscensoService, ValidacionAscensoService>();
             services.AddScoped<IReporteService, ReporteService>();
             services.AddScoped<ICryptoService, CryptoService>();

@@ -1,0 +1,40 @@
+# Pruebas de Normalización de Correos Electrónicos - Sistema de Gestión de Ascensos
+
+@host = http://localhost:5115
+
+## Descripción
+Este archivo contiene las pruebas para verificar la funcionalidad de normalización de correos electrónicos institucionales.
+
+### Formato esperado
+- Estructura: inicial_del_nombre + apellido + @uta.edu.ec
+- Ejemplo: "Daniel Jerez" -> "djerez@uta.edu.ec"
+
+### Endpoints disponibles
+
+#### 1. Normalizar todos los correos existentes
+POST {{host}}/api/EmailNormalization/normalizar-existentes
+
+#### 2. Listar datos de TTHH
+GET {{host}}/api/EmailNormalization/listar-datos-tthh
+
+#### 3. Normalizar correo por cédula específica
+POST {{host}}/api/EmailNormalization/normalizar-por-cedula/1804567890
+
+#### 4. Obtener datos TTHH por cédula (endpoint que usa el registro)
+GET {{host}}/api/auth/tthh/1804567890
+
+#### 5. Probar con diferentes cédulas
+GET {{host}}/api/auth/tthh/1712345678
+
+GET {{host}}/api/auth/tthh/1823456789
+
+GET {{host}}/api/auth/tthh/1934567890
+
+GET {{host}}/api/auth/tthh/1045678901
+
+### Ejemplos de normalización esperados:
+- Daniel Eduardo Jerez Mayorga -> djerez@uta.edu.ec
+- María Elena García López -> mgarcia@uta.edu.ec
+- Carlos Antonio Rodriguez Vaca -> crodriguez@uta.edu.ec
+- Ana Cristina Morales Silva -> amorales@uta.edu.ec
+- José Luis Hernández Torres -> jhernandez@uta.edu.ec

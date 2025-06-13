@@ -191,7 +191,7 @@
                 errorMessage = verificacionResult.Message;
                 isLoading = false;
                 return;
-            }// Obtener datos desde la API de TTHH
+            }            // Obtener datos desde la API de TTHH
             var datosPersonales = await ApiService.ObtenerDatosTTHH(registerModel.Cedula);
             if (datosPersonales != null)
             {
@@ -205,12 +205,24 @@
                     registerModel.Telefono = datosPersonales.Celular;
                 }
                 
-                // Sugerir un correo institucional basado en el nombre
+                // Usar el correo institucional si viene de TTHH, sino generar uno
                 if (string.IsNullOrEmpty(registerModel.Email))
                 {
-                    string primerNombre = registerModel.Nombres.Split(' ')[0].ToLower();
-                    string primerApellido = registerModel.Apellidos.Split(' ')[0].ToLower();
-                    registerModel.Email = $"{primerNombre}.{primerApellido}@uta.edu.ec";
+                    if (!string.IsNullOrEmpty(datosPersonales.EmailInstitucional))
+                    {
+                        registerModel.Email = datosPersonales.EmailInstitucional;
+                    }
+                    else if (!string.IsNullOrEmpty(datosPersonales.EmailPersonal))
+                    {
+                        registerModel.Email = datosPersonales.EmailPersonal;
+                    }
+                    else
+                    {
+                        // Fallback: generar correo con formato inicial + apellido
+                        string primeraInicial = registerModel.Nombres.Split(' ')[0].Substring(0, 1).ToLower();
+                        string primerApellido = registerModel.Apellidos.Split(' ')[0].ToLower();
+                        registerModel.Email = $"{primeraInicial}{primerApellido}@uta.edu.ec";
+                    }
                 }
 
                 datosCargados = true;
