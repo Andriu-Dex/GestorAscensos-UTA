@@ -46,11 +46,10 @@
                                         Ingrese su cédula y presione "Validar" para autocompletar sus datos.
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
+                            </div>                            <div class="col-md-6">
                                 <div class="register-form-group">
                                     <label for="email" class="register-label">Correo Electrónico:</label>
-                                    <InputText id="email" class="form-control register-input" @bind-Value="registerModel.Email" />                                    <ValidationMessage For="@(() => registerModel.Email)" class="register-validation-message" />
+                                    <InputText id="email" class="form-control register-input" @bind-Value="registerModel.Email" disabled="@datosCargados" />                                    <ValidationMessage For="@(() => registerModel.Email)" class="register-validation-message" />
                                     <div class="register-help-text">
                                         Debe ser un correo institucional (@@uta.edu.ec).
                                     </div>
@@ -75,7 +74,7 @@
                             <div class="col-md-6">
                                 <div class="register-form-group">
                                     <label for="telefono" class="register-label">Teléfono:</label>
-                                    <InputText id="telefono" class="form-control register-input" @bind-Value="registerModel.Telefono" />
+                                    <InputText id="telefono" class="form-control register-input" @bind-Value="registerModel.Telefono" disabled="@datosCargados" />
                                     <ValidationMessage For="@(() => registerModel.Telefono)" class="register-validation-message" />
                                 </div>
                             </div>
