@@ -13,7 +13,6 @@ namespace SGA.Web.Services
         Task<DatosTTHH?> ObtenerDatosTTHH(string cedula);
         Task<bool> ValidarCorreoUnico(string email);
         Task<bool> ValidarCedulaUnica(string cedula);
-        Task<bool> ValidarCedulaEcuatoriana(string cedula);
     }
 
     public class ApiService : IApiService
@@ -157,11 +156,6 @@ namespace SGA.Web.Services
                 Console.Error.WriteLine($"Error al validar cédula {cedula}: {ex.Message}");
                 return false;
             }
-        }        public async Task<bool> ValidarCedulaEcuatoriana(string cedula)
-        {
-            // Validación simplificada: solo verificamos que sea numérica y tenga 10 dígitos
-            await Task.Delay(100);
-            return cedula.Length == 10 && cedula.All(char.IsDigit);
         }
     }
 }

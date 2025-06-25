@@ -1,489 +1,135 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using SGA.Application.Services;
-using SGA.Domain.Entities;
-using SGA.Domain.Utilities;
+using SGA.Application.DTOs.Auth;
+using SGA.Application.Interfaces;
 
-namespace SGA.Api.Controllers
+namespace SGA.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
-    {        private readonly IDocenteService _docenteService;
-        private readonly IDatosTTHHService _datosTTHHService;
-        private readonly IEmailNormalizationService _emailNormalizationService;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthController> _logger;
-        private readonly IAntiforgery _antiforgery;        public AuthController(
-            IDocenteService docenteService,
-            IDatosTTHHService datosTTHHService,
-            IEmailNormalizationService emailNormalizationService,
-            IConfiguration configuration,
-            ILogger<AuthController> logger,
-            IAntiforgery antiforgery)
-        {
-            _docenteService = docenteService;
-            _datosTTHHService = datosTTHHService;
-            _emailNormalizationService = emailNormalizationService;
-            _configuration = configuration;
-            _logger = logger;
-            _antiforgery = antiforgery;}        [HttpGet("tthh/{cedula}")]
-        public async Task<IActionResult> GetDatosTTHH(string cedula)
-        {
-            try
-            {
-                _logger.LogInformation($"Solicitando datos TTHH para cédula: {cedula}");
-                
-                // Buscar en la base de datos por cédula
-                var datosTTHH = await _datosTTHHService.GetDatosByCedulaAsync(cedula);                if (datosTTHH != null)
-                {
-                    // Verificar si necesita normalización del correo institucional
-                    if (string.IsNullOrEmpty(datosTTHH.EmailInstitucional))
-                    {
-                        datosTTHH.EmailInstitucional = EmailNormalizer.GenerarCorreoInstitucional(datosTTHH.Nombres, datosTTHH.Apellidos);
-                    }
-                    
-                    // Crear un DTO de respuesta que tenga el correo institucional en todos los campos de email
-                    var respuesta = new DatosTTHHResponseDto
-                    {
-                        Id = datosTTHH.Id,
-                        Cedula = datosTTHH.Cedula,
-                        Nombres = datosTTHH.Nombres,
-                        Apellidos = datosTTHH.Apellidos,
-                        FacultadId = datosTTHH.FacultadId,
-                        Celular = datosTTHH.Celular,
-                        TelefonoConvencional = datosTTHH.TelefonoConvencional,
-                        EmailPersonal = datosTTHH.EmailInstitucional, // Correo institucional
-                        EmailInstitucional = datosTTHH.EmailInstitucional, // También en este campo
-                        Direccion = datosTTHH.Direccion,
-                        FechaNacimiento = datosTTHH.FechaNacimiento,
-                        EstadoCivil = datosTTHH.EstadoCivil,
-                        FechaIngreso = datosTTHH.FechaIngreso,
-                        FechaRegistro = datosTTHH.FechaRegistro,
-                        FechaActualizacion = datosTTHH.FechaActualizacion,
-                        Activo = datosTTHH.Activo,
-                        Facultad = datosTTHH.Facultad?.Nombre ?? "FISEI" // Asegurar que tenga un valor
-                    };
-                    
-                    return Ok(respuesta);
-                }
-                
-                return NotFound(new { message = $"No se encontraron datos para la cédula {cedula}" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener datos TTHH para cédula {cedula}: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }[HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+    private readonly IAuthService _authService;
 
-                var docente = await _docenteService.GetDocenteByEmailAsync(model.Email);
-                if (docente == null)
-                {
-                    _logger.LogWarning($"Intento de login con correo inexistente: {model.Email}");
-                    return Unauthorized(new { message = "Correo o contraseña incorrectos" });
-                }
-
-                // Verificar si el usuario está bloqueado
-                if (docente.Bloqueado)
-                {
-                    if (docente.FechaBloqueo.HasValue && docente.FechaBloqueo.Value.AddMinutes(15) > DateTime.Now)
-                    {
-                        // Todavía está bloqueado
-                        var tiempoRestante = (docente.FechaBloqueo.Value.AddMinutes(15) - DateTime.Now).Minutes;
-                        return Unauthorized(new { message = $"Usuario bloqueado temporalmente. Intente nuevamente en {tiempoRestante} minutos." });
-                    }
-                    else
-                    {
-                        // Ya pasó el tiempo de bloqueo, desbloqueamos
-                        docente.Bloqueado = false;
-                        docente.IntentosFallidos = 0;
-                        await _docenteService.UpdateDocenteAsync(docente);
-                    }
-                }
-
-                // Verificar contraseña
-                if (!VerifyPasswordHash(model.Password, docente.PasswordHash))
-                {
-                    // Incrementar intentos fallidos
-                    docente.IntentosFallidos++;
-                      // Bloquear después de 3 intentos fallidos
-                    if (docente.IntentosFallidos >= 3)
-                    {
-                        docente.Bloqueado = true;
-                        docente.FechaBloqueo = DateTime.Now;
-                        _logger.LogWarning($"Usuario bloqueado por múltiples intentos fallidos: {model.Email}");
-                    }
-
-                    await _docenteService.UpdateDocenteAsync(docente);
-
-                    if (docente.Bloqueado)
-                    {
-                        return Unauthorized(new { message = "Usuario bloqueado temporalmente por múltiples intentos fallidos. Intente nuevamente en 15 minutos." });
-                    }
-
-                    return Unauthorized(new { message = "Correo o contraseña incorrectos" });
-                }
-
-                // Restablecer intentos fallidos
-                docente.IntentosFallidos = 0;
-                await _docenteService.UpdateDocenteAsync(docente);                // Generar token JWT
-                var token = GenerateJwtToken(docente);
-
-                _logger.LogInformation($"Login exitoso para el usuario: {model.Email}");                return Ok(new
-                {
-                    token,
-                    user = new
-                    {
-                        id = docente.Id,
-                        username = docente.NombreUsuario,
-                        email = docente.Email,
-                        nombres = docente.Nombres,
-                        apellidos = docente.Apellidos,
-                        esAdmin = docente.EsAdministrador
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error en el login: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                // Validar formato de correo electrónico
-                if (!model.Email.EndsWith("@uta.edu.ec", StringComparison.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new { message = "El correo electrónico debe ser institucional (@uta.edu.ec)" });
-                }
-
-                // Verificar si ya existe un usuario con ese correo
-                var existingUserByEmail = await _docenteService.GetDocenteByEmailAsync(model.Email);
-                if (existingUserByEmail != null)
-                {
-                    return BadRequest(new { message = "El correo electrónico ya está registrado" });
-                }
-
-                // Verificar si ya existe un usuario con ese nombre de usuario
-                var existingUser = await _docenteService.GetDocenteByUsernameAsync(model.Username);
-                if (existingUser != null)
-                {
-                    return BadRequest(new { message = "El nombre de usuario ya está en uso" });
-                }
-
-                // Verificar si la cédula es válida
-                if (!ValidarCedulaEcuatoriana(model.Cedula))
-                {
-                    return BadRequest(new { message = "El número de cédula ingresado no es válido" });
-                }
-
-                // Verificar si ya existe un docente con esa cédula
-                var existingDocente = await _docenteService.GetDocenteByCedulaAsync(model.Cedula);
-                if (existingDocente != null)
-                {
-                    return BadRequest(new { message = "Ya existe un docente registrado con esta cédula" });
-                }                // Verificar si existen datos de TTHH para esta cédula
-                var datosTTHH = await _datosTTHHService.GetDatosByCedulaAsync(model.Cedula);
-                  // Si no existen datos en TTHH, registrarlos
-                if (datosTTHH == null)
-                {
-                    var nuevosDatosTTHH = new DatosTTHH
-                    {
-                        Cedula = model.Cedula,
-                        Nombres = model.Nombres,
-                        Apellidos = model.Apellidos,
-                        FacultadId = 1, // Por defecto FISEI, debe ajustarse según el modelo
-                        Facultad = null!, // Se asignará por Entity Framework
-                        FechaIngreso = DateTime.Now,
-                        FechaRegistro = DateTime.Now
-                    };
-                    await _datosTTHHService.CreateDatosTTHHAsync(nuevosDatosTTHH);
-                }
-
-                // Crear nuevo docente (sin departamento)
-                var docente = new Docente
-                {
-                    Cedula = model.Cedula,
-                    Nombres = model.Nombres,
-                    Apellidos = model.Apellidos,
-                    Email = model.Email,
-                    TelefonoContacto = model.Telefono,
-                    FacultadId = 1, // Por defecto FISEI, debe ajustarse según el modelo
-                    Facultad = null!, // Se asignará por Entity Framework
-                    NivelActual = 1, // Por defecto, todos inician en Titular 1
-                    FechaIngresoNivelActual = DateTime.Now,
-                    NombreUsuario = model.Username,
-                    PasswordHash = HashPassword(model.Password),
-                    IntentosFallidos = 0,
-                    Bloqueado = false,
-                    EsAdministrador = false, // Por defecto, los usuarios registrados son docentes, no administradores
-                    FechaRegistro = DateTime.Now
-                };
-
-                await _docenteService.CreateDocenteAsync(docente);
-
-                _logger.LogInformation($"Nuevo docente registrado: {model.Username}");
-
-                return Ok(new { message = "Registro exitoso" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error en el registro: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-        
-        [HttpGet("verificar-email/{email}")]
-        public async Task<IActionResult> VerificarEmail(string email)
-        {
-            try
-            {
-                var docente = await _docenteService.GetDocenteByEmailAsync(email);
-                if (docente != null)
-                {
-                    return BadRequest(new { message = "El correo electrónico ya está registrado" });
-                }
-                
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al verificar correo: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-        
-        [HttpGet("verificar-cedula/{cedula}")]
-        public async Task<IActionResult> VerificarCedula(string cedula)
-        {
-            try
-            {
-                if (!ValidarCedulaEcuatoriana(cedula))
-                {
-                    return BadRequest(new { message = "El número de cédula ingresado no es válido" });
-                }
-                
-                var docente = await _docenteService.GetDocenteByCedulaAsync(cedula);
-                if (docente != null)
-                {
-                    return BadRequest(new { message = "Ya existe un docente registrado con esta cédula" });
-                }
-                
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al verificar cédula: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-
-        [Authorize]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUser()
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out int id))
-                {
-                    return Unauthorized(new { message = "Token no válido" });
-                }
-
-                var docente = await _docenteService.GetDocenteByIdAsync(id);
-                if (docente == null)
-                {
-                    return NotFound(new { message = "Usuario no encontrado" });
-                }
-
-                return Ok(new
-                {
-                    id = docente.Id,
-                    cedula = docente.Cedula,
-                    nombres = docente.Nombres,
-                    apellidos = docente.Apellidos,
-                    email = docente.Email,
-                    facultad = docente.Facultad,
-                    nivelActual = docente.NivelActual,
-                    fechaIngresoNivelActual = docente.FechaIngresoNivelActual,
-                    esAdmin = docente.EsAdministrador
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al obtener el usuario actual: {ex.Message}");
-                return StatusCode(500, new { message = "Error interno del servidor" });
-            }
-        }
-
-        [HttpGet("csrf-token")]
-        public IActionResult GetCsrfToken()
-        {
-            var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-            return Ok(new { token = tokens.RequestToken });
-        }
-
-        private string GenerateJwtToken(Docente docente)
-        {
-            var jwtSecret = _configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT:Secret no está configurado");
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, docente.Id.ToString()),
-                new Claim(ClaimTypes.Name, docente.NombreUsuario),
-                new Claim(ClaimTypes.GivenName, docente.Nombres),
-                new Claim(ClaimTypes.Surname, docente.Apellidos),
-                new Claim("cedula", docente.Cedula)
-            };
-
-            if (docente.EsAdministrador)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, "Administrador"));
-            }
-            else
-            {
-                claims.Add(new Claim(ClaimTypes.Role, "Docente"));
-            }
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["JWT:ValidIssuer"],
-                audience: _configuration["JWT:ValidAudience"],
-                claims: claims,
-                expires: DateTime.Now.AddHours(24),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private static string HashPassword(string password)
-        {
-            // En una aplicación real, usar un algoritmo más seguro como BCrypt o Argon2
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
-        }
-
-        private static bool VerifyPasswordHash(string password, string storedHash)
-        {
-            // En una aplicación real, usar BCrypt.Verify o equivalente
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            var computedHash = Convert.ToBase64String(hash);
-            return computedHash == storedHash;
-        }
-          private bool ValidarCedulaEcuatoriana(string cedula)
-        {
-            // Para entorno de desarrollo, permitir cédulas de prueba específicas
-            if (cedula == "1801000000" || cedula == "1802000000")
-            {
-                return true;
-            }
-            
-            // Validación simplificada: solo verificamos que sea numérica y tenga 10 dígitos
-            return cedula.Length == 10 && cedula.All(char.IsDigit);
-        }
-    }    public class LoginModel
+    public AuthController(IAuthService authService)
     {
-        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
-        [EmailAddress(ErrorMessage = "El formato del correo electrónico no es válido")]
-        public string Email { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La contraseña es obligatoria")]
-        public string Password { get; set; } = string.Empty;
+        _authService = authService;
     }
 
-    public class RegisterModel
+    [HttpPost("login")]
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
-        [Required(ErrorMessage = "La cédula es obligatoria")]
-        [StringLength(10, MinimumLength = 10, ErrorMessage = "La cédula debe tener 10 dígitos")]
-        [RegularExpression("^[0-9]+$", ErrorMessage = "La cédula debe contener solo números")]
-        public string Cedula { get; set; } = string.Empty;
+        try
+        {
+            var response = await _authService.LoginAsync(request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
-        [Required(ErrorMessage = "Los nombres son obligatorios")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los nombres deben tener entre 2 y 100 caracteres")]
-        public string Nombres { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Los apellidos son obligatorios")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los apellidos deben tener entre 2 y 100 caracteres")]
-        public string Apellidos { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
-        [EmailAddress(ErrorMessage = "El formato del correo electrónico no es válido")]
-        [RegularExpression(@"^[a-zA-Z0-9_.+-]+@uta\.edu\.ec$", ErrorMessage = "El correo debe ser institucional (@uta.edu.ec)")]
-        public string Email { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "El teléfono es obligatorio")]
-        [StringLength(15, MinimumLength = 7, ErrorMessage = "El teléfono debe tener entre 7 y 15 caracteres")]
-        public string Telefono { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La facultad es obligatoria")]
-        public string Facultad { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "El nombre de usuario es obligatorio")]
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "El nombre de usuario debe tener entre 4 y 50 caracteres")]
-        public string Username { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La contraseña es obligatoria")]
-        [StringLength(100, MinimumLength = 8, ErrorMessage = "La contraseña debe tener entre 8 y 100 caracteres")]
-        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
-            ErrorMessage = "La contraseña debe contener al menos una letra mayúscula, una minúscula, un número y un carácter especial")]
-        public string Password { get; set; } = string.Empty;        [Required(ErrorMessage = "La confirmación de contraseña es obligatoria")]
-        [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
-        public string ConfirmPassword { get; set; } = string.Empty;
-    }    // DTO para devolver datos de TTHH con el correo institucional mapeado al campo EmailPersonal
-    public class DatosTTHHResponseDto
+    [HttpPost("register")]
+    public async Task<ActionResult<LoginResponse>> Register([FromBody] RegisterRequest request)
     {
-        public int Id { get; set; }
-        public string Cedula { get; set; } = string.Empty;
-        public string Nombres { get; set; } = string.Empty;
-        public string Apellidos { get; set; } = string.Empty;
-        public int FacultadId { get; set; }
-        public string? Celular { get; set; }
-        public string? TelefonoConvencional { get; set; }
-        public string? EmailPersonal { get; set; } // Este campo contendrá el correo institucional
-        public string? EmailInstitucional { get; set; } // También este campo
-        public string? Direccion { get; set; }
-        public DateTime? FechaNacimiento { get; set; }
-        public string? EstadoCivil { get; set; }
-        public DateTime FechaIngreso { get; set; }
-        public DateTime FechaRegistro { get; set; }
-        public DateTime FechaActualizacion { get; set; }
-        public bool Activo { get; set; }
-        public string? Facultad { get; set; } // Cambiar a string para compatibilidad con el frontend
+        try
+        {
+            var response = await _authService.RegisterAsync(request);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error interno del servidor" });
+        }
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<LoginResponse>> RefreshToken([FromBody] string refreshToken)
+    {
+        try
+        {
+            var response = await _authService.RefreshTokenAsync(refreshToken);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("logout")]
+    public async Task<ActionResult> Logout()
+    {
+        try
+        {
+            var email = User.Identity?.Name;
+            if (!string.IsNullOrEmpty(email))
+            {
+                await _authService.LogoutAsync(email);
+            }
+            return Ok(new { message = "Logout exitoso" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("validate-token")]
+    public async Task<ActionResult> ValidateToken([FromBody] string token)
+    {
+        try
+        {
+            var isValid = await _authService.ValidateTokenAsync(token);
+            return Ok(new { isValid });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("validate-cedula")]
+    public async Task<ActionResult> ValidateCedula([FromBody] ValidateCedulaRequest request)
+    {
+        try
+        {
+            var empleado = await _authService.ValidateCedulaAsync(request.Cedula);
+            if (empleado == null)
+            {
+                return NotFound(new { message = "Cédula no encontrada en la base de datos de Talento Humano" });
+            }
+
+            return Ok(new
+            {
+                valid = true,
+                empleado = new
+                {
+                    cedula = empleado.Cedula,
+                    nombres = empleado.Nombres,
+                    apellidos = empleado.Apellidos,
+                    email = empleado.Email,
+                    cargoActual = empleado.CargoActual,
+                    nivelAcademico = empleado.NivelAcademico,
+                    fechaNombramiento = empleado.FechaNombramiento
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

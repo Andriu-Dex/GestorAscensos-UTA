@@ -1,26 +1,70 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Microsoft.OpenApi.Models;
 using SGA.Application;
 using SGA.Infrastructure;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Agregar servicios a la aplicación
-builder.Services.AddOpenApi();
+// Configurar servicios
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+
+// Configurar Swagger con autenticación JWT
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Sistema de Gestión de Ascensos Docentes API",
+        Version = "v1",
+        Description = "API para la gestión de ascensos docentes de la Universidad Técnica de Ambato"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Configurar CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSGAWeb", policy =>
+    options.AddPolicy("AllowBlazorApp", policy =>
     {
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>())
+        policy.WithOrigins(
+                "https://localhost:7149", "http://localhost:5039", // SGA.Web
+                "https://localhost:7000", "http://localhost:5000"   // Otros frontends
+              )
+              .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowCredentials();
     });
 });
 
 // Configurar autenticación JWT
+var jwtSettings = builder.Configuration.GetSection("JWT");
+var secretKey = jwtSettings["SecretKey"] ?? "DefaultSecretKeyForDevelopment123456789012345678901234567890";
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -34,56 +78,63 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))
+        ValidIssuer = jwtSettings["Issuer"] ?? "SGA.Api",
+        ValidAudience = jwtSettings["Audience"] ?? "SGA.Client",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero
     };
 });
 
-// Configurar antiforgery
-builder.Services.AddAntiforgery(options =>
-{
-    options.HeaderName = "X-XSRF-TOKEN";
-    options.Cookie.Name = "XSRF-TOKEN";
-    options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-});
-
-// Configurar cookies
-builder.Services.Configure<CookiePolicyOptions>(options =>
-{
-    options.CheckConsentNeeded = context => true;
-    options.MinimumSameSitePolicy = SameSiteMode.Strict;
-    options.Secure = CookieSecurePolicy.Always;
-});
-
-// Registrar servicios de aplicación e infraestructura
+// Registrar capas de la aplicación
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddHttpClient();
-builder.Services.AddHttpContextAccessor();
-
-// Agregar controladores
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Configurar el pipeline de solicitudes HTTP
+// Configurar pipeline HTTP
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SGA API v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
-// Activar CORS
-app.UseCors("AllowSGAWeb");
-
 app.UseHttpsRedirection();
-
-// Activar autenticación y autorización
+app.UseCors("AllowBlazorApp");
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Mapear controladores
 app.MapControllers();
+
+// Inicializar base de datos
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var context = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.ApplicationDbContext>();
+        context.Database.EnsureCreated();
+        
+        // También crear las bases de datos externas
+        var tthhContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.TTHHDbContext>();
+        tthhContext.Database.EnsureCreated();
+        
+        var dacContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.DACDbContext>();
+        dacContext.Database.EnsureCreated();
+        
+        var diticContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.DITICDbContext>();
+        diticContext.Database.EnsureCreated();
+        
+        var dirInvContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.DIRINVDbContext>();
+        dirInvContext.Database.EnsureCreated();
+        
+        Console.WriteLine("Bases de datos inicializadas correctamente");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al inicializar base de datos: {ex.Message}");
+    }
+}
 
 app.Run();

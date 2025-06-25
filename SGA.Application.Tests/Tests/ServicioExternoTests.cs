@@ -1,55 +1,78 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Moq;
 using SGA.Application.Services;
-using SGA.Domain.Entities;
-using SGA.Infrastructure.Repositories;
 using Xunit;
 
 namespace SGA.Application.Tests.Tests
 {
-    public class ServicioExternoTests
+    public class ExternalDataServiceTests
     {
-        private readonly Mock<IServicioExternoRepository> _mockRepository;
-        private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-        private readonly Mock<ILogger<ServicioExternoService>> _mockLogger;
-        private readonly Mock<ILogService> _mockLogService;
+        private readonly ExternalDataService _externalDataService;
 
-        public ServicioExternoTests()
+        public ExternalDataServiceTests()
         {
-            _mockRepository = new Mock<IServicioExternoRepository>();
-            _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-            _mockLogger = new Mock<ILogger<ServicioExternoService>>();
-            _mockLogService = new Mock<ILogService>();
+            _externalDataService = new ExternalDataService();
         }
 
         [Fact]
-        public async Task ProbarConexionServicio_ServicioActivo_DevuelveTrue()
+        public async Task ImportarDesdeTTHHAsync_DebeRetornarRespuesta()
         {
             // Arrange
-            var servicio = new ServicioExterno
-            {
-                Id = 1,
-                Codigo = "DITIC",
-                Nombre = "DITIC - Cursos",
-                UrlBase = "https://api.ditic.uta.edu.ec",
-                Activo = true
-            };
+            var cedula = "1234567890";
 
-            _mockRepository.Setup(r => r.GetByCodigoAsync("DITIC")).ReturnsAsync(servicio);
-            _mockRepository.Setup(r => r.ActualizarEstadoConexionAsync(1, true, null)).ReturnsAsync(true);
+            // Act
+            var resultado = await _externalDataService.ImportarDesdeTTHHAsync(cedula);
 
-            var servicioExternoService = new ServicioExternoService(
-                _mockRepository.Object,
-                _mockHttpClientFactory.Object,
-                _mockLogger.Object,
-                _mockLogService.Object);
+            // Assert
+            Assert.NotNull(resultado);
+            Assert.True(resultado.Exitoso);
+            Assert.Contains("FechaNombramiento", resultado.DatosImportados.Keys);
+        }
 
-            // Act & Assert
-            // We're not actually testing the real implementation because it requires HTTP calls
-            // This is just to verify the test infrastructure works
-            Assert.NotNull(servicioExternoService);
+        [Fact]
+        public async Task ImportarDesdeDADACAsync_DebeRetornarRespuesta()
+        {
+            // Arrange
+            var cedula = "1234567890";
+
+            // Act
+            var resultado = await _externalDataService.ImportarDesdeDADACAsync(cedula);
+
+            // Assert
+            Assert.NotNull(resultado);
+            Assert.True(resultado.Exitoso);
+            Assert.Contains("PromedioEvaluaciones", resultado.DatosImportados.Keys);
+        }
+
+        [Fact]
+        public async Task ImportarDesdeDITICAsync_DebeRetornarRespuesta()
+        {
+            // Arrange
+            var cedula = "1234567890";
+
+            // Act
+            var resultado = await _externalDataService.ImportarDesdeDITICAsync(cedula);
+
+            // Assert
+            Assert.NotNull(resultado);
+            Assert.True(resultado.Exitoso);
+            Assert.Contains("HorasCapacitacion", resultado.DatosImportados.Keys);
+        }
+
+        [Fact]
+        public async Task ImportarDesdeDIRINVAsync_DebeRetornarRespuesta()
+        {
+            // Arrange
+            var cedula = "1234567890";
+
+            // Act
+            var resultado = await _externalDataService.ImportarDesdeDIRINVAsync(cedula);
+
+            // Assert
+            Assert.NotNull(resultado);
+            Assert.True(resultado.Exitoso);
+            Assert.Contains("NumeroObrasAcademicas", resultado.DatosImportados.Keys);
+            Assert.Contains("MesesInvestigacion", resultado.DatosImportados.Keys);
         }
     }
 }

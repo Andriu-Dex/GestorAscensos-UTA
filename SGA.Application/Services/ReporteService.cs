@@ -1,51 +1,34 @@
-using System;
-using System.Threading.Tasks;
-using SGA.Domain.Entities;
-using SGA.Infrastructure.Repositories;
+using SGA.Application.Interfaces;
 
-namespace SGA.Application.Services
+namespace SGA.Application.Services;
+
+public class ReporteService : IReporteService
 {
-    public class ReporteService : IReporteService
+    public async Task<byte[]> GenerarHojaDeVidaAsync(Guid docenteId)
     {
-        private readonly IDocenteRepository _docenteRepository;
-        private readonly ISolicitudAscensoRepository _solicitudRepository;
-        private readonly IValidacionAscensoService _validacionService;
+        // Implementación básica para generar PDF de hoja de vida
+        await Task.CompletedTask;
+        
+        // En un sistema real, aquí se usaría QuestPDF o similar
+        var contenido = $"Hoja de Vida - Docente ID: {docenteId}\nGenerado: {DateTime.Now}";
+        return System.Text.Encoding.UTF8.GetBytes(contenido);
+    }
 
-        public ReporteService(
-            IDocenteRepository docenteRepository,
-            ISolicitudAscensoRepository solicitudRepository,
-            IValidacionAscensoService validacionService)
-        {
-            _docenteRepository = docenteRepository;
-            _solicitudRepository = solicitudRepository;
-            _validacionService = validacionService;
-        }
+    public async Task<byte[]> GenerarReporteProcesoAscensoAsync(Guid solicitudId)
+    {
+        // Implementación básica para generar reporte de proceso
+        await Task.CompletedTask;
+        
+        var contenido = $"Reporte Proceso de Ascenso - Solicitud ID: {solicitudId}\nGenerado: {DateTime.Now}";
+        return System.Text.Encoding.UTF8.GetBytes(contenido);
+    }
 
-        public async Task<byte[]> GenerarReporteDocenteAsync(int docenteId)
-        {
-            var docente = await _docenteRepository.GetByIdAsync(docenteId);
-            if (docente == null)
-            {
-                throw new InvalidOperationException($"Docente con ID {docenteId} no encontrado");
-            }
-            
-            // This is just a temporary implementation for tests
-            return new byte[] { 1, 2, 3, 4, 5 };
-        }
-
-        public async Task<byte[]> GenerarReporteSolicitudAsync(int solicitudId)
-        {
-            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
-            if (solicitud == null)
-            {
-                throw new InvalidOperationException($"Solicitud con ID {solicitudId} no encontrada");
-            }
-
-            // This is just a temporary implementation for tests
-            return new byte[] { 1, 2, 3, 4, 5 };
-        }
-
-        // Note: All of the complex formatting and reporting methods have been temporarily removed
-        // to allow tests to run. Restore from the backup after testing.
+    public async Task<byte[]> GenerarReporteSolicitudesAsync(DateTime? fechaInicio = null, DateTime? fechaFin = null)
+    {
+        // Implementación básica para generar reporte de solicitudes
+        await Task.CompletedTask;
+        
+        var contenido = $"Reporte de Solicitudes\nPeríodo: {fechaInicio} - {fechaFin}\nGenerado: {DateTime.Now}";
+        return System.Text.Encoding.UTF8.GetBytes(contenido);
     }
 }

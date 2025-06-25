@@ -1,25 +1,28 @@
 using Microsoft.Extensions.DependencyInjection;
+using SGA.Application.Interfaces;
 using SGA.Application.Services;
-using SGA.Infrastructure.Repositories;
 
-namespace SGA.Application
-{
-    public static class DependencyInjection
+namespace SGA.Application;
+
+public static class DependencyInjection
+{    public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        public static IServiceCollection AddApplication(this IServiceCollection services)
-        {            // Registrar servicios
-            services.AddScoped<IDocenteService, DocenteService>();
-            services.AddScoped<IDocumentoService, DocumentoService>();
-            services.AddScoped<ISolicitudAscensoService, SolicitudAscensoService>();
-            services.AddScoped<IDatosTTHHService, DatosTTHHService>();
-            services.AddScoped<IEmailNormalizationService, EmailNormalizationService>();
-            services.AddScoped<IValidacionAscensoService, ValidacionAscensoService>();
-            services.AddScoped<IReporteService, ReporteService>();
-            services.AddScoped<ICryptoService, CryptoService>();
-            services.AddScoped<ILogService, LogService>();
-            services.AddScoped<IServicioExternoService, ServicioExternoService>();
-            
-            return services;
-        }
+        // Registrar servicios de aplicación
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IDocenteService, DocenteService>();
+        services.AddScoped<ISolicitudService, SolicitudService>();
+        services.AddScoped<IDocumentoService, DocumentoService>();
+        services.AddScoped<IReporteService, ReporteService>();
+        services.AddScoped<IAuditoriaService, AuditoriaService>();
+        services.AddScoped<IExternalDataService, ExternalDataService>();
+        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<ITTHHService, TTHHService>();
+        services.AddScoped<ITTHHService, TTHHService>();
+        services.AddScoped<ITTHHService, TTHHService>();
+        
+        // Configurar AutoMapper
+        services.AddAutoMapper(typeof(DependencyInjection).Assembly);
+        
+        return services;
     }
 }

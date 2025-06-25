@@ -18,9 +18,10 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\SGA.Application\SGA.Application.csproj" />
+    <ProjectReference Include="..\SGA.Infrastructure\SGA.Infrastructure.csproj" />
+    <ProjectReference Include="..\SGA.Domain\SGA.Domain.csproj" />
   </ItemGroup>
 
 </Project>

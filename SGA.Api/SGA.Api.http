@@ -1,6 +1,0 @@
-@SGA.Api_HostAddress = http://localhost:5115
-
-GET {{SGA.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -1,51 +1,65 @@
-using System;
-using System.Collections.Generic;
+using SGA.Domain.Common;
+using SGA.Domain.Enums;
 
-namespace SGA.Domain.Entities
-{    public class Docente
+namespace SGA.Domain.Entities;
+
+public class Docente : BaseEntity
+{
+    public string Cedula { get; set; } = string.Empty;
+    public string Nombres { get; set; } = string.Empty;
+    public string Apellidos { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public NivelTitular NivelActual { get; set; } = NivelTitular.Titular1;
+    public DateTime FechaInicioNivelActual { get; set; }
+    public DateTime? FechaUltimoAscenso { get; set; }
+    public bool EstaActivo { get; set; } = true;
+    
+    // Datos importados de sistemas externos
+    public DateTime? FechaNombramiento { get; set; }
+    public decimal? PromedioEvaluaciones { get; set; }
+    public int? HorasCapacitacion { get; set; }
+    public int? NumeroObrasAcademicas { get; set; }
+    public int? MesesInvestigacion { get; set; }
+    public DateTime? FechaUltimaImportacion { get; set; }
+    
+    // Relaciones
+    public Guid UsuarioId { get; set; }
+    public virtual Usuario Usuario { get; set; } = null!;
+    public virtual ICollection<SolicitudAscenso> SolicitudesAscenso { get; set; } = new List<SolicitudAscenso>();
+    
+    // Métodos de validación
+    public bool CumpleRequisitosParaNivel(NivelTitular nivelObjetivo)
     {
-        public Docente()
+        var tiempoEnNivel = DateTime.UtcNow - FechaInicioNivelActual;
+        var cumpleTiempo = tiempoEnNivel.TotalDays >= (4 * 365); // 4 años
+        
+        return nivelObjetivo switch
         {
-            Documentos = new List<Documento>();
-            Solicitudes = new List<SolicitudAscenso>();
-            LogsAuditoria = new List<LogAuditoria>();
-        }
-
-        public int Id { get; set; }
-        public required string Cedula { get; set; }
-        public required string Nombres { get; set; }
-        public required string Apellidos { get; set; }
-        public required string Email { get; set; }
-        public required string TelefonoContacto { get; set; }
-        
-        // Relación con Facultad (normalizada)
-        public int FacultadId { get; set; }
-
-        // Nivel actual del docente (Titular 1, 2, 3, 4, 5)
-        public int NivelActual { get; set; }
-
-        // Fechas importantes
-        public DateTime FechaIngresoNivelActual { get; set; }
-        
-        // Autenticación
-        public required string NombreUsuario { get; set; }
-        public required string PasswordHash { get; set; }
-        public int IntentosFallidos { get; set; }
-        public bool Bloqueado { get; set; }
-        public DateTime? FechaBloqueo { get; set; }
-        public bool EsAdministrador { get; set; }
-        public DateTime FechaRegistro { get; set; }
-        
-        // Estado del docente
-        public bool Activo { get; set; } = true;
-        public DateTime? FechaBaja { get; set; }
-        public string? MotivoBaja { get; set; }
-        
-        // Navegación
-        public required Facultad Facultad { get; set; }
-        public IndicadorDocente? Indicadores { get; set; }
-        public ICollection<Documento> Documentos { get; set; }
-        public ICollection<SolicitudAscenso> Solicitudes { get; set; }
-        public ICollection<LogAuditoria> LogsAuditoria { get; set; }
+            NivelTitular.Titular2 => cumpleTiempo && 
+                                    (NumeroObrasAcademicas ?? 0) >= 1 && 
+                                    (PromedioEvaluaciones ?? 0) >= 75 && 
+                                    (HorasCapacitacion ?? 0) >= 96,
+                                    
+            NivelTitular.Titular3 => cumpleTiempo && 
+                                    (NumeroObrasAcademicas ?? 0) >= 2 && 
+                                    (PromedioEvaluaciones ?? 0) >= 75 && 
+                                    (HorasCapacitacion ?? 0) >= 96 && 
+                                    (MesesInvestigacion ?? 0) >= 12,
+                                    
+            NivelTitular.Titular4 => cumpleTiempo && 
+                                    (NumeroObrasAcademicas ?? 0) >= 3 && 
+                                    (PromedioEvaluaciones ?? 0) >= 75 && 
+                                    (HorasCapacitacion ?? 0) >= 128 && 
+                                    (MesesInvestigacion ?? 0) >= 24,
+                                    
+            NivelTitular.Titular5 => cumpleTiempo && 
+                                    (NumeroObrasAcademicas ?? 0) >= 5 && 
+                                    (PromedioEvaluaciones ?? 0) >= 75 && 
+                                    (HorasCapacitacion ?? 0) >= 160 && 
+                                    (MesesInvestigacion ?? 0) >= 24,
+            _ => false
+        };
     }
+    
+    public string NombreCompleto => $"{Nombres} {Apellidos}";
 }

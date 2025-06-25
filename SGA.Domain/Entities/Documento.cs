@@ -1,34 +1,18 @@
-using System;
+using SGA.Domain.Common;
+using SGA.Domain.Enums;
 
-namespace SGA.Domain.Entities
+namespace SGA.Domain.Entities;
+
+public class Documento : BaseEntity
 {
-    public class Documento
-    {
-        public int Id { get; set; }
-        public int DocenteId { get; set; }
-        public int TipoDocumentoId { get; set; }
-        public required string Nombre { get; set; }
-        public string? Descripcion { get; set; }
-        public required byte[] Contenido { get; set; }
-        public required string ContentType { get; set; }
-        public long TamanioBytes { get; set; }
-        public DateTime FechaSubida { get; set; } = DateTime.Now;
-        public DateTime? FechaModificacion { get; set; }
-        public bool Activo { get; set; } = true;
-        
-        // Validación y verificación
-        public bool Validado { get; set; } = false;
-        public DateTime? FechaValidacion { get; set; }
-        public int? ValidadoPorId { get; set; }
-        public string? ObservacionesValidacion { get; set; }
-        
-        // Hash para verificar integridad
-        public string? HashSHA256 { get; set; }
-        
-        // Navegación
-        public required Docente Docente { get; set; }
-        public required TipoDocumento TipoDocumento { get; set; }
-        public Docente? ValidadoPor { get; set; }
-        public ICollection<DocumentoSolicitud> DocumentosSolicitud { get; set; } = new List<DocumentoSolicitud>();
-    }
+    public string NombreArchivo { get; set; } = string.Empty;
+    public string RutaArchivo { get; set; } = string.Empty;
+    public long TamanoArchivo { get; set; }
+    public TipoDocumento TipoDocumento { get; set; }
+    public byte[] ContenidoArchivo { get; set; } = Array.Empty<byte>();
+    public string ContentType { get; set; } = string.Empty;
+    
+    // Relación con SolicitudAscenso
+    public Guid SolicitudAscensoId { get; set; }
+    public virtual SolicitudAscenso SolicitudAscenso { get; set; } = null!;
 }

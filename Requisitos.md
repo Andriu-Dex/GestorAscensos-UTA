@@ -1,560 +1,245 @@
-# Guía Completa de Estructura de Proyecto: Sistema de Gestión de Ascensos Docentes Universitarios
-
-## Introducción
-
-Esta guía proporciona una estructura de proyecto profesional y completa para un sistema web de gestión de ascensos docentes universitarios, implementando las mejores prácticas de arquitectura de software moderna y específicamente diseñada para cumplir con los requisitos académicos y de seguridad institucional.
-
-## 1. Estructura General de la Solución
-
-### Organización Principal del Proyecto
-
-```
-GestionAscensosDocentes.sln
-├── src/
-│   ├── Core/                                    # Capa de Dominio (Onion Core)
-│   │   ├── GestionAscensos.Domain/
-│   │   └── GestionAscensos.Application/
-│   ├── Infrastructure/                          # Capa de Infraestructura
-│   │   ├── GestionAscensos.Infrastructure/
-│   │   └── GestionAscensos.Persistence/
-│   ├── Presentation/                            # Capa de Presentación
-│   │   ├── GestionAscensos.Api/                # ASP.NET Core 9 Web API
-│   │   └── GestionAscensos.BlazorWasm/         # Blazor WebAssembly Client
-│   └── Shared/                                  # Componentes Compartidos
-│       └── GestionAscensos.Shared/
-├── tests/
-│   ├── UnitTests/
-│   ├── IntegrationTests/
-│   └── ArchitecturalTests/
-├── docs/                                        # Documentación
-└── scripts/                                     # Scripts de BD y despliegue
-```
-
-## 2. Implementación de Onion Architecture
-
-### 2.1 Capa de Dominio (Core)
-
-**GestionAscensos.Domain/** - Contiene las entidades de negocio, objetos de valor, eventos de dominio y especificaciones:
-
-- **Entities/**: Docente, SolicitudAscenso, Documento, EvaluacionDocente, ObraAcademica, ProyectoInvestigacion
-- **ValueObjects/**: Email, NivelTitular, EstadoSolicitud, DocumentoTipo
-- **DomainEvents/**: Eventos para notificaciones y workflows
-- **Specifications/**: Lógica de consultas complejas encapsulada
-- **Exceptions/**: Excepciones específicas del dominio
-
-**Ejemplo de Entidad Docente:**
-
-```csharp
-public class Docente : BaseEntity, IAuditableEntity
-{
-    public string Nombre { get; private set; }
-    public string Apellido { get; private set; }
-    public Email Email { get; private set; }
-    public NivelTitular NivelActual { get; private set; }
-    public DateTime FechaIngresoNivel { get; private set; }
-
-    public bool CumpleRequisitosParaAscenso(NivelTitular nivelDestino)
-    {
-        var requisitos = RequisitosPorNivel.ObtenerRequisitos(nivelDestino);
-        // Validar tiempo en nivel, obras, evaluaciones, capacitación, investigación
-        return ValidarTodosLosRequisitos(requisitos);
-    }
-}
-```
-
-### 2.2 Capa de Aplicación
-
-**GestionAscensos.Application/** - Implementa casos de uso con patrón CQRS:
-
-- **Features/**: Organizados por funcionalidad (Docentes, SolicitudesAscenso, Documentos, Reportes)
-- **Commands/**: Operaciones de escritura (CreateSolicitudAscenso, ProcessSolicitud)
-- **Queries/**: Operaciones de lectura (GetDocente, GetSolicitudesList)
-- **Behaviors/**: Pipeline behaviors para validación, logging, caching, autorización
-
-**Ejemplo de Command Handler:**
-
-```csharp
-public class CreateSolicitudAscensoCommandHandler : IRequestHandler<CreateSolicitudAscensoCommand, Result<Guid>>
-{
-    public async Task<Result<Guid>> Handle(CreateSolicitudAscensoCommand request, CancellationToken cancellationToken)
-    {
-        // Validar requisitos de ascenso
-        // Crear solicitud
-        // Procesar documentos con compresión PDF
-        // Guardar en base de datos
-        // Enviar notificaciones
-    }
-}
-```
-
-## 3. Estructura de la API RESTful
-
-### 3.1 Controladores RESTful
-
-**Endpoints principales:**
-
-- `GET /api/docentes` - Lista paginada de docentes
-- `POST /api/solicitudesascenso` - Crear nueva solicitud
-- `GET /api/solicitudesascenso/{id}` - Obtener solicitud específica
-- `PUT /api/solicitudesascenso/{id}/aprobar` - Aprobar solicitud
-- `POST /api/documentos/upload` - Subir documentos con compresión
-- `GET /api/reportes/ascensos` - Generar reportes PDF
-
-### 3.2 Configuración de Seguridad JWT
-
-```csharp
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-            ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-```
-
-## 4. Cliente Blazor WebAssembly
-
-### 4.1 Estructura del Cliente
-
-```
-GestionAscensos.BlazorWasm/
-├── Components/
-│   ├── Pages/                    # Páginas principales
-│   ├── Shared/                   # Componentes reutilizables
-│   └── Forms/                    # Formularios específicos
-├── Services/
-│   ├── Api/                      # Servicios de API
-│   ├── Authentication/           # Manejo de autenticación
-│   └── State/                    # Gestión de estado
-├── Models/                       # DTOs y ViewModels
-└── Infrastructure/               # Helpers y extensiones
-```
-
-### 4.2 Componentes de Ejemplo
-
-**Formulario de Solicitud de Ascenso:**
-
-```razor
-@page "/solicitudes/crear"
-@attribute [Authorize(Roles = "Docente,Administrador")]
-
-<EditForm Model="@Model" OnValidSubmit="@HandleValidSubmit">
-    <FluentValidator TValidator="CreateSolicitudViewModelValidator" />
-
-    <div class="form-group">
-        <InputSelect @bind-Value="Model.DocenteId" class="form-control">
-            @foreach (var docente in Docentes)
-            {
-                <option value="@docente.Id">@docente.NombreCompleto</option>
-            }
-        </InputSelect>
-    </div>
-
-    <FileUpload @bind-Files="Model.DocumentosAdjuntos"
-                AcceptedFileTypes=".pdf"
-                MaxFileSize="@(10 * 1024 * 1024)" />
-
-    <button type="submit" class="btn btn-primary">Crear Solicitud</button>
-</EditForm>
-```
-
-## 5. Configuración de Base de Datos
-
-### 5.1 Entity Framework Core 9
-
-**ApplicationDbContext con auditoría automática:**
-
-```csharp
-public class ApplicationDbContext : DbContext, IApplicationDbContext
-{
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
-        {
-            switch (entry.State)
-            {
-                case EntityState.Added:
-                    entry.Entity.CreatedBy = _currentUserService.UserId;
-                    entry.Entity.CreatedAt = _dateTime.Now;
-                    break;
-                case EntityState.Modified:
-                    entry.Entity.ModifiedBy = _currentUserService.UserId;
-                    entry.Entity.ModifiedAt = _dateTime.Now;
-                    break;
-            }
-        }
-        return await base.SaveChangesAsync(cancellationToken);
-    }
-}
-```
-
-### 5.2 Configuraciones de Entidad
-
-**Configuración de normalización 3FN:**
-
-```csharp
-public class DocenteConfiguration : IEntityTypeConfiguration<Docente>
-{
-    public void Configure(EntityTypeBuilder<Docente> builder)
-    {
-        builder.ToTable("Docentes");
-        builder.HasKey(d => d.Id);
-
-        builder.Property(d => d.Nombre).HasMaxLength(100).IsRequired();
-        builder.Property(d => d.DocumentoIdentidad).HasMaxLength(20).IsRequired();
-        builder.HasIndex(d => d.DocumentoIdentidad).IsUnique();
-
-        // Configuración de Value Object
-        builder.OwnsOne(d => d.Email, email =>
-        {
-            email.Property(e => e.Value)
-                .HasColumnName("Email")
-                .HasMaxLength(255)
-                .IsRequired();
-        });
-
-        // Relaciones con restricciones
-        builder.HasMany(d => d.SolicitudesAscenso)
-            .WithOne(s => s.Docente)
-            .HasForeignKey(s => s.DocenteId)
-            .OnDelete(DeleteBehavior.Restrict);
-    }
-}
-```
-
-## 6. Servicios Específicos del Dominio
-
-### 6.1 Servicio de Compresión de PDFs
-
-```csharp
-public class PdfCompressionService : IPdfCompressionService
-{
-    public async Task<byte[]> CompressAsync(IFormFile pdfFile, CancellationToken cancellationToken = default)
-    {
-        using var inputStream = new MemoryStream();
-        await pdfFile.CopyToAsync(inputStream, cancellationToken);
-
-        using var outputStream = new MemoryStream();
-        using var reader = new PdfReader(inputStream.ToArray());
-        using var stamper = new PdfStamper(reader, outputStream);
-
-        stamper.SetFullCompression();
-        stamper.Writer.CompressionLevel = PdfStream.BEST_COMPRESSION;
-
-        // Comprimir imágenes página por página
-        for (int i = 1; i <= reader.NumberOfPages; i++)
-        {
-            CompressPageImages(reader.GetPageN(i), _settings.CompressionQuality);
-        }
-
-        return outputStream.ToArray();
-    }
-}
-```
-
-### 6.2 Servicio de Importación de Datos
-
-```csharp
-public class ImportacionDatosService : IImportacionDatosService
-{
-    public async Task<ImportResult> ImportFromDITICAsync(CancellationToken cancellationToken = default)
-    {
-        using var connection = new SqlConnection(_settings.DITIC.ConnectionString);
-
-        // Importar docentes, evaluaciones, obras académicas
-        var docentesImportados = await ImportDocentesFromDITIC(connection, cancellationToken);
-        var evaluacionesImportadas = await ImportEvaluacionesFromDITIC(connection, cancellationToken);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new ImportResult
-        {
-            Success = true,
-            DocentesImportados = docentesImportados,
-            EvaluacionesImportadas = evaluacionesImportadas
-        };
-    }
-}
-```
-
-## 7. Testing Comprehensivo
-
-### 7.1 Estructura de Pruebas
-
-```
-tests/
-├── UnitTests/
-│   ├── Domain.UnitTests/         # Pruebas de entidades y lógica de negocio
-│   ├── Application.UnitTests/    # Pruebas de handlers y behaviors
-│   └── Infrastructure.UnitTests/ # Pruebas de servicios
-├── IntegrationTests/
-│   ├── Api.IntegrationTests/     # Pruebas de endpoints
-│   └── BlazorWasm.IntegrationTests/ # Pruebas de componentes
-└── ArchitecturalTests/           # Validación de arquitectura
-```
-
-### 7.2 Ejemplos de Pruebas
-
-**Unit Test de Dominio:**
-
-```csharp
-[Fact]
-public void CumpleRequisitosParaAscenso_WithValidRequirements_ShouldReturnTrue()
-{
-    // Arrange
-    var docente = DocenteTestHelper.CreateDocenteWithCompleteData();
-    var nivelDestino = NivelTitular.Titular2;
-
-    // Act
-    var cumpleRequisitos = docente.CumpleRequisitosParaAscenso(nivelDestino);
-
-    // Assert
-    cumpleRequisitos.Should().BeTrue();
-}
-```
-
-**Integration Test de API:**
-
-```csharp
-[Fact]
-public async Task CreateSolicitud_WithValidData_ShouldReturnCreated()
-{
-    // Arrange
-    var token = await GenerateJwtTokenAsync("Docente");
-    Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-    // Act
-    var response = await Client.PostAsJsonAsync("/api/solicitudesascenso", request);
-
-    // Assert
-    response.StatusCode.Should().Be(HttpStatusCode.Created);
-}
-```
-
-## 8. Despliegue y DevOps
-
-### 8.1 Configuración Docker
-
-**Multi-stage Dockerfile para API:**
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /src
-COPY ["GestionAscensos.Api.csproj", "."]
-RUN dotnet restore
-COPY . .
-RUN dotnet publish -c Release -o /app/publish
-
-FROM base AS final
-WORKDIR /app
-COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "GestionAscensos.Api.dll"]
-```
-
-### 8.2 Docker Compose para Desarrollo
-
-```yaml
-version: "3.8"
-services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      - SA_PASSWORD=YourStrong@Passw0rd
-      - ACCEPT_EULA=Y
-    ports:
-      - "1433:1433"
-
-  api:
-    build: .
-    ports:
-      - "7001:443"
-    depends_on:
-      - sqlserver
-    environment:
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=GestionAscensosDb;User Id=sa;Password=YourStrong@Passw0rd
-```
-
-### 8.3 CI/CD con GitHub Actions
-
-```yaml
-name: CI/CD Pipeline
-on:
-  push:
-    branches: [main, develop]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.0.x"
-      - name: Run tests
-        run: dotnet test --configuration Release
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Build and push Docker images
-        # Comandos de build y push a registry
-```
-
-## 9. Configuración de Entornos
-
-### 9.1 Configuración Fuertemente Tipada
-
-```csharp
-public class JwtSettings
-{
-    public string SecretKey { get; set; } = string.Empty;
-    public string Issuer { get; set; } = string.Empty;
-    public string Audience { get; set; } = string.Empty;
-    public int AccessTokenExpirationMinutes { get; set; } = 15;
-    public int RefreshTokenExpirationDays { get; set; } = 7;
-}
-
-public class FileStorageSettings
-{
-    public string StorageType { get; set; } = "Local";
-    public string LocalPath { get; set; } = "wwwroot/uploads";
-    public int MaxFileSizeMB { get; set; } = 10;
-    public List<string> AllowedExtensions { get; set; } = new();
-    public bool EnableCompression { get; set; } = true;
-}
-```
-
-### 9.2 Configuración por Ambiente
-
-**Development:**
-
-- SQL Server local
-- JWT con expiración larga
-- Logging detallado
-- CORS permisivos
-
-**Production:**
-
-- SQL Server en la nube
-- JWT con expiración corta
-- Logging mínimo
-- CORS restrictivos
-- Secrets en Azure Key Vault
-
-## 10. Optimización de Rendimiento
-
-### 10.1 Caché Distribuido
-
-```csharp
-public class CacheService : ICacheService
-{
-    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
-    {
-        if (_settings.EnableRedis && _redisDatabase != null)
-        {
-            var value = await _redisDatabase.StringGetAsync(key);
-            return value.HasValue ? JsonSerializer.Deserialize<T>(value!) : null;
-        }
-        return _memoryCache.Get<T>(key);
-    }
-}
-```
-
-### 10.2 Consultas Optimizadas
-
-```csharp
-public async Task<PaginatedList<Docente>> GetDocentesWithFiltersAsync(DocenteFilter filter)
-{
-    var query = Context.Docentes
-        .Where(d => filter.Nombre == null || d.Nombre.Contains(filter.Nombre))
-        .Where(d => filter.Departamento == null || d.Departamento == filter.Departamento);
-
-    // Include solo datos necesarios
-    if (filter.IncludeEvaluaciones)
-    {
-        query = query.Include(d => d.Evaluaciones.Where(e => e.Periodo >= DateTime.UtcNow.AddYears(-4)));
-    }
-
-    return await PaginatedList<Docente>.CreateAsync(query, filter.PageNumber, filter.PageSize);
-}
-```
-
-## 11. Reglas de Negocio Implementadas
-
-### 11.1 Validación de Requisitos de Ascenso
-
-- **Tiempo en rol**: Mínimo 4 años por nivel
-- **Obras académicas**: Cantidad variable según nivel destino
-- **Evaluación docente**: Promedio mínimo 75%
-- **Horas de capacitación**: Requisitos específicos por nivel
-- **Proyectos de investigación**: Tiempo mínimo de participación
-
-### 11.2 Workflow de Solicitudes
-
-1. **Creación**: Docente crea solicitud con documentos
-2. **Validación automática**: Sistema verifica requisitos
-3. **Revisión**: Administradores evalúan solicitud
-4. **Decisión**: Aprobación o rechazo con observaciones
-5. **Notificación**: Email automático al docente
-6. **Actualización**: Si aprobado, actualizar nivel y reiniciar contadores
-
-## 12. Comandos de Inicio Rápido
-
-```bash
-# Clonar e inicializar
-git clone <repository-url>
-cd GestionAscensosDocentes
-dotnet restore
-
-# Ejecutar migraciones
-dotnet ef database update --project src/Infrastructure/GestionAscensos.Persistence
-
-# Ejecutar pruebas
-dotnet test
-
-# Ejecutar aplicación (desarrollo)
-dotnet run --project src/Presentation/GestionAscensos.Api
-dotnet run --project src/Presentation/GestionAscensos.BlazorWasm
-
-# Docker desarrollo
-docker-compose up -d
-
-# Build producción
-dotnet publish -c Release
-```
-
-## Conclusión
-
-Esta guía proporciona una arquitectura completa y profesional para un sistema de gestión de ascensos docentes universitarios, implementando:
-
-✅ **Onion Architecture** con separación clara de capas
-✅ **CQRS + MediatR** para operaciones complejas
-✅ **JWT Authentication** con roles y políticas
-✅ **Entity Framework Core 9** con configuración 3FN
-✅ **Blazor WebAssembly** con componentes reutilizables
-✅ **Testing completo** (Unit, Integration, Architectural)
-✅ **Docker + CI/CD** para despliegue automatizado
-✅ **Compresión de PDFs** y gestión documental
-✅ **Importación de datos** desde múltiples fuentes
-✅ **Reportes PDF** dinámicos
-✅ **Optimización de rendimiento** con caché
-✅ **Configuración por ambiente** robusta
-
-El sistema está diseñado para ser mantenible, escalable, seguro y específicamente adaptado a las necesidades del dominio académico universitario, cumpliendo con todos los requisitos técnicos y de negocio especificados.
+# Instrucciones para Sistema de Gestión de Ascensos Docentes - Versión Base
+
+## 1. Objetivo del Sistema
+
+Desarrollar un sistema web **completamente funcional** para la gestión de ascensos docentes que permita:
+
+- Registro e inicio de sesión de docentes
+- Importación **real** de datos desde bases de datos externas
+- Validación automática de requisitos de ascenso
+- Creación y gestión de solicitudes de ascenso
+- Aprobación/rechazo por parte de administradores
+- Generación de reportes
+
+## 2. Arquitectura del Sistema
+
+### Tecnologías a Utilizar
+
+- **Frontend**: Blazor WebAssembly
+- **Backend**: ASP.NET Core 9 Web API
+- **Base de Datos**: SQL Server Express
+- **Autenticación**: JWT (JSON Web Tokens)
+- **Arquitectura**: Onion Architecture (4 capas)
+
+### Estructura de Capas
+
+1. **Capa de Dominio**: Entidades principales (Docente, SolicitudAscenso, Documento)
+2. **Capa de Aplicación**: Casos de uso y lógica de negocio
+3. **Capa de Infraestructura**: Acceso a datos y servicios externos
+4. **Capa de Presentación**: API REST y cliente Blazor
+
+## 3. Base de Datos Completa
+
+### Base de Datos Principal del Sistema
+
+- **Usuarios**: Información de login y roles
+- **Docentes**: Datos personales y nivel actual
+- **SolicitudesAscenso**: Solicitudes con estado y documentos
+- **Documentos**: Archivos PDF adjuntos
+- **LogAuditoria**: Registro de operaciones importantes
+
+### Bases de Datos Externas (Reales y Separadas)
+
+Crear bases de datos independientes que representen los sistemas universitarios externos:
+
+**Base de Datos TTHH (Talento Humano)**
+
+- Tabla de empleados con datos personales y laborales
+- Tabla de acciones de personal con historial de cambios
+- Tabla de cargos y niveles académicos
+- Poblar con al menos 50 docentes con datos realistas
+
+**Base de Datos DAC (Evaluación Docente)**
+
+- Tabla de evaluaciones docentes por período
+- Tabla de períodos académicos
+- Tabla de criterios de evaluación
+- Poblar con evaluaciones de múltiples períodos para cada docente
+
+**Base de Datos DITIC (Capacitación)**
+
+- Tabla de cursos disponibles
+- Tabla de participación en cursos por docente
+- Tabla de certificaciones obtenidas
+- Poblar con variedad de cursos y participaciones realistas
+
+**Base de Datos DIR INV (Investigación)**
+
+- Tabla de obras académicas (publicaciones, artículos, libros)
+- Tabla de proyectos de investigación
+- Tabla de participación en proyectos por docente
+- Poblar con producción académica variada por docente
+
+## 4. Funcionalidades Completamente Operativas
+
+### Autenticación y Usuarios
+
+- **Registro de docentes**
+- **Login con JWT**: Tokens seguros con expiración configurable
+- **Dos roles**: Docente (ve solo sus datos) y Administrador (ve todo)
+- **Seguridad**: Bloqueo temporal después de 3 intentos fallidos
+
+### Importación Real de Datos
+
+- **Conexión a TTHH**: Obtener tiempo real en cargo actual y fecha de nombramiento
+- **Conexión a DAC**: Calcular promedio real de evaluaciones de últimos 4 períodos
+- **Conexión a DITIC**: Sumar horas reales de capacitación de últimos 3 años
+- **Conexión a DIR INV**: Contar obras académicas y calcular tiempo en investigación
+- **Botones funcionales**: Cada botón ejecuta consultas reales a bases de datos externas
+
+### Validación Automática de Requisitos
+
+El sistema debe validar automáticamente usando datos reales importados:
+
+- **Titular 1 → 2**: 4 años en rol, 1 obra, 75% evaluación, 96h capacitación
+- **Titular 2 → 3**: 4 años en rol, 2 obras, 75% evaluación, 96h capacitación, 12 meses investigación
+- **Titular 3 → 4**: 4 años en rol, 3 obras, 75% evaluación, 128h capacitación, 24 meses investigación
+- **Titular 4 → 5**: 4 años en rol, 5 obras, 75% evaluación, 160h capacitación, 24 meses investigación
+
+### Gestión de Solicitudes de Ascenso
+
+- **Creación**: Solo permitir si datos reales muestran cumplimiento de requisitos
+- **Documentos**: Subida real de archivos PDF con compresión automática
+- **Estados**: Pendiente, En Proceso, Aprobada, Rechazada
+- **Workflow**: Administradores pueden revisar, aprobar o rechazar con motivos
+- **Restricción**: Un docente solo puede tener una solicitud activa
+
+### Reinicio de Contadores
+
+- **Al aprobar ascenso**: Actualizar nivel del docente y fecha de promoción
+- **Reinicio automático**: Los contadores de obras, horas, etc. se reinician automáticamente
+- **Base para siguiente ascenso**: Nuevos cálculos desde fecha de último ascenso
+
+## 5. APIs REST Principales
+
+### Autenticación
+
+- Endpoints para login, registro y renovación de tokens
+- Validación de credenciales contra base de datos principal
+
+### Docentes
+
+- Obtener datos del docente autenticado
+- Importar datos desde cada sistema externo (TTHH, DAC, DITIC, DIR INV)
+- Validar requisitos para ascenso a nivel específico
+
+### Solicitudes
+
+- Crear nueva solicitud con documentos
+- Listar solicitudes según rol del usuario
+- Aprobar o rechazar solicitudes (solo administradores)
+
+### Documentos
+
+- Subir archivos PDF con validación y compresión
+- Descargar documentos asociados a solicitudes
+
+### Reportes
+
+- Generar hoja de vida en PDF
+- Generar reporte de proceso de ascenso
+
+## 6. Cliente Blazor WebAssembly
+
+### Páginas Principales
+
+- **Login**: Autenticación de usuarios
+- **Dashboard**: Estado actual del docente con resumen de requisitos
+- **Mi Perfil**: Datos personales y nivel académico actual
+- **Importar Datos**: Botones para traer datos de sistemas externos
+- **Solicitar Ascenso**: Formulario para crear solicitud (solo si cumple requisitos)
+- **Mis Solicitudes**: Historial de solicitudes del docente
+- **Administración**: Panel para gestionar todas las solicitudes (solo admin)
+
+### Funcionalidades de Interface
+
+- **Indicadores visuales**: Mostrar claramente qué requisitos cumple y cuáles no
+- **Progreso en tiempo real**: Actualizar estado después de importar datos
+- **Validación de archivos**: Solo permitir PDFs con tamaño máximo
+- **Notificaciones**: Alertas sobre cambios de estado en solicitudes
+
+## 7. Validaciones y Reglas de Negocio
+
+### Validaciones de Datos
+
+- **Archivos PDF**: Verificar formato y tamaño máximo
+- **Requisitos de ascenso**: Validación automática con datos reales
+- **Ascenso secuencial**: Solo permitir ascenso al siguiente nivel
+
+### Reglas de Negocio
+
+- **Un docente, una solicitud**: No permitir solicitudes múltiples simultáneas
+- **Reinicio de contadores**: Al ascender, reiniciar todos los indicadores
+- **Fechas de corte**: Cálculos basados en fecha de inicio en nivel actual
+- **Estados de solicitud**: Workflow claro y auditable
+
+## 8. Manejo de Archivos
+
+### Gestión de PDFs
+
+- **Validación estricta**: Solo archivos PDF válidos
+- **Compresión automática**: Reducir tamaño para optimizar almacenamiento
+- **Almacenamiento seguro**: En base de datos con metadata completa
+- **Descarga controlada**: Solo usuarios autorizados
+
+### Generación de Reportes
+
+- **Hoja de vida**: PDF con todos los datos del docente
+- **Reporte de proceso**: Estado detallado de solicitud de ascenso
+- **Formato profesional**: Documentos bien estructurados y presentables
+
+## 9. Datos de Prueba Realistas
+
+### Poblar Bases de Datos Externas
+
+**TTHH**: Crear al menos 50 docentes con fechas de nombramiento variadas, algunos que cumplan 4 años en su nivel y otros que no.
+
+**DAC**: Generar evaluaciones para múltiples períodos académicos, con puntajes variados donde algunos docentes superen 75% y otros no.
+
+**DITIC**: Crear catálogo de cursos realistas y asignar participaciones variadas, algunos docentes con suficientes horas y otros sin completar.
+
+**DIR INV**: Asignar obras académicas y proyectos de investigación de manera realista, variando la productividad entre docentes.
+
+### Casos de Prueba Diversos
+
+- **Docentes que cumplen**: Todos los requisitos para ascender
+- **Docentes que no cumplen**: Faltan uno o más requisitos
+- **Casos límite**: Docentes que están muy cerca de cumplir requisitos
+- **Diferentes niveles**: Docentes en cada nivel de Titular 1 a Titular 4
+
+## 10. Configuración y Seguridad
+
+### Variables de Configuración
+
+- **Cadenas de conexión**: Para base principal y las 4 bases externas
+- **Configuración JWT**: Clave secreta, emisor, audiencia, tiempo de expiración
+- **Configuración de archivos**: Tamaño máximo, tipos permitidos, ruta de almacenamiento
+- **Configuración de requisitos**: Parámetros de ascenso por nivel
+
+### Medidas de Seguridad
+
+- **Autenticación JWT**: Tokens seguros con validación en cada request
+- **Autorización por roles**: Control estricto de acceso según perfil
+- **Validación de entrada**: Sanitización de todos los inputs del usuario
+- **Auditoría**: Log de operaciones críticas (login, solicitudes, aprobaciones)
+
+## 11. Entregables del Proyecto
+
+### Sistema Funcional Completo
+
+- **Aplicación web**: Blazor WebAssembly completamente operativa
+- **API REST**: Todos los endpoints funcionando correctamente
+- **Bases de datos**: Sistema principal + 4 bases externas con datos realistas
+- **Autenticación**: Sistema de login funcional con roles
+- **Importación**: Conexiones reales a bases de datos externas
+- **Workflow**: Proceso completo de solicitud y aprobación de ascensos
+
+### Documentación Técnica
+
+- **Diagrama de arquitectura**: Mostrando las 4 capas de Onion Architecture
+- **Modelo de datos**: Estructura de las 5 bases de datos
+- **Documentación de APIs**: Descripción de todos los endpoints
+- **Manual de instalación**: Pasos para configurar el sistema
+- **Manual de usuario**: Guía para docentes y administradores
+
+El sistema debe ser **completamente funcional** y demostrar todos los aspectos del proceso de ascensos docentes de manera real y operativa.
