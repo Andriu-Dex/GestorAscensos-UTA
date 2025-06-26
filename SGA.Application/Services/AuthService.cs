@@ -49,7 +49,14 @@ public class AuthService : IAuthService
         }
 
         // Verificar contraseña
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, usuario.PasswordHash))
+        Console.WriteLine($"[DEBUG] Password from request: '{request.Password}'");
+        Console.WriteLine($"[DEBUG] Hash from database: '{usuario.PasswordHash}'");
+        Console.WriteLine($"[DEBUG] Hash length: {usuario.PasswordHash?.Length}");
+        
+        bool passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, usuario.PasswordHash);
+        Console.WriteLine($"[DEBUG] Password verification result: {passwordValid}");
+        
+        if (!passwordValid)
         {
             usuario.IntentosLogin++;
             if (usuario.IntentosLogin >= 3)
@@ -113,11 +120,11 @@ public class AuthService : IAuthService
             throw new ArgumentException("La cédula no se encuentra registrada en la base de datos de Talento Humano");
         }
 
-        // Verificar si ya existe usuario con este email
-        var usuarioExistente = await _usuarioRepository.GetByEmailAsync(request.Email);
+        // Verificar si ya existe usuario con este correo institucional
+        var usuarioExistente = await _usuarioRepository.GetByEmailAsync(empleadoTTHH.CorreoInstitucional);
         if (usuarioExistente != null)
         {
-            throw new ArgumentException("Ya existe un usuario con este email");
+            throw new ArgumentException("Ya existe un usuario con este correo institucional");
         }
 
         // Verificar si ya existe docente con esta cédula
@@ -127,22 +134,10 @@ public class AuthService : IAuthService
             throw new ArgumentException("Ya existe un docente registrado con esta cédula");
         }
 
-        // Validar que los datos coincidan con TTHH
-        if (!empleadoTTHH.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException("El email no coincide con el registrado en Talento Humano");
-        }
-
-        if (!empleadoTTHH.Nombres.Equals(request.Nombres, StringComparison.OrdinalIgnoreCase) ||
-            !empleadoTTHH.Apellidos.Equals(request.Apellidos, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException("Los nombres y apellidos no coinciden con los registrados en Talento Humano");
-        }
-
-        // Crear usuario
+        // Crear usuario con correo institucional
         var usuario = new Usuario
         {
-            Email = request.Email,
+            Email = empleadoTTHH.CorreoInstitucional, // Usar correo institucional
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Rol = RolUsuario.Docente,
             EstaActivo = true
@@ -159,7 +154,7 @@ public class AuthService : IAuthService
             Cedula = empleadoTTHH.Cedula,
             Nombres = empleadoTTHH.Nombres,
             Apellidos = empleadoTTHH.Apellidos,
-            Email = empleadoTTHH.Email,
+            Email = empleadoTTHH.CorreoInstitucional, // Usar correo institucional
             NivelActual = nivelTitular,
             FechaInicioNivelActual = empleadoTTHH.FechaNombramiento,
             UsuarioId = usuario.Id,

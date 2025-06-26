@@ -101,6 +101,12 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpGet("test")]
+    public ActionResult Test()
+    {
+        return Ok(new { message = "API funcionando correctamente", timestamp = DateTime.UtcNow });
+    }
+
     [HttpPost("validate-cedula")]
     public async Task<ActionResult> ValidateCedula([FromBody] ValidateCedulaRequest request)
     {
@@ -121,9 +127,16 @@ public class AuthController : ControllerBase
                     nombres = empleado.Nombres,
                     apellidos = empleado.Apellidos,
                     email = empleado.Email,
+                    correoInstitucional = empleado.CorreoInstitucional,
+                    celular = empleado.Celular,
                     cargoActual = empleado.CargoActual,
+                    facultad = empleado.Facultad,
                     nivelAcademico = empleado.NivelAcademico,
-                    fechaNombramiento = empleado.FechaNombramiento
+                    fechaNombramiento = empleado.FechaNombramiento,
+                    direccion = empleado.Direccion,
+                    fechaNacimiento = empleado.FechaNacimiento,
+                    estadoCivil = empleado.EstadoCivil,
+                    tipoContrato = empleado.TipoContrato
                 }
             });
         }

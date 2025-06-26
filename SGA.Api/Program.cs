@@ -52,8 +52,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowBlazorApp", policy =>
     {
         policy.WithOrigins(
-                "https://localhost:7149", "http://localhost:5039", // SGA.Web
-                "https://localhost:7000", "http://localhost:5000"   // Otros frontends
+                "https://localhost:7149", "http://localhost:5039", // SGA.Web (puertos correctos)
+                "https://localhost:7030", "http://localhost:5115"   // API local para testing
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
@@ -102,7 +102,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+// Comentado temporalmente para evitar problemas de CORS con mixed HTTP/HTTPS
+// app.UseHttpsRedirection();
 app.UseCors("AllowBlazorApp");
 app.UseAuthentication();
 app.UseAuthorization();

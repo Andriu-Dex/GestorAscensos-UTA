@@ -12,6 +12,7 @@ namespace SGA.Web.Services
         private readonly HttpClient _httpClient;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly SGA.Web.Services.ILocalStorageService _localStorage;
+        private UserInfoModel? _currentUser;
 
         public AuthService(HttpClient httpClient, AuthenticationStateProvider authStateProvider, SGA.Web.Services.ILocalStorageService localStorage)
         {
@@ -24,40 +25,101 @@ namespace SGA.Web.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginModel);                if (response.IsSuccessStatusCode)
+                Console.WriteLine($"[AUTH DEBUG] Iniciando login para: {loginModel.Email}");
+                Console.WriteLine($"[AUTH DEBUG] URL Base: {_httpClient.BaseAddress}");
+                
+                var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginModel);
+                
+                Console.WriteLine($"[AUTH DEBUG] Status Code: {response.StatusCode}");
+                Console.WriteLine($"[AUTH DEBUG] IsSuccessStatusCode: {response.IsSuccessStatusCode}");
+                
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[AUTH DEBUG] Response Content: {content}");
+                
+                if (response.IsSuccessStatusCode)
                 {
-                    var content = await response.Content.ReadFromJsonAsync<LoginResult>();
-
-                    if (content != null && !string.IsNullOrEmpty(content.Token))
+                    // Parsear la respuesta de la API
+                    var apiResponse = JsonSerializer.Deserialize<ApiLoginResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    
+                    Console.WriteLine($"[AUTH DEBUG] API Response Parsed: {apiResponse != null}");
+                    if (apiResponse?.Token != null)
                     {
-                        await _localStorage.SetItemAsync("authToken", content.Token);
-                        ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsAuthenticated(content.Token);
-                        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", content.Token);
-                        content.Success = true;
-                        return content;
+                        var tokenPreview = apiResponse.Token.Length > 20 ? apiResponse.Token.Substring(0, 20) + "..." : apiResponse.Token;
+                        Console.WriteLine($"[AUTH DEBUG] Token: {tokenPreview}");
+                    }
+                    Console.WriteLine($"[AUTH DEBUG] Usuario: {apiResponse?.Usuario?.Email}");
+
+                    if (apiResponse != null && !string.IsNullOrEmpty(apiResponse.Token))
+                    {
+                        Console.WriteLine("[AUTH DEBUG] Guardando token en localStorage");
+                        await _localStorage.SetItemAsync("authToken", apiResponse.Token);
+                        
+                        Console.WriteLine("[AUTH DEBUG] Configurando header de autorización");
+                        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiResponse.Token);
+                        
+                        Console.WriteLine("[AUTH DEBUG] Marcando usuario como autenticado");
+                        ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsAuthenticated(apiResponse.Token);
+                        
+                        var userInfoModel = new UserInfoModel
+                        {
+                            Id = 0, // UserInfoModel usa int, no Guid
+                            Username = apiResponse.Usuario?.Email ?? "",
+                            Email = apiResponse.Usuario?.Email ?? "",
+                            Nombres = apiResponse.Usuario?.Docente?.Nombres ?? "",
+                            Apellidos = apiResponse.Usuario?.Docente?.Apellidos ?? "",
+                            Cedula = apiResponse.Usuario?.Docente?.Cedula ?? "",
+                            Facultad = "", // Se puede obtener de otro endpoint si es necesario
+                            Departamento = "",
+                            NivelActual = 1, // Por defecto
+                            FechaIngresoNivelActual = apiResponse.Usuario?.Docente?.FechaInicioNivelActual ?? DateTime.Now,
+                            EsAdmin = apiResponse.Usuario?.Rol == "Admin"
+                        };
+                        
+                        // Guardar la información del usuario en memoria
+                        _currentUser = userInfoModel;
+                        
+                        var loginResult = new LoginResult 
+                        { 
+                            Success = true, 
+                            Token = apiResponse.Token,
+                            Message = "Login exitoso",
+                            User = userInfoModel
+                        };
+                        
+                        Console.WriteLine("[AUTH DEBUG] Login exitoso, retornando resultado");
+                        return loginResult;
+                    }
+                    else
+                    {
+                        Console.WriteLine("[AUTH DEBUG] Token vacío o nulo en la respuesta");
+                        return new LoginResult { Success = false, Message = "No se recibió token de autenticación" };
                     }
                 }
-
-                string errorMessage = "Error de inicio de sesión";
-                if (!response.IsSuccessStatusCode)
+                else
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[AUTH DEBUG] Error HTTP: {response.StatusCode}");
+                    
+                    string errorMessage = "Credenciales inválidas";
                     try
                     {
-                        var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        var error = JsonSerializer.Deserialize<ErrorResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         errorMessage = error?.Message ?? errorMessage;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"[AUTH DEBUG] Error deserializando error response: {ex.Message}");
                         errorMessage = "Error al procesar la respuesta del servidor";
                     }
+                    
+                    Console.WriteLine($"[AUTH DEBUG] Retornando error: {errorMessage}");
+                    return new LoginResult { Success = false, Message = errorMessage };
                 }
-
-                return new LoginResult { Success = false, Message = errorMessage };
             }
             catch (Exception ex)
             {
-                return new LoginResult { Success = false, Message = $"Error: {ex.Message}" };
+                Console.WriteLine($"[AUTH DEBUG] Excepción en Login: {ex.Message}");
+                Console.WriteLine($"[AUTH DEBUG] Stack Trace: {ex.StackTrace}");
+                return new LoginResult { Success = false, Message = $"Error de conexión: {ex.Message}" };
             }
         }
 
@@ -93,11 +155,19 @@ namespace SGA.Web.Services
             {
                 return new RegisterResult { Success = false, Message = $"Error: {ex.Message}" };
             }
-        }        public async Task<UserInfoModel?> GetUserInfo()
+        }
+
+        public async Task<UserInfoModel?> GetUserInfo()
         {
             try
             {
-                // Obtener el token del localStorage
+                // Si ya tenemos la información del usuario en memoria, la devolvemos
+                if (_currentUser != null)
+                {
+                    return _currentUser;
+                }
+                
+                // Verificar si hay un token válido
                 var token = await _localStorage.GetItemAsync<string>("authToken");
                 
                 if (string.IsNullOrWhiteSpace(token))
@@ -105,24 +175,51 @@ namespace SGA.Web.Services
                     return null;
                 }
                 
-                // Configurar el header de autorización
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                
-                var response = await _httpClient.GetAsync("api/auth/me");
-
-                if (response.IsSuccessStatusCode)
+                // Si hay token pero no información del usuario, 
+                // intentamos extraerla del token JWT
+                try
                 {
-                    return await response.Content.ReadFromJsonAsync<UserInfoModel>();
+                    var claims = ((ApiAuthenticationStateProvider)_authStateProvider).ParseClaimsFromJwt(token);
+                    if (claims != null && claims.Any())
+                    {
+                        var email = claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
+                        var role = claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "";
+                        
+                        _currentUser = new UserInfoModel
+                        {
+                            Id = 0,
+                            Username = email,
+                            Email = email,
+                            Nombres = "Usuario", // Por defecto, se actualizará con datos reales
+                            Apellidos = "",
+                            Cedula = "",
+                            Facultad = "",
+                            Departamento = "",
+                            NivelActual = 1,
+                            FechaIngresoNivelActual = DateTime.Now,
+                            EsAdmin = role == "Admin"
+                        };
+                        
+                        return _currentUser;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AUTH DEBUG] Error parsing JWT claims: {ex.Message}");
                 }
 
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[AUTH DEBUG] Error in GetUserInfo: {ex.Message}");
                 return null;
             }
-        }public async Task Logout()
+        }
+
+        public async Task Logout()
         {
+            _currentUser = null; // Limpiar información del usuario
             await _localStorage.RemoveItemAsync("authToken");
             ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsLoggedOut();
             _httpClient.DefaultRequestHeaders.Authorization = null;
@@ -190,7 +287,9 @@ namespace SGA.Web.Services
                     Message = $"Error al verificar la cédula: {ex.Message}" 
                 };
             }
-        }        public async Task<bool> ValidateToken()
+        }
+
+        public async Task<bool> ValidateToken()
         {
             try
             {
@@ -247,8 +346,39 @@ namespace SGA.Web.Services
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
-    }    public class ErrorResponse
+    }
+
+    public class ErrorResponse
     {
         public string Message { get; set; } = string.Empty;
+    }
+
+    // Modelos para deserializar la respuesta de la API
+    public class ApiLoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+        public DateTime Expiration { get; set; }
+        public ApiUsuarioDto? Usuario { get; set; }
+    }
+
+    public class ApiUsuarioDto
+    {
+        public Guid Id { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Rol { get; set; } = string.Empty;
+        public ApiDocenteDto? Docente { get; set; }
+    }
+
+    public class ApiDocenteDto
+    {
+        public Guid Id { get; set; }
+        public string Cedula { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string NivelActual { get; set; } = string.Empty;
+        public DateTime FechaInicioNivelActual { get; set; }
+        public DateTime? FechaUltimoAscenso { get; set; }
     }
 }

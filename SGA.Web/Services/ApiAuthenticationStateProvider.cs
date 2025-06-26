@@ -44,7 +44,7 @@ namespace SGA.Web.Services
             NotifyAuthenticationStateChanged(authState);
         }
 
-        private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
+        public IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
         {
             var claims = new List<Claim>();
             if (string.IsNullOrEmpty(jwt)) return claims;

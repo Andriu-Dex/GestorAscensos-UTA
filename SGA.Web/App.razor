@@ -8,16 +8,23 @@
             <AuthorizeRouteView RouteData="@routeInfo" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized Context="notAuthorizedContext">
                     @{
-                        var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
-                        NavigationManager.NavigateTo($"login?returnUrl={returnUrl}", forceLoad: true);
+                        // Solo redirigir si no estamos ya en login
+                        var currentPath = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath;
+                        if (!currentPath.Equals("/login", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+                            NavigationManager.NavigateTo($"/login?returnUrl={returnUrl}");
+                        }
                     }
-                </NotAuthorized>                <Authorizing>
+                </NotAuthorized>
+                <Authorizing>
                     <div class="d-flex justify-content-center mt-4">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>
                     </div>
-                </Authorizing>            </AuthorizeRouteView>
+                </Authorizing>
+            </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeInfo" Selector="h1" />
         </Found>
         <NotFound>
@@ -27,6 +34,15 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+<BlazoredToasts Position="Blazored.Toast.Configuration.ToastPosition.TopRight"
+                Timeout="5"
+                IconType="Blazored.Toast.Configuration.IconType.FontAwesome"
+                SuccessClass="success-toast-override"
+                SuccessIcon="fa fa-check-circle"
+                ErrorIcon="fa fa-times-circle"
+                InfoIcon="fa fa-info-circle"
+                WarningIcon="fa fa-exclamation-circle" />
 
 <BlazoredToasts Position="Blazored.Toast.Configuration.ToastPosition.TopRight"
                 Timeout="5"

@@ -84,10 +84,24 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var token = await LocalStorage.GetItemAsync<string>("authToken");
-        if (!string.IsNullOrEmpty(token))
+        Console.WriteLine("[LOGIN DEBUG] OnInitializedAsync ejecutado");
+        
+        // Verificar si ya está autenticado
+        try
         {
-            NavigationManager.NavigateTo("/");
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Console.WriteLine($"[LOGIN DEBUG] Token encontrado: {!string.IsNullOrEmpty(token)}");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("[LOGIN DEBUG] Usuario ya tiene token, redirigiendo");
+                NavigationManager.NavigateTo("/", replace: true);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LOGIN DEBUG] Error verificando token: {ex.Message}");
         }
     }
 
@@ -98,29 +112,44 @@
 
     private async Task HandleLogin()
     {
+        Console.WriteLine("[LOGIN DEBUG] HandleLogin iniciado");
         isLoading = true;
         errorMessage = "";
+        StateHasChanged();
 
         try
         {
+            Console.WriteLine($"[LOGIN DEBUG] Intentando login con email: {loginModel.Email}");
+            
             var result = await AuthService.Login(loginModel);
             
-            if (result.Success)
+            Console.WriteLine($"[LOGIN DEBUG] Resultado del login - Success: {result.Success}");
+            Console.WriteLine($"[LOGIN DEBUG] Mensaje: {result.Message}");
+            Console.WriteLine($"[LOGIN DEBUG] Token: {!string.IsNullOrEmpty(result.Token)}");
+            
+            if (result.Success && !string.IsNullOrEmpty(result.Token))
             {
-                NavigationManager.NavigateTo("/");
+                Console.WriteLine("[LOGIN DEBUG] Login exitoso, navegando a home");
+                // Dar un momento para que el estado se actualice
+                await Task.Delay(100);
+                NavigationManager.NavigateTo("/", replace: true);
             }
             else
             {
-                errorMessage = result.Message;
+                Console.WriteLine($"[LOGIN DEBUG] Login falló: {result.Message}");
+                errorMessage = result.Message ?? "Error desconocido";
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[LOGIN DEBUG] Excepción en HandleLogin: {ex.Message}");
+            Console.WriteLine($"[LOGIN DEBUG] Stack trace: {ex.StackTrace}");
             errorMessage = $"Error: {ex.Message}";
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 }

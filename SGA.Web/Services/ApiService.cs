@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using SGA.Web.Models;
 
 namespace SGA.Web.Services
@@ -74,54 +75,43 @@ namespace SGA.Web.Services
                 Console.Error.WriteLine($"Error en solicitud DELETE a {endpoint}: {ex.Message}");
                 throw;
             }
-        }        public async Task<DatosTTHH?> ObtenerDatosTTHH(string cedula)
+        }
+
+        public async Task<DatosTTHH?> ObtenerDatosTTHH(string cedula)
         {
             try
             {
-                // Intentamos primero llamar a la API de datos TTHH
-                try 
+                // Llamar al endpoint correcto de validación de cédula
+                var request = new { Cedula = cedula };
+                var response = await _httpClient.PostAsJsonAsync("api/auth/validate-cedula", request);
+                
+                if (response.IsSuccessStatusCode)
                 {
-                    return await _httpClient.GetFromJsonAsync<DatosTTHH>($"api/auth/tthh/{cedula}");
-                }                catch
-                {
-                    // Si la API no existe, usamos una implementación local simulada
-                    await Task.Delay(300); // Simulamos un poco de latencia
+                    var jsonResponse = await response.Content.ReadFromJsonAsync<JsonElement>();
                     
-                    // Para cualquier cédula, generamos datos con correo institucional normalizado
-                    string nombres, apellidos;
-                    
-                    // Verificamos la cédula para devolver diferentes datos según el caso
-                    if (cedula == "1801000000")
+                    if (jsonResponse.TryGetProperty("valid", out var validProp) && validProp.GetBoolean())
                     {
-                        nombres = "Andriu";
-                        apellidos = "Dex";
+                        if (jsonResponse.TryGetProperty("empleado", out var empleadoProp))
+                        {
+                            return new DatosTTHH
+                            {
+                                Cedula = empleadoProp.GetProperty("cedula").GetString() ?? "",
+                                Nombres = empleadoProp.GetProperty("nombres").GetString() ?? "",
+                                Apellidos = empleadoProp.GetProperty("apellidos").GetString() ?? "",
+                                EmailInstitucional = empleadoProp.GetProperty("correoInstitucional").GetString() ?? "",
+                                Celular = empleadoProp.GetProperty("celular").GetString() ?? "",
+                                Facultad = empleadoProp.GetProperty("facultad").GetString() ?? "",
+                                EmailPersonal = empleadoProp.GetProperty("email").GetString() ?? ""
+                            };
+                        }
                     }
-                    else if (cedula == "1802000000")
-                    {
-                        nombres = "Steven";
-                        apellidos = "Paredes";
-                    }
-                    else
-                    {
-                        nombres = "Usuario";
-                        apellidos = "Prueba";
-                    }
-                    
-                    // Generar correo institucional normalizado: inicial + apellido + @uta.edu.ec
-                    string primeraInicial = nombres.Substring(0, 1).ToLower();
-                    string primerApellido = apellidos.Split(' ')[0].ToLower();
-                    string correoInstitucional = $"{primeraInicial}{primerApellido}@uta.edu.ec";
-                      return new DatosTTHH
-                    {
-                        Cedula = cedula,
-                        Nombres = nombres,
-                        Apellidos = apellidos,
-                        Facultad = "FISEI",
-                        Celular = "0912345678",
-                        EmailPersonal = correoInstitucional, // Devolver el correo institucional en EmailPersonal
-                        EmailInstitucional = correoInstitucional // También en EmailInstitucional
-                    };
                 }
+                else
+                {
+                    Console.Error.WriteLine($"Error al validar cédula {cedula}: {response.StatusCode} - {response.ReasonPhrase}");
+                }
+                
+                return null; // Si no se encuentra o hay error
             }
             catch (Exception ex)
             {
