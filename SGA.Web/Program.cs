@@ -6,6 +6,7 @@ using Blazored.Toast;
 using SGA.Web.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -16,6 +17,9 @@ builder.Services.AddScoped(sp => new HttpClient
 { 
     BaseAddress = new Uri("https://localhost:7030/") 
 });
+
+// Add MudBlazor services
+builder.Services.AddMudServices();
 
 // Add Authorization services
 builder.Services.AddAuthorizationCore();

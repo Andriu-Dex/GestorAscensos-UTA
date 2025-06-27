@@ -1,0 +1,35 @@
+# Test completo del sistema de validación de ascensos con datos externos
+
+# Validar requisitos de ascenso para Steven Paredes (usuario de prueba)
+GET http://localhost:5000/api/validacion/validar-ascenso/1804123456
+Content-Type: application/json
+
+###
+
+# Verificar si Steven puede ascender automáticamente
+GET http://localhost:5000/api/validacion/puede-ascender/1804123456
+Content-Type: application/json
+
+###
+
+# Validar ascenso específico al nivel 3
+GET http://localhost:5000/api/validacion/validar-ascenso/1804123456?nivelDestino=Titular3
+Content-Type: application/json
+
+###
+
+# Prueba con otro usuario
+GET http://localhost:5000/api/validacion/validar-ascenso/1234567890
+Content-Type: application/json
+
+###
+
+# Verificar elegibilidad de un docente inexistente (debe devolver error)
+GET http://localhost:5000/api/validacion/puede-ascender/0000000000
+Content-Type: application/json
+
+###
+
+# Test de datos externos completos combinados con validación
+GET http://localhost:5000/api/integracionexterna/completo/1804123456
+Content-Type: application/json

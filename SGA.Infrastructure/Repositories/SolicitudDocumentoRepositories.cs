@@ -101,6 +101,15 @@ public class DocumentoRepository : IDocumentoRepository
             .ToListAsync();
     }
 
+    public async Task<List<Documento>> GetByDocenteIdAsync(Guid docenteId)
+    {
+        return await _context.Documentos
+            .Include(d => d.SolicitudAscenso)
+            .Where(d => d.SolicitudAscenso.DocenteId == docenteId)
+            .OrderByDescending(d => d.FechaCreacion)
+            .ToListAsync();
+    }
+
     public async Task<Documento> CreateAsync(Documento documento)
     {
         _context.Documentos.Add(documento);

@@ -38,6 +38,7 @@ public interface IDocumentoRepository
 {
     Task<Documento?> GetByIdAsync(Guid id);
     Task<List<Documento>> GetBySolicitudIdAsync(Guid solicitudId);
+    Task<List<Documento>> GetByDocenteIdAsync(Guid docenteId);
     Task<Documento> CreateAsync(Documento documento);
     Task<Documento> UpdateAsync(Documento documento);
     Task<bool> DeleteAsync(Guid id);

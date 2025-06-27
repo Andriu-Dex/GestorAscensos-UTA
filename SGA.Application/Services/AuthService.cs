@@ -6,6 +6,7 @@ using SGA.Domain.Entities;
 using SGA.Domain.Entities.External;
 using SGA.Domain.Enums;
 using BCrypt.Net;
+using DocenteDto = SGA.Application.DTOs.Docentes.DocenteDto;
 
 namespace SGA.Application.Services;
 

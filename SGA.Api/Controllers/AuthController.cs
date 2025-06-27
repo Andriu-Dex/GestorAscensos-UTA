@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SGA.Application.DTOs.Auth;
 using SGA.Application.Interfaces;
+using System.Security.Claims;
 
 namespace SGA.Api.Controllers;
 
@@ -9,10 +11,12 @@ namespace SGA.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IDocenteService _docenteService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IDocenteService docenteService)
     {
         _authService = authService;
+        _docenteService = docenteService;
     }
 
     [HttpPost("login")]
@@ -143,6 +147,40 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult> GetCurrentUser()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            return Ok(new
+            {
+                id = docente.Id,
+                nombres = docente.Nombres,
+                apellidos = docente.Apellidos,
+                cedula = docente.Cedula,
+                email = docente.Email,
+                telefonoContacto = "", // Se puede agregar este campo al modelo si es necesario
+                facultadId = 1, // Por defecto, se puede obtener de la base de datos si es necesario
+                facultad = new { id = 1, nombre = "Facultad de Ingeniería" }, // Por defecto
+                nivelActual = int.Parse(docente.NivelActual.Replace("Titular", "")),
+                fechaIngresoNivelActual = docente.FechaInicioNivelActual
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
         }
     }
 }

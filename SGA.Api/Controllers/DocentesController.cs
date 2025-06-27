@@ -174,4 +174,79 @@ public class DocentesController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+    [HttpGet("indicadores")]
+    public async Task<ActionResult<IndicadoresDocenteDto>> GetIndicadores()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var indicadores = await _docenteService.GetIndicadoresAsync(docente.Cedula);
+            return Ok(indicadores);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("requisitos")]
+    public async Task<ActionResult<RequisitosAscensoDto>> GetRequisitos()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Obtener el siguiente nivel para validar requisitos
+            var nivelActual = int.Parse(docente.NivelActual.ToString().Replace("Titular", ""));
+            var siguienteNivel = $"Titular{nivelActual + 1}";
+
+            var requisitos = await _docenteService.GetRequisitosAscensoAsync(docente.Cedula, siguienteNivel);
+            return Ok(requisitos);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("actualizar-indicadores")]
+    public async Task<ActionResult> ActualizarIndicadores()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Importar datos de todos los sistemas
+            await _docenteService.ImportarDatosTTHHAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDACAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDITICAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+
+            return Ok(new { message = "Indicadores actualizados correctamente" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 }

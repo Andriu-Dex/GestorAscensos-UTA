@@ -8,6 +8,7 @@
 @using Microsoft.JSInterop
 @using Blazored.Toast.Services
 @using SGA.Web.Services
+@using SGA.Web.Models
 
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -60,7 +61,7 @@
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>Facultad:</span>
-                                <span class="fw-bold">@(userInfo.Facultad?.Nombre ?? "No asignada")</span>
+                                <span class="fw-bold">@(userInfo.FacultadInfo?.Nombre ?? userInfo.Facultad ?? "No asignada")</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>Fecha de ingreso:</span>
@@ -510,7 +511,7 @@
                     Email = "usuario.demo@uta.edu.ec",
                     TelefonoContacto = "0987654321",
                     FacultadId = 1,
-                    Facultad = new FacultadModel { Id = 1, Nombre = "Facultad de Ingeniería" },
+                    FacultadInfo = new FacultadInfo { Id = 1, Nombre = "Facultad de Ingeniería" },
                     NivelActual = 1,
                     FechaIngresoNivelActual = DateTime.Now.AddMonths(-24)
                 };
@@ -553,7 +554,7 @@
                     Email = "usuario.demo@uta.edu.ec",
                     TelefonoContacto = "0987654321",
                     FacultadId = 1,
-                    Facultad = new FacultadModel { Id = 1, Nombre = "Facultad de Ingeniería" },
+                    FacultadInfo = new FacultadInfo { Id = 1, Nombre = "Facultad de Ingeniería" },
                     NivelActual = 1,
                     FechaIngresoNivelActual = DateTime.Now.AddMonths(-24)
                 };
@@ -676,7 +677,7 @@
             #endif
             
             // Usar la URL correcta del endpoint
-            var response = await Http.GetAsync("api/docente/estado-requisitos");
+            var response = await Http.GetAsync("api/docente/requisitos");
             
             if (response.IsSuccessStatusCode)
             {
@@ -1014,46 +1015,6 @@
         {
             ToastService.ShowError($"Error de autenticación: {ex.Message}");
         }
-    }
-    
-    // Clases de modelo
-    public class UserInfoModel
-    {
-        public int Id { get; set; }
-        public string? Nombres { get; set; }
-        public string? Apellidos { get; set; }
-        public string? Cedula { get; set; }
-        public string? Email { get; set; }
-        public string? TelefonoContacto { get; set; }
-        public int FacultadId { get; set; }
-        public FacultadModel? Facultad { get; set; }
-        public int NivelActual { get; set; }
-        public DateTime FechaIngresoNivelActual { get; set; } = DateTime.Now.AddYears(-2);
-    }
-    
-    public class FacultadModel
-    {
-        public int Id { get; set; }
-        public string? Nombre { get; set; }
-        public string? Codigo { get; set; }
-    }
-    
-    public class IndicadoresModel
-    {
-        public int TiempoRol { get; set; } = 0;
-        public int NumeroObras { get; set; } = 0;
-        public decimal PuntajeEvaluacion { get; set; } = 0;
-        public int HorasCapacitacion { get; set; } = 0;
-        public int TiempoInvestigacion { get; set; } = 0;
-    }
-    
-    public class RequisitosModel
-    {
-        public bool CumpleTiempoRol { get; set; } = false;
-        public bool CumpleObras { get; set; } = false;
-        public bool CumpleEvaluacion { get; set; } = false;
-        public bool CumpleCapacitacion { get; set; } = false;
-        public bool CumpleInvestigacion { get; set; } = false;
     }
     
     public class EditUserModel

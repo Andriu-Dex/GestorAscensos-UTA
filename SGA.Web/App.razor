@@ -1,6 +1,11 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor
 @inject NavigationManager NavigationManager
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
@@ -18,11 +23,9 @@
                     }
                 </NotAuthorized>
                 <Authorizing>
-                    <div class="d-flex justify-content-center mt-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                    </div>
+                    <MudContainer Class="d-flex justify-center mt-4">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    </MudContainer>
                 </Authorizing>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeInfo" Selector="h1" />

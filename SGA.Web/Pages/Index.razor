@@ -1,5 +1,6 @@
 @page "/"
 @attribute [Authorize]
+@using SGA.Web.Models
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -45,7 +46,7 @@
                         </div>
                     </div>
                     <div class="user-info">
-                        <h5 class="mb-0">Titular @userInfo.NivelActual | @userInfo.Facultad</h5>
+                        <h5 class="mb-0">Titular @userInfo.NivelActual | @(userInfo.FacultadInfo?.Nombre ?? userInfo.Facultad)</h5>
                         <p class="text-muted mb-0"><i class="bi bi-calendar-event me-1"></i> Ingreso: @userInfo.FechaIngresoNivelActual.ToString("dd/MM/yyyy")</p>
                     </div>
                     <div class="user-actions">
@@ -330,7 +331,7 @@
         {
             if (userInfo != null)
             {
-                var response = await Http.GetAsync($"api/validacion/requisitos?nivelActual={userInfo.NivelActual}");
+                var response = await Http.GetAsync("api/docente/requisitos");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -543,23 +544,5 @@
     {
         await AuthService.Logout();
         NavigationManager.NavigateTo("/login");
-    }
-    
-    public class IndicadoresModel
-    {
-        public int TiempoRol { get; set; }
-        public int NumeroObras { get; set; }
-        public decimal PuntajeEvaluacion { get; set; }
-        public int HorasCapacitacion { get; set; }
-        public int TiempoInvestigacion { get; set; }
-    }
-    
-    public class RequisitosModel
-    {
-        public bool CumpleTiempoRol { get; set; }
-        public bool CumpleObras { get; set; }
-        public bool CumpleEvaluacion { get; set; }
-        public bool CumpleCapacitacion { get; set; }
-        public bool CumpleInvestigacion { get; set; }
     }
 }

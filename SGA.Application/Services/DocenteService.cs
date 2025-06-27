@@ -67,26 +67,41 @@ public class DocenteService : IDocenteService
     {
         try
         {
-            var response = await _externalDataService.ImportarDesdeTTHHAsync(cedula);
+            var datosTTHH = await _externalDataService.ImportarDatosTTHHAsync(cedula);
             
-            if (response.Exitoso)
+            if (datosTTHH != null)
             {
                 var docente = await _docenteRepository.GetByCedulaAsync(cedula);
                 if (docente != null)
                 {
-                    if (response.DatosImportados.TryGetValue("FechaNombramiento", out var fechaNombr))
-                        docente.FechaNombramiento = (DateTime?)fechaNombr;
-                    
+                    docente.FechaNombramiento = datosTTHH.FechaNombramiento;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_TTHH", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Fecha nombramiento: {fechaNombr}", null);
+                        $"Fecha nombramiento: {datosTTHH.FechaNombramiento}", null);
                 }
+                
+                return new ImportarDatosResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Datos importados exitosamente desde TTHH",
+                    DatosImportados = new Dictionary<string, object?>
+                    {
+                        ["FechaNombramiento"] = datosTTHH.FechaNombramiento,
+                        ["CargoActual"] = datosTTHH.CargoActual,
+                        ["Facultad"] = datosTTHH.Facultad,
+                        ["Departamento"] = datosTTHH.Departamento
+                    }
+                };
             }
             
-            return response;
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se encontraron datos en TTHH para la cédula proporcionada"
+            };
         }
         catch (Exception ex)
         {
@@ -102,26 +117,40 @@ public class DocenteService : IDocenteService
     {
         try
         {
-            var response = await _externalDataService.ImportarDesdeDADACAsync(cedula);
+            var datosDAC = await _externalDataService.ImportarDatosDACAsync(cedula);
             
-            if (response.Exitoso)
+            if (datosDAC != null)
             {
                 var docente = await _docenteRepository.GetByCedulaAsync(cedula);
                 if (docente != null)
                 {
-                    if (response.DatosImportados.TryGetValue("PromedioEvaluaciones", out var promedio))
-                        docente.PromedioEvaluaciones = Convert.ToDecimal(promedio);
-                    
+                    docente.PromedioEvaluaciones = datosDAC.PromedioEvaluaciones;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_DAC", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Promedio evaluaciones: {promedio}", null);
+                        $"Promedio evaluaciones: {datosDAC.PromedioEvaluaciones}", null);
                 }
+                
+                return new ImportarDatosResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Datos importados exitosamente desde DAC",
+                    DatosImportados = new Dictionary<string, object?>
+                    {
+                        ["PromedioEvaluaciones"] = datosDAC.PromedioEvaluaciones,
+                        ["PeriodosEvaluados"] = datosDAC.PeriodosEvaluados,
+                        ["FechaUltimaEvaluacion"] = datosDAC.FechaUltimaEvaluacion
+                    }
+                };
             }
             
-            return response;
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se encontraron datos en DAC para la cédula proporcionada"
+            };
         }
         catch (Exception ex)
         {
@@ -137,26 +166,40 @@ public class DocenteService : IDocenteService
     {
         try
         {
-            var response = await _externalDataService.ImportarDesdeDITICAsync(cedula);
+            var datosDITIC = await _externalDataService.ImportarDatosDITICAsync(cedula);
             
-            if (response.Exitoso)
+            if (datosDITIC != null)
             {
                 var docente = await _docenteRepository.GetByCedulaAsync(cedula);
                 if (docente != null)
                 {
-                    if (response.DatosImportados.TryGetValue("HorasCapacitacion", out var horas))
-                        docente.HorasCapacitacion = Convert.ToInt32(horas);
-                    
+                    docente.HorasCapacitacion = datosDITIC.HorasCapacitacion;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_DITIC", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Horas capacitación: {horas}", null);
+                        $"Horas capacitación: {datosDITIC.HorasCapacitacion}", null);
                 }
+                
+                return new ImportarDatosResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Datos importados exitosamente desde DITIC",
+                    DatosImportados = new Dictionary<string, object?>
+                    {
+                        ["HorasCapacitacion"] = datosDITIC.HorasCapacitacion,
+                        ["CursosCompletados"] = datosDITIC.CursosCompletados,
+                        ["FechaUltimoCurso"] = datosDITIC.FechaUltimoCurso
+                    }
+                };
             }
             
-            return response;
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se encontraron datos en DITIC para la cédula proporcionada"
+            };
         }
         catch (Exception ex)
         {
@@ -172,29 +215,42 @@ public class DocenteService : IDocenteService
     {
         try
         {
-            var response = await _externalDataService.ImportarDesdeDIRINVAsync(cedula);
+            var datosDirInv = await _externalDataService.ImportarDatosDirInvAsync(cedula);
             
-            if (response.Exitoso)
+            if (datosDirInv != null)
             {
                 var docente = await _docenteRepository.GetByCedulaAsync(cedula);
                 if (docente != null)
                 {
-                    if (response.DatosImportados.TryGetValue("NumeroObrasAcademicas", out var obras))
-                        docente.NumeroObrasAcademicas = Convert.ToInt32(obras);
-                    
-                    if (response.DatosImportados.TryGetValue("MesesInvestigacion", out var meses))
-                        docente.MesesInvestigacion = Convert.ToInt32(meses);
-                    
+                    docente.NumeroObrasAcademicas = datosDirInv.NumeroObrasAcademicas;
+                    docente.MesesInvestigacion = datosDirInv.MesesInvestigacion;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_DIRINV", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Obras académicas: {obras}, Meses investigación: {meses}", null);
+                        $"Obras académicas: {datosDirInv.NumeroObrasAcademicas}, Meses investigación: {datosDirInv.MesesInvestigacion}", null);
                 }
+                
+                return new ImportarDatosResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Datos importados exitosamente desde DIRINV",
+                    DatosImportados = new Dictionary<string, object?>
+                    {
+                        ["NumeroObrasAcademicas"] = datosDirInv.NumeroObrasAcademicas,
+                        ["MesesInvestigacion"] = datosDirInv.MesesInvestigacion,
+                        ["ProyectosActivos"] = datosDirInv.ProyectosActivos,
+                        ["FechaUltimaPublicacion"] = datosDirInv.FechaUltimaPublicacion
+                    }
+                };
             }
             
-            return response;
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se encontraron datos en DIRINV para la cédula proporcionada"
+            };
         }
         catch (Exception ex)
         {
@@ -418,5 +474,70 @@ public class DocenteService : IDocenteService
             $"Nivel: {nivelAnterior}", $"Nivel: {nuevoNivel}", null);
 
         return true;
+    }
+
+    public async Task<IndicadoresDocenteDto> GetIndicadoresAsync(string cedula)
+    {
+        var docente = await _docenteRepository.GetByCedulaAsync(cedula);
+        if (docente == null)
+            throw new ArgumentException("Docente no encontrado");
+
+        // Calcular tiempo en rol actual en meses
+        var tiempoRol = (int)Math.Floor((DateTime.UtcNow - docente.FechaInicioNivelActual).TotalDays / 30.44);
+
+        return new IndicadoresDocenteDto
+        {
+            TiempoRol = tiempoRol,
+            NumeroObras = docente.NumeroObrasAcademicas ?? 0,
+            PuntajeEvaluacion = docente.PromedioEvaluaciones ?? 0,
+            HorasCapacitacion = docente.HorasCapacitacion ?? 0,
+            TiempoInvestigacion = docente.MesesInvestigacion ?? 0
+        };
+    }
+
+    public async Task<RequisitosAscensoDto> GetRequisitosAscensoAsync(string cedula, string nivelObjetivo)
+    {
+        var docente = await _docenteRepository.GetByCedulaAsync(cedula);
+        if (docente == null)
+            throw new ArgumentException("Docente no encontrado");
+
+        var indicadores = await GetIndicadoresAsync(cedula);
+        var requisitos = GetRequisitosPorNivel(nivelObjetivo);
+
+        return new RequisitosAscensoDto
+        {
+            CumpleTiempoRol = indicadores.TiempoRol >= requisitos.TiempoRol,
+            CumpleObras = indicadores.NumeroObras >= requisitos.NumeroObras,
+            CumpleEvaluacion = indicadores.PuntajeEvaluacion >= requisitos.PuntajeEvaluacion,
+            CumpleCapacitacion = indicadores.HorasCapacitacion >= requisitos.HorasCapacitacion,
+            CumpleInvestigacion = indicadores.TiempoInvestigacion >= requisitos.TiempoInvestigacion,
+            
+            TiempoRolRequerido = requisitos.TiempoRol,
+            TiempoRolActual = indicadores.TiempoRol,
+            
+            ObrasRequeridas = requisitos.NumeroObras,
+            ObrasActuales = indicadores.NumeroObras,
+            
+            EvaluacionRequerida = requisitos.PuntajeEvaluacion,
+            EvaluacionActual = indicadores.PuntajeEvaluacion,
+            
+            CapacitacionRequerida = requisitos.HorasCapacitacion,
+            CapacitacionActual = indicadores.HorasCapacitacion,
+            
+            InvestigacionRequerida = requisitos.TiempoInvestigacion,
+            InvestigacionActual = indicadores.TiempoInvestigacion
+        };
+    }
+
+    private (int TiempoRol, int NumeroObras, decimal PuntajeEvaluacion, int HorasCapacitacion, int TiempoInvestigacion) GetRequisitosPorNivel(string nivel)
+    {
+        return nivel switch
+        {
+            "Titular2" => (48, 1, 75, 96, 0),    // Titular 1 → 2
+            "Titular3" => (48, 2, 75, 96, 12),   // Titular 2 → 3
+            "Titular4" => (48, 3, 75, 128, 24),  // Titular 3 → 4
+            "Titular5" => (48, 5, 75, 160, 24),  // Titular 4 → 5
+            _ => throw new ArgumentException($"Nivel no válido: {nivel}")
+        };
     }
 }

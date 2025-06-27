@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using SGA.Domain.Entities;
+using SGA.Application.Interfaces;
 
 namespace SGA.Infrastructure.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {

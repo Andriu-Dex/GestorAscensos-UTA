@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Infrastructure.Data;
 using SGA.Infrastructure.Data.External;
@@ -15,6 +16,10 @@ public static class DependencyInjection
         // Base de datos principal
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
+        // Registrar IApplicationDbContext
+        services.AddScoped<IApplicationDbContext>(provider => 
+            provider.GetRequiredService<ApplicationDbContext>());
 
         // Bases de datos externas
         services.AddDbContext<TTHHDbContext>(options =>
