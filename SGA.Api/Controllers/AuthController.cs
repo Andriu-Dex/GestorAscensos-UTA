@@ -24,12 +24,38 @@ public class AuthController : ControllerBase
     {
         try
         {
+            // DEMO: Datos hardcodeados para demostración
+            if (request.Email == "docente@uta.edu.ec" && request.Password == "123456")
+            {
+                return Ok(new LoginResponse
+                {
+                    Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkb2NlbnRlQHV0YS5lZHUuZWMiLCJlbWFpbCI6ImRvY2VudGVAdXRhLmVkdS5lYyIsInJvbGUiOiJEb2NlbnRlIiwibmFtZSI6IkRyLiBKdWFuIFDDqXJleiIsImV4cCI6MTc0NTgxNDEwMH0.demo-token-for-presentation",
+                    Email = "docente@uta.edu.ec",
+                    Role = "Docente",
+                    FullName = "Dr. Juan Pérez",
+                    ExpiresAt = DateTime.UtcNow.AddHours(24)
+                });
+            }
+            
+            if (request.Email == "admin@uta.edu.ec" && request.Password == "admin123")
+            {
+                return Ok(new LoginResponse
+                {
+                    Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkB1dGEuZWR1LmVjIiwiZW1haWwiOiJhZG1pbkB1dGEuZWR1LmVjIiwicm9sZSI6IkFkbWluaXN0cmFkb3IiLCJuYW1lIjoiQWRtaW5pc3RyYWRvciBTaXN0ZW1hIiwiZXhwIjoxNzQ1ODE0MTAwfQ.demo-admin-token-for-presentation",
+                    Email = "admin@uta.edu.ec",
+                    Role = "Administrador",
+                    FullName = "Administrador Sistema",
+                    ExpiresAt = DateTime.UtcNow.AddHours(24)
+                });
+            }
+
+            // Para otros usuarios, usar el servicio real
             var response = await _authService.LoginAsync(request);
             return Ok(response);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { message = ex.Message });
+            return Unauthorized(new { message = "Credenciales inválidas. Use: docente@uta.edu.ec/123456 o admin@uta.edu.ec/admin123" });
         }
         catch (Exception ex)
         {

@@ -138,4 +138,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Endpoint de salud simple
+app.MapGet("/api/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
+
 app.Run();

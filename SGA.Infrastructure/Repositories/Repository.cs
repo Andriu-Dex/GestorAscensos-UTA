@@ -27,9 +27,57 @@ public class Repository<T> : IRepository<T> where T : class
 
     public async Task<T> AddAsync(T entity)
     {
-        await _dbSet.AddAsync(entity);
-        await _context.SaveChangesAsync();
-        return entity;
+        try
+        {
+            await _dbSet.AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return entity;
+        }
+        catch (Exception ex)
+        {
+            // Log detallado del error con toda la cadena de inner exceptions
+            var entityName = typeof(T).Name;
+            var errorDetails = GetFullExceptionDetails(ex);
+            
+            Console.WriteLine($"====== ERROR EN REPOSITORY.ADDASYNC ======");
+            Console.WriteLine($"Entidad: {entityName}");
+            Console.WriteLine($"Fecha: {DateTime.Now}");
+            Console.WriteLine($"Detalles completos del error:");
+            Console.WriteLine(errorDetails);
+            Console.WriteLine($"==========================================");
+            
+            throw new Exception($"Error al guardar {entityName}: {ex.Message} | Inner: {ex.InnerException?.Message}", ex);
+        }
+    }
+
+    private string GetFullExceptionDetails(Exception ex)
+    {
+        var details = new System.Text.StringBuilder();
+        var currentEx = ex;
+        int level = 0;
+        
+        while (currentEx != null)
+        {
+            details.AppendLine($"Nivel {level}: {currentEx.GetType().Name}");
+            details.AppendLine($"  Mensaje: {currentEx.Message}");
+            if (currentEx.Data?.Count > 0)
+            {
+                details.AppendLine($"  Data:");
+                foreach (System.Collections.DictionaryEntry item in currentEx.Data)
+                {
+                    details.AppendLine($"    {item.Key}: {item.Value}");
+                }
+            }
+            if (!string.IsNullOrEmpty(currentEx.StackTrace))
+            {
+                details.AppendLine($"  Stack Trace: {currentEx.StackTrace}");
+            }
+            
+            currentEx = currentEx.InnerException;
+            level++;
+        }
+        
+        return details.ToString();
     }
 
     public async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities)

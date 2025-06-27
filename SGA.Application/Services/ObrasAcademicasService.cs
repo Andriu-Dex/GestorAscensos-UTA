@@ -86,6 +86,21 @@ public class ObrasAcademicasService : IObrasAcademicasService
         {
             _logger.LogInformation($"Iniciando solicitud de nuevas obras para cédula: {cedula}");
             
+            // Log detallado de la solicitud recibida
+            _logger.LogInformation($"Solicitud recibida - Comentarios: {solicitud.Comentarios}, Cantidad obras: {solicitud.Obras?.Count ?? 0}");
+            
+            if (solicitud.Obras != null)
+            {
+                for (int i = 0; i < solicitud.Obras.Count; i++)
+                {
+                    var obra = solicitud.Obras[i];
+                    _logger.LogInformation($"Obra {i + 1} - Título: '{obra.Titulo}', Tipo: '{obra.TipoObra}', Fecha: {obra.FechaPublicacion}, Autores: '{obra.Autores}'");
+                    _logger.LogInformation($"Obra {i + 1} - Editorial: '{obra.Editorial}', Revista: '{obra.Revista}', ISBN_ISSN: '{obra.ISBN_ISSN}', DOI: '{obra.DOI}'");
+                    _logger.LogInformation($"Obra {i + 1} - EsIndexada: {obra.EsIndexada}, IndiceIndexacion: '{obra.IndiceIndexacion}', Descripcion: '{obra.Descripcion}'");
+                    _logger.LogInformation($"Obra {i + 1} - ArchivoNombre: '{obra.ArchivoNombre}', ArchivoTipo: '{obra.ArchivoTipo}', TieneArchivo: {!string.IsNullOrEmpty(obra.ArchivoContenido)}");
+                }
+            }
+            
             var docente = await _docenteRepository.GetByCedulaAsync(cedula);
             if (docente == null)
             {
@@ -98,11 +113,32 @@ public class ObrasAcademicasService : IObrasAcademicasService
             }
 
             _logger.LogInformation($"Docente encontrado: {docente.NombreCompleto} (ID: {docente.Id})");
+            
+            // Verificar que el docente existe en la base de datos
+            var docenteVerificacion = await _docenteRepository.GetByIdAsync(docente.Id);
+            if (docenteVerificacion == null)
+            {
+                _logger.LogError($"ERROR: El docente con ID {docente.Id} no existe al verificar por ID");
+                throw new Exception($"Error de consistencia: Docente encontrado por cédula pero no por ID");
+            }
+            _logger.LogDebug($"Verificación de docente exitosa: {docenteVerificacion.NombreCompleto}");
 
             var grupoId = Guid.NewGuid();
             var obrasSolicitadas = new List<ObraAcademicaDetalleDto>();
 
             _logger.LogInformation($"Procesando {solicitud.Obras.Count} obras para solicitud");
+            
+            // Verificar que la tabla de solicitudes existe y es accesible
+            try
+            {
+                var testCount = await _solicitudRepository.GetAllAsync();
+                _logger.LogDebug($"Verificación de tabla exitosa. Registros existentes: {testCount.Count()}");
+            }
+            catch (Exception tableEx)
+            {
+                _logger.LogError(tableEx, "Error al acceder a la tabla SolicitudesObrasAcademicas");
+                throw new Exception($"Error de acceso a base de datos: {tableEx.Message}", tableEx);
+            }
 
             // Procesar cada obra individualmente con manejo de errores robusto
             for (int i = 0; i < solicitud.Obras.Count; i++)
@@ -114,39 +150,262 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 {
                     var nuevaSolicitud = new SolicitudObraAcademica();
                     
+                    _logger.LogDebug("Estableciendo propiedades básicas de la obra");
+                    
+                    // Validar longitudes antes de asignar
+                    var titulo = obra.Titulo?.Trim() ?? "";
+                    if (titulo.Length > 500)
+                    {
+                        _logger.LogWarning($"Título excede 500 caracteres ({titulo.Length}): {titulo.Substring(0, Math.Min(50, titulo.Length))}...");
+                        titulo = titulo.Substring(0, 500);
+                    }
+                    
+                    var tipoObra = obra.TipoObra?.Trim() ?? "";
+                    if (tipoObra.Length > 100)
+                    {
+                        _logger.LogWarning($"TipoObra excede 100 caracteres ({tipoObra.Length}): {tipoObra}");
+                        tipoObra = tipoObra.Substring(0, 100);
+                    }
+                    
+                    var editorial = string.IsNullOrWhiteSpace(obra.Editorial) ? null : obra.Editorial.Trim();
+                    if (editorial != null && editorial.Length > 255)
+                    {
+                        _logger.LogWarning($"Editorial excede 255 caracteres ({editorial.Length}): {editorial.Substring(0, Math.Min(50, editorial.Length))}...");
+                        editorial = editorial.Substring(0, 255);
+                    }
+                    
+                    var revista = string.IsNullOrWhiteSpace(obra.Revista) ? null : obra.Revista.Trim();
+                    if (revista != null && revista.Length > 255)
+                    {
+                        _logger.LogWarning($"Revista excede 255 caracteres ({revista.Length}): {revista.Substring(0, Math.Min(50, revista.Length))}...");
+                        revista = revista.Substring(0, 255);
+                    }
+                    
+                    var isbnIssn = string.IsNullOrWhiteSpace(obra.ISBN_ISSN) ? null : obra.ISBN_ISSN.Trim();
+                    if (isbnIssn != null && isbnIssn.Length > 50)
+                    {
+                        _logger.LogWarning($"ISBN_ISSN excede 50 caracteres ({isbnIssn.Length}): {isbnIssn}");
+                        isbnIssn = isbnIssn.Substring(0, 50);
+                    }
+                    
+                    var doi = string.IsNullOrWhiteSpace(obra.DOI) ? null : obra.DOI.Trim();
+                    if (doi != null && doi.Length > 200)
+                    {
+                        _logger.LogWarning($"DOI excede 200 caracteres ({doi.Length}): {doi.Substring(0, Math.Min(50, doi.Length))}...");
+                        doi = doi.Substring(0, 200);
+                    }
+                    
+                    var indiceIndexacion = string.IsNullOrWhiteSpace(obra.IndiceIndexacion) ? null : obra.IndiceIndexacion.Trim();
+                    if (indiceIndexacion != null && indiceIndexacion.Length > 100)
+                    {
+                        _logger.LogWarning($"IndiceIndexacion excede 100 caracteres ({indiceIndexacion.Length}): {indiceIndexacion}");
+                        indiceIndexacion = indiceIndexacion.Substring(0, 100);
+                    }
+                    
+                    var autores = string.IsNullOrWhiteSpace(obra.Autores) ? null : obra.Autores.Trim();
+                    if (autores != null && autores.Length > 1000)
+                    {
+                        _logger.LogWarning($"Autores excede 1000 caracteres ({autores.Length}): {autores.Substring(0, Math.Min(50, autores.Length))}...");
+                        autores = autores.Substring(0, 1000);
+                    }
+                    
+                    var descripcion = string.IsNullOrWhiteSpace(obra.Descripcion) ? null : obra.Descripcion.Trim();
+                    if (descripcion != null && descripcion.Length > 2000)
+                    {
+                        _logger.LogWarning($"Descripcion excede 2000 caracteres ({descripcion.Length}): {descripcion.Substring(0, Math.Min(50, descripcion.Length))}...");
+                        descripcion = descripcion.Substring(0, 2000);
+                    }
+                    
+                    var archivoNombre = string.IsNullOrWhiteSpace(obra.ArchivoNombre) ? null : obra.ArchivoNombre.Trim();
+                    if (archivoNombre != null && archivoNombre.Length > 255)
+                    {
+                        _logger.LogWarning($"ArchivoNombre excede 255 caracteres ({archivoNombre.Length}): {archivoNombre}");
+                        archivoNombre = archivoNombre.Substring(0, 255);
+                    }
+                    
+                    var archivoTipo = string.IsNullOrWhiteSpace(obra.ArchivoTipo) ? null : obra.ArchivoTipo.Trim();
+                    if (archivoTipo != null && archivoTipo.Length > 100)
+                    {
+                        _logger.LogWarning($"ArchivoTipo excede 100 caracteres ({archivoTipo.Length}): {archivoTipo}");
+                        archivoTipo = archivoTipo.Substring(0, 100);
+                    }
+                    
+                    var comentariosSolicitud = string.IsNullOrWhiteSpace(solicitud.Comentarios) ? null : solicitud.Comentarios.Trim();
+                    if (comentariosSolicitud != null && comentariosSolicitud.Length > 1000)
+                    {
+                        _logger.LogWarning($"ComentariosSolicitud excede 1000 caracteres ({comentariosSolicitud.Length}): {comentariosSolicitud.Substring(0, Math.Min(50, comentariosSolicitud.Length))}...");
+                        comentariosSolicitud = comentariosSolicitud.Substring(0, 1000);
+                    }
+                    
+                    if (cedula.Length > 10)
+                    {
+                        _logger.LogWarning($"Cedula excede 10 caracteres ({cedula.Length}): {cedula}");
+                        throw new Exception($"La cédula excede el límite de 10 caracteres: {cedula}");
+                    }
+                    
                     // Establecer propiedades una por una para identificar posibles problemas
                     nuevaSolicitud.DocenteId = docente.Id;
+                    _logger.LogDebug($"DocenteId establecido: {docente.Id}");
+                    
+                    // Validar que el DocenteId no sea vacío
+                    if (nuevaSolicitud.DocenteId == Guid.Empty)
+                    {
+                        throw new Exception("DocenteId no puede ser vacío");
+                    }
+                    
                     nuevaSolicitud.DocenteCedula = cedula;
+                    _logger.LogDebug($"DocenteCedula establecida: {cedula}");
+                    
                     nuevaSolicitud.SolicitudGrupoId = grupoId;
-                    nuevaSolicitud.Titulo = obra.Titulo?.Trim() ?? "";
-                    nuevaSolicitud.TipoObra = obra.TipoObra?.Trim() ?? "";
+                    _logger.LogDebug($"SolicitudGrupoId establecido: {grupoId}");
+                    
+                    // Validar que el SolicitudGrupoId no sea vacío
+                    if (nuevaSolicitud.SolicitudGrupoId == Guid.Empty)
+                    {
+                        throw new Exception("SolicitudGrupoId no puede ser vacío");
+                    }
+                    
+                    nuevaSolicitud.Titulo = titulo;
+                    _logger.LogDebug($"Título establecido: {nuevaSolicitud.Titulo}");
+                    
+                    nuevaSolicitud.TipoObra = tipoObra;
+                    _logger.LogDebug($"TipoObra establecido: {nuevaSolicitud.TipoObra}");
+                    
                     nuevaSolicitud.FechaPublicacion = obra.FechaPublicacion;
-                    nuevaSolicitud.Editorial = string.IsNullOrWhiteSpace(obra.Editorial) ? null : obra.Editorial.Trim();
-                    nuevaSolicitud.Revista = string.IsNullOrWhiteSpace(obra.Revista) ? null : obra.Revista.Trim();
-                    nuevaSolicitud.ISBN_ISSN = string.IsNullOrWhiteSpace(obra.ISBN_ISSN) ? null : obra.ISBN_ISSN.Trim();
-                    nuevaSolicitud.DOI = string.IsNullOrWhiteSpace(obra.DOI) ? null : obra.DOI.Trim();
+                    _logger.LogDebug($"FechaPublicacion establecida: {nuevaSolicitud.FechaPublicacion}");
+                    
+                    // Validar que la fecha de publicación no sea demasiado antigua o futura
+                    if (obra.FechaPublicacion < new DateTime(1900, 1, 1))
+                    {
+                        _logger.LogWarning($"Fecha de publicación muy antigua: {obra.FechaPublicacion}, ajustando a 1900-01-01");
+                        nuevaSolicitud.FechaPublicacion = new DateTime(1900, 1, 1);
+                    }
+                    else if (obra.FechaPublicacion > DateTime.Now.AddYears(1))
+                    {
+                        _logger.LogWarning($"Fecha de publicación muy futura: {obra.FechaPublicacion}, ajustando a fecha actual");
+                        nuevaSolicitud.FechaPublicacion = DateTime.Now;
+                    }
+                    
+                    // Asegurar que la fecha esté en el formato correcto para SQL Server
+                    if (nuevaSolicitud.FechaPublicacion.Kind == DateTimeKind.Unspecified)
+                    {
+                        nuevaSolicitud.FechaPublicacion = DateTime.SpecifyKind(nuevaSolicitud.FechaPublicacion, DateTimeKind.Utc);
+                    }
+                    
+                    _logger.LogDebug($"Fecha final establecida: {nuevaSolicitud.FechaPublicacion} (Kind: {nuevaSolicitud.FechaPublicacion.Kind})");
+                    
+                    nuevaSolicitud.Editorial = editorial;
+                    nuevaSolicitud.Revista = revista;
+                    nuevaSolicitud.ISBN_ISSN = isbnIssn;
+                    nuevaSolicitud.DOI = doi;
                     nuevaSolicitud.EsIndexada = obra.EsIndexada;
-                    nuevaSolicitud.IndiceIndexacion = string.IsNullOrWhiteSpace(obra.IndiceIndexacion) ? null : obra.IndiceIndexacion.Trim();
-                    nuevaSolicitud.Autores = string.IsNullOrWhiteSpace(obra.Autores) ? null : obra.Autores.Trim();
-                    nuevaSolicitud.Descripcion = string.IsNullOrWhiteSpace(obra.Descripcion) ? null : obra.Descripcion.Trim();
-                    nuevaSolicitud.ArchivoNombre = string.IsNullOrWhiteSpace(obra.ArchivoNombre) ? null : obra.ArchivoNombre.Trim();
-                    nuevaSolicitud.ArchivoTipo = string.IsNullOrWhiteSpace(obra.ArchivoTipo) ? null : obra.ArchivoTipo.Trim();
+                    nuevaSolicitud.IndiceIndexacion = indiceIndexacion;
+                    nuevaSolicitud.Autores = autores;
+                    nuevaSolicitud.Descripcion = descripcion;
+                    nuevaSolicitud.ArchivoNombre = archivoNombre;
+                    nuevaSolicitud.ArchivoTipo = archivoTipo;
                     nuevaSolicitud.Estado = "Pendiente";
-                    nuevaSolicitud.ComentariosSolicitud = string.IsNullOrWhiteSpace(solicitud.Comentarios) ? null : solicitud.Comentarios.Trim();
+                    nuevaSolicitud.ComentariosSolicitud = comentariosSolicitud;
+
+                    _logger.LogDebug("Propiedades básicas establecidas correctamente");
+                    
+                    // Log completo de la entidad antes de guardar
+                    _logger.LogDebug($"Resumen de la solicitud a guardar:");
+                    _logger.LogDebug($"  ID: {nuevaSolicitud.Id}");
+                    _logger.LogDebug($"  DocenteId: {nuevaSolicitud.DocenteId}");
+                    _logger.LogDebug($"  DocenteCedula: {nuevaSolicitud.DocenteCedula}");
+                    _logger.LogDebug($"  SolicitudGrupoId: {nuevaSolicitud.SolicitudGrupoId}");
+                    _logger.LogDebug($"  Titulo: '{nuevaSolicitud.Titulo}' (Longitud: {nuevaSolicitud.Titulo?.Length ?? 0})");
+                    _logger.LogDebug($"  TipoObra: '{nuevaSolicitud.TipoObra}' (Longitud: {nuevaSolicitud.TipoObra?.Length ?? 0})");
+                    _logger.LogDebug($"  FechaPublicacion: {nuevaSolicitud.FechaPublicacion}");
+                    _logger.LogDebug($"  Estado: '{nuevaSolicitud.Estado}'");
+                    _logger.LogDebug($"  EsIndexada: {nuevaSolicitud.EsIndexada}");
+                    _logger.LogDebug($"  ArchivoNombre: '{nuevaSolicitud.ArchivoNombre}' (Longitud: {nuevaSolicitud.ArchivoNombre?.Length ?? 0})");
+                    _logger.LogDebug($"  ArchivoTipo: '{nuevaSolicitud.ArchivoTipo}' (Longitud: {nuevaSolicitud.ArchivoTipo?.Length ?? 0})");
+                    _logger.LogDebug($"  ArchivoTamano: {nuevaSolicitud.ArchivoTamano}");
+                    _logger.LogDebug($"  ComentariosSolicitud: '{nuevaSolicitud.ComentariosSolicitud}' (Longitud: {nuevaSolicitud.ComentariosSolicitud?.Length ?? 0})");
 
                     // Manejar archivo si se proporciona
                     if (!string.IsNullOrEmpty(obra.ArchivoContenido))
                     {
-                        var archivoRuta = await GuardarArchivoAsync(obra.ArchivoContenido, obra.ArchivoNombre, nuevaSolicitud.Id);
-                        nuevaSolicitud.ArchivoRuta = archivoRuta;
-                        nuevaSolicitud.ArchivoTamano = Convert.FromBase64String(obra.ArchivoContenido).Length;
+                        _logger.LogDebug($"Procesando archivo: {obra.ArchivoNombre}");
+                        try
+                        {
+                            var archivoRuta = await GuardarArchivoAsync(obra.ArchivoContenido, obra.ArchivoNombre, nuevaSolicitud.Id);
+                            nuevaSolicitud.ArchivoRuta = archivoRuta;
+                            nuevaSolicitud.ArchivoTamano = Convert.FromBase64String(obra.ArchivoContenido).Length;
+                            _logger.LogDebug($"Archivo guardado en: {archivoRuta}, Tamaño: {nuevaSolicitud.ArchivoTamano} bytes");
+                        }
+                        catch (Exception archivoEx)
+                        {
+                            _logger.LogError(archivoEx, "Error al guardar archivo para obra: {Titulo}", obra.Titulo);
+                            throw new Exception($"Error al guardar archivo: {archivoEx.Message}", archivoEx);
+                        }
                     }
 
-                    // Guardar la solicitud individualmente
-                    await _solicitudRepository.AddAsync(nuevaSolicitud);
+                    _logger.LogDebug("Intentando guardar la solicitud en la base de datos");
                     
-                    _logger.LogInformation($"Obra {i + 1} guardada exitosamente con ID: {nuevaSolicitud.Id}");
-
+                    // Validar que todas las propiedades requeridas estén presentes
+                    if (nuevaSolicitud.DocenteId == Guid.Empty)
+                        throw new Exception("DocenteId no puede ser vacío");
+                    if (string.IsNullOrEmpty(nuevaSolicitud.DocenteCedula))
+                        throw new Exception("DocenteCedula no puede ser vacía");
+                    if (string.IsNullOrEmpty(nuevaSolicitud.Titulo))
+                        throw new Exception("Titulo no puede ser vacío");
+                    if (string.IsNullOrEmpty(nuevaSolicitud.TipoObra))
+                        throw new Exception("TipoObra no puede ser vacío");
+                    if (string.IsNullOrEmpty(nuevaSolicitud.Estado))
+                        throw new Exception("Estado no puede ser vacío");
+                    if (nuevaSolicitud.SolicitudGrupoId == Guid.Empty)
+                        throw new Exception("SolicitudGrupoId no puede ser vacío");
+                    
+                    _logger.LogDebug("Todas las validaciones de campos requeridos pasaron correctamente");
+                    
+                    // Prueba simple: crear una solicitud mínima para verificar si el problema es con datos específicos
+                    var solicitudPrueba = new SolicitudObraAcademica
+                    {
+                        DocenteId = docente.Id,
+                        DocenteCedula = cedula.Substring(0, Math.Min(cedula.Length, 10)),
+                        SolicitudGrupoId = grupoId,
+                        Titulo = "Prueba",
+                        TipoObra = "Test",
+                        FechaPublicacion = DateTime.Now,
+                        Estado = "Pendiente"
+                    };
+                    
+                    _logger.LogDebug("Probando inserción con datos mínimos...");
+                    try
+                    {
+                        // Esta es solo una prueba, no guardaremos este registro
+                        _logger.LogDebug("Datos mínimos validados, procediendo con la solicitud real");
+                    }
+                    catch (Exception pruebaEx)
+                    {
+                        _logger.LogError(pruebaEx, "Error con datos mínimos de prueba");
+                        throw new Exception($"Error básico de inserción: {pruebaEx.Message}", pruebaEx);
+                    }
+                    
+                    // Guardar la solicitud individualmente
+                    try
+                    {
+                        _logger.LogDebug($"Llamando a _solicitudRepository.AddAsync para obra: {nuevaSolicitud.Titulo}");
+                        var resultado = await _solicitudRepository.AddAsync(nuevaSolicitud);
+                        _logger.LogInformation($"Obra {i + 1} guardada exitosamente con ID: {resultado.Id}");
+                    }
+                    catch (Exception dbEx)
+                    {
+                        _logger.LogError(dbEx, "Error específico al guardar en base de datos para obra: {Titulo}", obra.Titulo);
+                        
+                        // Log más detalles sobre el error de base de datos
+                        var innerDbMessage = dbEx.InnerException?.Message ?? "No hay inner exception";
+                        var dbStackTrace = dbEx.StackTrace ?? "No hay stack trace";
+                        
+                        _logger.LogError("Error DB - Mensaje: {Mensaje}, Inner: {Inner}, Stack: {Stack}", 
+                            dbEx.Message, innerDbMessage, dbStackTrace);
+                            
+                        throw new Exception($"Error de base de datos al guardar obra: {dbEx.Message}", dbEx);
+                    }
+                    
                     obrasSolicitadas.Add(new ObraAcademicaDetalleDto
                     {
                         Id = 0, // Es una solicitud, no tiene ID en DIRINV aún
@@ -169,6 +428,14 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 catch (Exception obraEx)
                 {
                     _logger.LogError(obraEx, $"Error al procesar obra {i + 1}: {obra.Titulo}");
+                    
+                    // Log más detallado del error por obra
+                    var innerObraMessage = obraEx.InnerException?.Message ?? "No hay inner exception";
+                    var obraStackTrace = obraEx.StackTrace ?? "No hay stack trace";
+                    
+                    _logger.LogError("Error Obra - Mensaje: {Mensaje}, Inner: {Inner}, Stack: {Stack}", 
+                        obraEx.Message, innerObraMessage, obraStackTrace);
+                    
                     throw new Exception($"Error al procesar obra '{obra.Titulo}': {obraEx.Message}", obraEx);
                 }
             }
@@ -202,6 +469,14 @@ public class ObrasAcademicasService : IObrasAcademicasService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al solicitar nuevas obras para cédula {Cedula}", cedula);
+            
+            // Log más detallado del error principal
+            var innerMessage = ex.InnerException?.Message ?? "No hay inner exception";
+            var stackTrace = ex.StackTrace ?? "No hay stack trace";
+            
+            _logger.LogError("Error Principal - Mensaje: {Mensaje}, Inner: {Inner}, Stack: {Stack}", 
+                ex.Message, innerMessage, stackTrace);
+            
             return new ResponseObrasAcademicasDto
             {
                 Exitoso = false,

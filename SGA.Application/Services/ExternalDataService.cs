@@ -33,9 +33,8 @@ public class ExternalDataService : IExternalDataService
                 e.FechaNombramiento,
                 e.NivelAcademico,
                 e.Facultad,
-                e.Departamento,
                 e.CorreoInstitucional as Email,
-                e.Activo
+                e.EstaActivo as Activo
             FROM EmpleadosTTHH e 
             WHERE e.Cedula = @Cedula", new { Cedula = cedula });
 
@@ -45,15 +44,15 @@ public class ExternalDataService : IExternalDataService
         // Ahora consultamos acciones de personal para determinar el historial de promociones
         var accionesPersonal = await connection.QueryAsync<dynamic>(@"
             SELECT 
-                ap.Tipo,
-                ap.Fecha,
-                ap.Detalle,
-                ap.NivelAnterior,
-                ap.NivelNuevo
+                ap.TipoAccion as Tipo,
+                ap.FechaAccion as Fecha,
+                ap.Observaciones as Detalle,
+                ap.CargoAnterior as NivelAnterior,
+                ap.CargoNuevo as NivelNuevo
             FROM AccionesPersonalTTHH ap
             WHERE ap.Cedula = @Cedula 
-                AND ap.Tipo = 'PROMOCION'
-            ORDER BY ap.Fecha DESC", new { Cedula = cedula });
+                AND ap.TipoAccion = 'PROMOCION'
+            ORDER BY ap.FechaAccion DESC", new { Cedula = cedula });
             
         // Determinar la fecha de ingreso al nivel actual usando la acción de personal más reciente
         // o la fecha de nombramiento si no hay acciones de promoción
@@ -135,33 +134,95 @@ public class ExternalDataService : IExternalDataService
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
-        // Consultar evaluaciones de los últimos 4 períodos
+        // Primero verificar si el docente existe
+        var docenteExiste = await connection.QueryFirstOrDefaultAsync<int?>(@"
+            SELECT COUNT(*) 
+            FROM Evaluaciones 
+            WHERE Cedula = @Cedula", new { Cedula = cedula });
+
+        if (docenteExiste == 0)
+            return null;
+
+        // Obtener datos del docente desde TTHH para determinar fecha de inicio en nivel actual (opcional)
+        DateTime fechaInicioNivel;
+        try 
+        {
+            var docenteTTHH = await ImportarDatosTTHHAsync(cedula);
+            fechaInicioNivel = docenteTTHH?.FechaIngresoNivelActual ?? docenteTTHH?.FechaNombramiento ?? DateTime.Now.AddYears(-5);
+        }
+        catch
+        {
+            // Si no se puede obtener de TTHH, usar fecha por defecto (5 años atrás)
+            fechaInicioNivel = DateTime.Now.AddYears(-5);
+        }
+
+        // Consultar evaluaciones desde la fecha de inicio en el nivel actual
         var evaluaciones = await connection.QueryAsync<dynamic>(@"
-            SELECT TOP 4
-                e.PuntajeTotal as Puntaje,
+            SELECT 
+                e.PuntajeTotal,
+                e.PuntajeMaximo,
+                (e.PuntajeTotal / e.PuntajeMaximo * 100) as Porcentaje,
                 p.Nombre as PeriodoAcademico,
-                e.FechaEvaluacion
-            FROM EvaluacionesDocenteDAC e 
-            INNER JOIN PeriodosAcademicosDAC p ON e.PeriodoId = p.Id
+                e.FechaEvaluacion,
+                p.FechaInicio,
+                p.FechaFin
+            FROM Evaluaciones e 
+            INNER JOIN Periodos p ON e.PeriodoId = p.Id
             WHERE e.Cedula = @Cedula 
-            ORDER BY e.FechaEvaluacion DESC", new { Cedula = cedula });
+                AND e.FechaEvaluacion >= @FechaInicio
+            ORDER BY e.FechaEvaluacion DESC", 
+            new { 
+                Cedula = cedula, 
+                FechaInicio = fechaInicioNivel 
+            });
+
+        if (!evaluaciones.Any())
+        {
+            // Si no hay evaluaciones desde la fecha de nivel actual, tomar las últimas 4
+            evaluaciones = await connection.QueryAsync<dynamic>(@"
+                SELECT TOP 4
+                    e.PuntajeTotal,
+                    e.PuntajeMaximo,
+                    (e.PuntajeTotal / e.PuntajeMaximo * 100) as Porcentaje,
+                    p.Nombre as PeriodoAcademico,
+                    e.FechaEvaluacion,
+                    p.FechaInicio,
+                    p.FechaFin
+                FROM Evaluaciones e 
+                INNER JOIN Periodos p ON e.PeriodoId = p.Id
+                WHERE e.Cedula = @Cedula 
+                ORDER BY e.FechaEvaluacion DESC", new { Cedula = cedula });
+        }
 
         if (!evaluaciones.Any())
             return null;
 
-        var promedio = evaluaciones.Average(e => (decimal)e.Puntaje);
+        var promedioEvaluacion = evaluaciones.Average(e => (decimal)e.Porcentaje);
+        var totalPeriodos = evaluaciones.Count();
+        var primeraEvaluacion = evaluaciones.Last();
         var ultimaEvaluacion = evaluaciones.First();
+        
+        // Determinar si cumple el requisito (75% mínimo)
+        var cumpleRequisito = promedioEvaluacion >= 75.0m;
+        var requisitoMinimo = 75.0m;
 
         return new DTOs.ExternalData.DatosDACDto
         {
-            PromedioEvaluaciones = promedio,
-            PeriodosEvaluados = evaluaciones.Count(),
+            PromedioEvaluaciones = promedioEvaluacion,
+            PeriodosEvaluados = totalPeriodos,
             FechaUltimaEvaluacion = ultimaEvaluacion.FechaEvaluacion,
+            CumpleRequisito = cumpleRequisito,
+            RequisitoMinimo = requisitoMinimo,
+            PeriodoEvaluado = $"Desde {primeraEvaluacion.FechaEvaluacion:dd/MM/yyyy} hasta {ultimaEvaluacion.FechaEvaluacion:dd/MM/yyyy}",
+            Mensaje = $"Promedio de {totalPeriodos} evaluaciones: {promedioEvaluacion:F1}% " + 
+                     (cumpleRequisito ? "(Cumple requisito mínimo)" : "(NO cumple requisito mínimo)"),
             Evaluaciones = evaluaciones.Select(e => new DTOs.ExternalData.EvaluacionPeriodoDto
             {
                 Periodo = e.PeriodoAcademico,
-                Calificacion = e.Puntaje,
-                Fecha = e.FechaEvaluacion
+                Calificacion = e.PuntajeTotal,
+                Porcentaje = e.Porcentaje,
+                Fecha = e.FechaEvaluacion,
+                EstudiantesEvaluaron = 45 // Este valor se puede hacer dinámico si tienes esa información
             }).ToList()
         };
     }

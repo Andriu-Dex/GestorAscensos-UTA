@@ -110,7 +110,19 @@ public class ObrasAcademicasController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al procesar solicitud de obras académicas");
-            return StatusCode(500, new { message = ex.Message });
+            
+            // Log más detallado incluyendo la excepción interna
+            var innerMessage = ex.InnerException?.Message ?? "No hay excepción interna";
+            var stackTrace = ex.StackTrace ?? "No hay stack trace";
+            
+            _logger.LogError("Detalles del error - Mensaje: {Mensaje}, Inner Exception: {InnerMessage}, Stack Trace: {StackTrace}", 
+                ex.Message, innerMessage, stackTrace);
+            
+            return StatusCode(500, new { 
+                message = ex.Message,
+                innerException = innerMessage,
+                stackTrace = stackTrace
+            });
         }
     }
 

@@ -130,18 +130,28 @@ public class DocenteService : IDocenteService
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_DAC", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Promedio evaluaciones: {datosDAC.PromedioEvaluaciones}", null);
+                        $"Promedio evaluaciones: {datosDAC.PromedioEvaluaciones}% - {datosDAC.PeriodosEvaluados} períodos", null);
                 }
                 
                 return new ImportarDatosResponse
                 {
                     Exitoso = true,
-                    Mensaje = "Datos importados exitosamente desde DAC",
+                    Mensaje = datosDAC.Mensaje,
                     DatosImportados = new Dictionary<string, object?>
                     {
-                        ["PromedioEvaluaciones"] = datosDAC.PromedioEvaluaciones,
-                        ["PeriodosEvaluados"] = datosDAC.PeriodosEvaluados,
-                        ["FechaUltimaEvaluacion"] = datosDAC.FechaUltimaEvaluacion
+                        ["exitoso"] = true,
+                        ["evaluacionesEncontradas"] = datosDAC.PeriodosEvaluados,
+                        ["promedioEvaluacion"] = datosDAC.PromedioEvaluaciones,
+                        ["cumpleRequisito"] = datosDAC.CumpleRequisito,
+                        ["requisitoMinimo"] = datosDAC.RequisitoMinimo,
+                        ["periodoEvaluado"] = datosDAC.PeriodoEvaluado,
+                        ["mensaje"] = datosDAC.Mensaje,
+                        ["detalleEvaluaciones"] = datosDAC.Evaluaciones.Select(e => new {
+                            periodo = e.Periodo,
+                            porcentaje = e.Porcentaje,
+                            fecha = e.Fecha.ToString("yyyy-MM-dd"),
+                            estudiantesEvaluaron = e.EstudiantesEvaluaron
+                        }).ToList()
                     }
                 };
             }
@@ -149,7 +159,7 @@ public class DocenteService : IDocenteService
             return new ImportarDatosResponse
             {
                 Exitoso = false,
-                Mensaje = "No se encontraron datos en DAC para la cédula proporcionada"
+                Mensaje = "No se encontraron evaluaciones docentes para la cédula proporcionada en DAC"
             };
         }
         catch (Exception ex)
