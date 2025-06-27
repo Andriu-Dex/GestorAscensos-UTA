@@ -10,11 +10,20 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     {
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        // Suprimir temporalmente la advertencia de cambios pendientes
+        optionsBuilder.ConfigureWarnings(warnings => 
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Docente> Docentes { get; set; }
     public DbSet<SolicitudAscenso> SolicitudesAscenso { get; set; }
     public DbSet<Documento> Documentos { get; set; }
     public DbSet<LogAuditoria> LogsAuditoria { get; set; }
+    public DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -89,6 +98,43 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.UsuarioEmail).HasMaxLength(255);
             entity.Property(e => e.EntidadAfectada).HasMaxLength(255);
             entity.Property(e => e.DireccionIP).HasMaxLength(45);
+        });
+
+        // Configuración SolicitudObraAcademica
+        modelBuilder.Entity<SolicitudObraAcademica>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DocenteCedula).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.TipoObra).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Editorial).HasMaxLength(255);
+            entity.Property(e => e.Revista).HasMaxLength(255);
+            entity.Property(e => e.ISBN_ISSN).HasMaxLength(50);
+            entity.Property(e => e.DOI).HasMaxLength(200);
+            entity.Property(e => e.IndiceIndexacion).HasMaxLength(100);
+            entity.Property(e => e.Autores).HasMaxLength(1000);
+            entity.Property(e => e.Descripcion).HasMaxLength(2000);
+            entity.Property(e => e.ArchivoNombre).HasMaxLength(255);
+            entity.Property(e => e.ArchivoRuta).HasMaxLength(500);
+            entity.Property(e => e.ArchivoTipo).HasMaxLength(100);
+            entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ComentariosRevision).HasMaxLength(1000);
+            entity.Property(e => e.MotivoRechazo).HasMaxLength(1000);
+            entity.Property(e => e.ComentariosSolicitud).HasMaxLength(1000);
+            
+            entity.HasIndex(e => e.DocenteCedula);
+            entity.HasIndex(e => e.SolicitudGrupoId);
+            entity.HasIndex(e => e.Estado);
+            
+            entity.HasOne(e => e.Docente)
+                  .WithMany()
+                  .HasForeignKey(e => e.DocenteId)
+                  .OnDelete(DeleteBehavior.Restrict);
+                  
+            entity.HasOne(e => e.RevisadoPor)
+                  .WithMany()
+                  .HasForeignKey(e => e.RevisadoPorId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Datos semilla

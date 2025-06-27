@@ -78,13 +78,12 @@ public class AuthService : IAuthService
         usuario.UltimoLogin = DateTime.UtcNow;
         await _usuarioRepository.UpdateAsync(usuario);
 
-        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString());
+        var docente = await _docenteRepository.GetByUsuarioIdAsync(usuario.Id);
+        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString(), docente?.Cedula);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         await _auditoriaService.RegistrarAccionAsync("LOGIN_EXITOSO", usuario.Id.ToString(), 
             usuario.Email, "Usuario", null, null, null);
-
-        var docente = await _docenteRepository.GetByUsuarioIdAsync(usuario.Id);
         
         return new LoginResponse
         {

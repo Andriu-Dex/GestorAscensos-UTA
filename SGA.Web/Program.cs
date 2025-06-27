@@ -12,12 +12,6 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Configure HttpClient
-builder.Services.AddScoped(sp => new HttpClient 
-{ 
-    BaseAddress = new Uri("https://localhost:7030/") 
-});
-
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
@@ -30,6 +24,19 @@ builder.Services.AddBlazoredToast();
 
 // Add custom services
 builder.Services.AddScoped<SGA.Web.Services.ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<AuthorizationMessageHandler>();
+
+// Configure HttpClient with authorization handler
+builder.Services.AddHttpClient<HttpClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7030/");
+})
+.AddHttpMessageHandler<AuthorizationMessageHandler>();
+
+// Register HttpClient as scoped
+builder.Services.AddScoped<HttpClient>(provider =>
+    provider.GetRequiredService<IHttpClientFactory>().CreateClient(typeof(HttpClient).Name));
+
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();

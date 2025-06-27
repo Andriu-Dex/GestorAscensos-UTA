@@ -54,15 +54,12 @@ namespace SGA.Web.Services
                         Console.WriteLine("[AUTH DEBUG] Guardando token en localStorage");
                         await _localStorage.SetItemAsync("authToken", apiResponse.Token);
                         
-                        Console.WriteLine("[AUTH DEBUG] Configurando header de autorización");
-                        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiResponse.Token);
-                        
                         Console.WriteLine("[AUTH DEBUG] Marcando usuario como autenticado");
                         ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsAuthenticated(apiResponse.Token);
                         
                         var userInfoModel = new UserInfoModel
                         {
-                            Id = 0, // UserInfoModel usa int, no Guid
+                            Id = apiResponse.Usuario?.Id ?? Guid.Empty,
                             Username = apiResponse.Usuario?.Email ?? "",
                             Email = apiResponse.Usuario?.Email ?? "",
                             Nombres = apiResponse.Usuario?.Docente?.Nombres ?? "",
@@ -187,7 +184,7 @@ namespace SGA.Web.Services
                         
                         _currentUser = new UserInfoModel
                         {
-                            Id = 0,
+                            Id = Guid.Empty,
                             Username = email,
                             Email = email,
                             Nombres = "Usuario", // Por defecto, se actualizará con datos reales
@@ -222,7 +219,6 @@ namespace SGA.Web.Services
             _currentUser = null; // Limpiar información del usuario
             await _localStorage.RemoveItemAsync("authToken");
             ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsLoggedOut();
-            _httpClient.DefaultRequestHeaders.Authorization = null;
         }
 
         public async Task<RegisterResult> VerificarEmail(string email)

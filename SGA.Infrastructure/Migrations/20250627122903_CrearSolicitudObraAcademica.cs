@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace SGA.Infrastructure.Data.Migrations
+namespace SGA.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class CrearSolicitudObraAcademica : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -123,6 +123,55 @@ namespace SGA.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SolicitudesObrasAcademicas",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DocenteId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DocenteCedula = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    Titulo = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    TipoObra = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    FechaPublicacion = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Editorial = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    Revista = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ISBN_ISSN = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DOI = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    EsIndexada = table.Column<bool>(type: "bit", nullable: false),
+                    IndiceIndexacion = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Autores = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Descripcion = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    ArchivoNombre = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ArchivoRuta = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ArchivoTipo = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ArchivoTamano = table.Column<long>(type: "bigint", nullable: true),
+                    Estado = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ComentariosRevision = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    RevisadoPorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FechaRevision = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MotivoRechazo = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    ComentariosSolicitud = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    SolicitudGrupoId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FechaModificacion = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SolicitudesObrasAcademicas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SolicitudesObrasAcademicas_Docentes_DocenteId",
+                        column: x => x.DocenteId,
+                        principalTable: "Docentes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_SolicitudesObrasAcademicas_Usuarios_RevisadoPorId",
+                        column: x => x.RevisadoPorId,
+                        principalTable: "Usuarios",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Documentos",
                 columns: table => new
                 {
@@ -151,12 +200,12 @@ namespace SGA.Infrastructure.Data.Migrations
             migrationBuilder.InsertData(
                 table: "Usuarios",
                 columns: new[] { "Id", "Email", "EstaActivo", "FechaCreacion", "FechaModificacion", "IntentosLogin", "PasswordHash", "Rol", "UltimoBloqueado", "UltimoLogin" },
-                values: new object[] { new Guid("6fa6dce8-66df-465c-a79c-0f6e2d2651c1"), "admin@uta.edu.ec", true, new DateTime(2025, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(621), null, 0, "$2a$11$eWDAhgGAMRNpUkpUHlnwaefg3uyYXXV8CUkLZU76AaiP1bFNcUZuC", "Administrador", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+                values: new object[] { new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214"), "admin@uta.edu.ec", true, new DateTime(2025, 6, 27, 12, 29, 2, 726, DateTimeKind.Utc).AddTicks(4900), null, 0, "$2a$11$6O062mcgFNytReZF.LPdv.FNAqEy/XKrg6vcDrTYBUCyspsjrF0hW", "Administrador", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
 
             migrationBuilder.InsertData(
                 table: "Docentes",
                 columns: new[] { "Id", "Apellidos", "Cedula", "Email", "EstaActivo", "FechaCreacion", "FechaInicioNivelActual", "FechaModificacion", "FechaNombramiento", "FechaUltimaImportacion", "FechaUltimoAscenso", "HorasCapacitacion", "MesesInvestigacion", "NivelActual", "Nombres", "NumeroObrasAcademicas", "PromedioEvaluaciones", "UsuarioId" },
-                values: new object[] { new Guid("2f3111eb-1567-48f9-a438-d90493df25f1"), "Sistema", "1800000000", "admin@uta.edu.ec", true, new DateTime(2025, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(6624), new DateTime(2020, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(6273), null, null, null, null, null, null, "Titular5", "Administrador", null, null, new Guid("6fa6dce8-66df-465c-a79c-0f6e2d2651c1") });
+                values: new object[] { new Guid("80a42eb2-0777-4b91-b20d-9d38cc30daed"), "Sistema", "1800000000", "admin@uta.edu.ec", true, new DateTime(2025, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2969), new DateTime(2020, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2485), null, null, null, null, null, null, "Titular5", "Administrador", null, null, new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214") });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Docentes_Cedula",
@@ -192,6 +241,31 @@ namespace SGA.Infrastructure.Data.Migrations
                 column: "DocenteId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_SolicitudesObrasAcademicas_DocenteCedula",
+                table: "SolicitudesObrasAcademicas",
+                column: "DocenteCedula");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SolicitudesObrasAcademicas_DocenteId",
+                table: "SolicitudesObrasAcademicas",
+                column: "DocenteId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SolicitudesObrasAcademicas_Estado",
+                table: "SolicitudesObrasAcademicas",
+                column: "Estado");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SolicitudesObrasAcademicas_RevisadoPorId",
+                table: "SolicitudesObrasAcademicas",
+                column: "RevisadoPorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SolicitudesObrasAcademicas_SolicitudGrupoId",
+                table: "SolicitudesObrasAcademicas",
+                column: "SolicitudGrupoId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Usuarios_Email",
                 table: "Usuarios",
                 column: "Email",
@@ -206,6 +280,9 @@ namespace SGA.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "LogsAuditoria");
+
+            migrationBuilder.DropTable(
+                name: "SolicitudesObrasAcademicas");
 
             migrationBuilder.DropTable(
                 name: "SolicitudesAscenso");

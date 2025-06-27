@@ -6,6 +6,8 @@ using SGA.Application.Interfaces.Repositories;
 using SGA.Infrastructure.Data;
 using SGA.Infrastructure.Data.External;
 using SGA.Infrastructure.Repositories;
+using SGA.Infrastructure.Services;
+using SGA.Infrastructure.Services;
 
 namespace SGA.Infrastructure;
 
@@ -41,6 +43,12 @@ public static class DependencyInjection
         services.AddScoped<IDocumentoRepository, DocumentoRepository>();
         services.AddScoped<ILogAuditoriaRepository, LogAuditoriaRepository>();
         services.AddScoped<ITTHHRepository, TTHHRepository>();
+        
+        // Repositorio genérico para obras académicas
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        
+        // Servicio de datos de DIRINV
+        services.AddScoped<IDIRINVDataService, DIRINVDataService>();
 
         return services;
     }

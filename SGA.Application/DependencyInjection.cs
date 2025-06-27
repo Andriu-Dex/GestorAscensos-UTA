@@ -21,6 +21,10 @@ public static class DependencyInjection
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<ITTHHService, TTHHService>();
         
+        // Servicios para obras académicas
+        services.AddScoped<IObrasAcademicasService, ObrasAcademicasService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         

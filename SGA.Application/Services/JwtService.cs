@@ -23,12 +23,12 @@ public class JwtService : IJwtService
         _audience = _configuration["JWT:Audience"] ?? "SGA.Client";
     }
 
-    public string GenerateToken(Guid userId, string email, string role)
+    public string GenerateToken(Guid userId, string email, string role, string? cedula = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Email, email),
@@ -36,6 +36,11 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
+
+        if (!string.IsNullOrEmpty(cedula))
+        {
+            claims.Add(new Claim("cedula", cedula));
+        }
 
         var token = new JwtSecurityToken(
             issuer: _issuer,

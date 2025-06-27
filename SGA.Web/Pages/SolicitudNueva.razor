@@ -204,9 +204,9 @@
 </div>
 
 @code {
-    private UserInfoModel userInfo;
+    private UserInfoModel? userInfo;
     private CrearSolicitudAscensoDto solicitud = new CrearSolicitudAscensoDto();
-    private List<DocumentoDto> documentos;
+    private List<DocumentoDto>? documentos;
     private List<int> documentosSeleccionados = new List<int>();
     private bool isLoading = true;
     private bool isSubmitting = false;
@@ -224,6 +224,9 @@
             // Cargar información del usuario
             userInfo = await Http.GetFromJsonAsync<UserInfoModel>("api/auth/me");
             
+            // Verificar si ya tiene una solicitud activa antes de permitir crear una nueva
+            await VerificarSolicitudActiva();
+            
             // Cargar documentos del usuario
             documentos = await Http.GetFromJsonAsync<List<DocumentoDto>>("api/documento/mis-documentos");
             
@@ -240,37 +243,68 @@
         }
     }
     
+    private async Task VerificarSolicitudActiva()
+    {
+        try
+        {
+            var solicitudesResponse = await Http.GetFromJsonAsync<List<SolicitudAscensoDto>>("api/solicitudascenso/mis-solicitudes");
+            if (solicitudesResponse != null)
+            {
+                var solicitudActiva = solicitudesResponse.FirstOrDefault(s => 
+                    s.Estado == "Pendiente" || s.Estado == "EnProceso");
+                
+                if (solicitudActiva != null)
+                {
+                    ToastService.ShowWarning($"Ya tiene una solicitud activa con estado: {solicitudActiva.Estado}. Debe esperar a que se procese antes de crear una nueva.");
+                    NavigationManager.NavigateTo("/solicitudes");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al verificar solicitudes activas: {ex.Message}");
+            // Continuar con el flujo normal si hay error en la verificación
+        }
+    }
+    
     private async Task CargarIndicadores()
     {
         try
         {
             var indicadoresResponse = await Http.GetFromJsonAsync<IndicadoresResponse>("api/docente/indicadores");
             
-            // Asignar valores a la solicitud
-            solicitud.TiempoRol = indicadoresResponse.TiempoRol;
-            solicitud.NumeroObras = indicadoresResponse.NumeroObras;
-            solicitud.PuntajeEvaluacion = indicadoresResponse.PuntajeEvaluacion;
-            solicitud.HorasCapacitacion = indicadoresResponse.HorasCapacitacion;
-            solicitud.TiempoInvestigacion = indicadoresResponse.TiempoInvestigacion;
-            
-            // Establecer nivel actual y solicitado
-            solicitud.NivelActual = userInfo.NivelActual;
-            solicitud.NivelSolicitado = userInfo.NivelActual + 1;
-            
-            // Validar requisitos
-            var requisitosResponse = await Http.GetFromJsonAsync<RequisitosResponse>($"api/validacion/requisitos?nivelActual={solicitud.NivelActual}");
-            
-            solicitud.CumpleTiempoRol = requisitosResponse.CumpleTiempoRol;
-            solicitud.CumpleObras = requisitosResponse.CumpleObras;
-            solicitud.CumpleEvaluacion = requisitosResponse.CumpleEvaluacion;
-            solicitud.CumpleCapacitacion = requisitosResponse.CumpleCapacitacion;
-            solicitud.CumpleInvestigacion = requisitosResponse.CumpleInvestigacion;
-            
-            cumpleTodosRequisitos = solicitud.CumpleTiempoRol && 
-                                    solicitud.CumpleObras && 
-                                    solicitud.CumpleEvaluacion && 
-                                    solicitud.CumpleCapacitacion && 
-                                    solicitud.CumpleInvestigacion;
+            if (indicadoresResponse != null && userInfo != null)
+            {
+                // Asignar valores a la solicitud
+                solicitud.TiempoRol = indicadoresResponse.TiempoRol;
+                solicitud.NumeroObras = indicadoresResponse.NumeroObras;
+                solicitud.PuntajeEvaluacion = indicadoresResponse.PuntajeEvaluacion;
+                solicitud.HorasCapacitacion = indicadoresResponse.HorasCapacitacion;
+                solicitud.TiempoInvestigacion = indicadoresResponse.TiempoInvestigacion;
+                
+                // Establecer nivel actual y solicitado
+                solicitud.NivelActual = userInfo.NivelActual;
+                solicitud.NivelSolicitado = userInfo.NivelActual + 1;
+                
+                // Validar requisitos
+                var requisitosResponse = await Http.GetFromJsonAsync<RequisitosResponse>($"api/validacion/requisitos?nivelActual={solicitud.NivelActual}");
+                
+                if (requisitosResponse != null)
+                {
+                    solicitud.CumpleTiempoRol = requisitosResponse.CumpleTiempoRol;
+                    solicitud.CumpleObras = requisitosResponse.CumpleObras;
+                    solicitud.CumpleEvaluacion = requisitosResponse.CumpleEvaluacion;
+                    solicitud.CumpleCapacitacion = requisitosResponse.CumpleCapacitacion;
+                    solicitud.CumpleInvestigacion = requisitosResponse.CumpleInvestigacion;
+                    
+                    cumpleTodosRequisitos = solicitud.CumpleTiempoRol && 
+                                            solicitud.CumpleObras && 
+                                            solicitud.CumpleEvaluacion && 
+                                            solicitud.CumpleCapacitacion && 
+                                            solicitud.CumpleInvestigacion;
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -355,9 +389,9 @@
     public class UserInfoModel
     {
         public int Id { get; set; }
-        public string Nombres { get; set; }
-        public string Apellidos { get; set; }
-        public string Email { get; set; }
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public int NivelActual { get; set; }
         public DateTime FechaIngresoNivelActual { get; set; }
     }
@@ -365,15 +399,15 @@
     public class DocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
-        public TipoDocumentoDto TipoDocumento { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public TipoDocumentoDto? TipoDocumento { get; set; }
         public DateTime FechaCreacion { get; set; }
     }
     
     public class TipoDocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
     }
     
     public class IndicadoresResponse
@@ -408,7 +442,16 @@
         public bool CumpleEvaluacion { get; set; }
         public bool CumpleCapacitacion { get; set; }
         public bool CumpleInvestigacion { get; set; }
-        public string Observaciones { get; set; }
+        public string Observaciones { get; set; } = string.Empty;
         public List<int> DocumentosIds { get; set; } = new List<int>();
+    }
+
+    public class SolicitudAscensoDto
+    {
+        public int Id { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public DateTime FechaCreacion { get; set; }
+        public int NivelActual { get; set; }
+        public int NivelSolicitado { get; set; }
     }
 }

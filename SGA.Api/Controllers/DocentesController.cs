@@ -149,6 +149,94 @@ public class DocentesController : ControllerBase
         }
     }
 
+    [HttpPost("importar-obras")]
+    public async Task<ActionResult<ImportarDatosResponse>> ImportarObras()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var response = await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("importar-evaluacion")]
+    public async Task<ActionResult<ImportarDatosResponse>> ImportarEvaluacion()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var response = await _docenteService.ImportarDatosDACAsync(docente.Cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("importar-capacitacion")]
+    public async Task<ActionResult<ImportarDatosResponse>> ImportarCapacitacion()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var response = await _docenteService.ImportarDatosDITICAsync(docente.Cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("importar-investigacion")]
+    public async Task<ActionResult<ImportarDatosResponse>> ImportarInvestigacion()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var response = await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
     [HttpGet("validar-requisitos/{nivelObjetivo}")]
     public async Task<ActionResult<ValidacionRequisitosDto>> ValidarRequisitos(string nivelObjetivo)
     {
@@ -173,6 +261,69 @@ public class DocentesController : ControllerBase
         {
             return StatusCode(500, new { message = ex.Message });
         }
+    }
+
+    [HttpGet("indicadores")]
+    public async Task<ActionResult<IndicadoresDocenteDto>> GetIndicadores()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var indicadores = await _docenteService.GetIndicadoresAsync(docente.Cedula);
+            return Ok(indicadores);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("actualizar-indicadores")]
+    public async Task<ActionResult> ActualizarIndicadores()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Importar datos de todos los sistemas
+            await _docenteService.ImportarDatosTTHHAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDACAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDITICAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+
+            return Ok(new { message = "Indicadores actualizados correctamente" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+}
+
+// Nuevo controlador para endpoints específicos que el frontend espera
+[ApiController]
+[Route("api/docente")]
+[Authorize]
+public class DocenteController : ControllerBase
+{
+    private readonly IDocenteService _docenteService;
+
+    public DocenteController(IDocenteService docenteService)
+    {
+        _docenteService = docenteService;
     }
 
     [HttpGet("indicadores")]
@@ -223,11 +374,15 @@ public class DocentesController : ControllerBase
         }
     }
 
-    [HttpPost("actualizar-indicadores")]
-    public async Task<ActionResult> ActualizarIndicadores()
+    [HttpGet("perfil")]
+    public async Task<ActionResult<DocenteDto>> GetPerfil()
     {
         try
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
                 return Unauthorized();
@@ -236,13 +391,7 @@ public class DocentesController : ControllerBase
             if (docente == null)
                 return NotFound("Docente no encontrado");
 
-            // Importar datos de todos los sistemas
-            await _docenteService.ImportarDatosTTHHAsync(docente.Cedula);
-            await _docenteService.ImportarDatosDACAsync(docente.Cedula);
-            await _docenteService.ImportarDatosDITICAsync(docente.Cedula);
-            await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
-
-            return Ok(new { message = "Indicadores actualizados correctamente" });
+            return Ok(docente);
         }
         catch (Exception ex)
         {

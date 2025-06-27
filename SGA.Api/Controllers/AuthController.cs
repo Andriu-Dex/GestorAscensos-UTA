@@ -173,7 +173,8 @@ public class AuthController : ControllerBase
                 email = docente.Email,
                 telefonoContacto = "", // Se puede agregar este campo al modelo si es necesario
                 facultadId = 1, // Por defecto, se puede obtener de la base de datos si es necesario
-                facultad = new { id = 1, nombre = "Facultad de Ingeniería" }, // Por defecto
+                facultad = "Facultad de Ingeniería", // String simple para compatibilidad
+                facultadInfo = new { id = 1, nombre = "Facultad de Ingeniería" }, // Objeto separado
                 nivelActual = int.Parse(docente.NivelActual.Replace("Titular", "")),
                 fechaIngresoNivelActual = docente.FechaInicioNivelActual
             });

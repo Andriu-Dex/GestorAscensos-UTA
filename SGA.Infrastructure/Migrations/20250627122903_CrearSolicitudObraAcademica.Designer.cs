@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SGA.Infrastructure.Data;
 
 #nullable disable
 
-namespace SGA.Infrastructure.Data.Migrations
+namespace SGA.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250627122903_CrearSolicitudObraAcademica")]
+    partial class CrearSolicitudObraAcademica
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,16 +107,16 @@ namespace SGA.Infrastructure.Data.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("2f3111eb-1567-48f9-a438-d90493df25f1"),
+                            Id = new Guid("80a42eb2-0777-4b91-b20d-9d38cc30daed"),
                             Apellidos = "Sistema",
                             Cedula = "1800000000",
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(6624),
-                            FechaInicioNivelActual = new DateTime(2020, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(6273),
+                            FechaCreacion = new DateTime(2025, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2969),
+                            FechaInicioNivelActual = new DateTime(2020, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2485),
                             NivelActual = "Titular5",
                             Nombres = "Administrador",
-                            UsuarioId = new Guid("6fa6dce8-66df-465c-a79c-0f6e2d2651c1")
+                            UsuarioId = new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214")
                         });
                 });
 
@@ -274,6 +277,126 @@ namespace SGA.Infrastructure.Data.Migrations
                     b.ToTable("SolicitudesAscenso");
                 });
 
+            modelBuilder.Entity("SGA.Domain.Entities.SolicitudObraAcademica", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ArchivoNombre")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ArchivoRuta")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("ArchivoTamano")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ArchivoTipo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Autores")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ComentariosRevision")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ComentariosSolicitud")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DOI")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("DocenteCedula")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<Guid>("DocenteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Editorial")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("EsIndexada")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaPublicacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ISBN_ISSN")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("IndiceIndexacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("RevisadoPorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Revista")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("SolicitudGrupoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TipoObra")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocenteCedula");
+
+                    b.HasIndex("DocenteId");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("RevisadoPorId");
+
+                    b.HasIndex("SolicitudGrupoId");
+
+                    b.ToTable("SolicitudesObrasAcademicas");
+                });
+
             modelBuilder.Entity("SGA.Domain.Entities.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -321,12 +444,12 @@ namespace SGA.Infrastructure.Data.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("6fa6dce8-66df-465c-a79c-0f6e2d2651c1"),
+                            Id = new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214"),
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 25, 21, 26, 12, 45, DateTimeKind.Utc).AddTicks(621),
+                            FechaCreacion = new DateTime(2025, 6, 27, 12, 29, 2, 726, DateTimeKind.Utc).AddTicks(4900),
                             IntentosLogin = 0,
-                            PasswordHash = "$2a$11$eWDAhgGAMRNpUkpUHlnwaefg3uyYXXV8CUkLZU76AaiP1bFNcUZuC",
+                            PasswordHash = "$2a$11$6O062mcgFNytReZF.LPdv.FNAqEy/XKrg6vcDrTYBUCyspsjrF0hW",
                             Rol = "Administrador",
                             UltimoLogin = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
@@ -370,6 +493,24 @@ namespace SGA.Infrastructure.Data.Migrations
                     b.Navigation("AprobadoPor");
 
                     b.Navigation("Docente");
+                });
+
+            modelBuilder.Entity("SGA.Domain.Entities.SolicitudObraAcademica", b =>
+                {
+                    b.HasOne("SGA.Domain.Entities.Docente", "Docente")
+                        .WithMany()
+                        .HasForeignKey("DocenteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SGA.Domain.Entities.Usuario", "RevisadoPor")
+                        .WithMany()
+                        .HasForeignKey("RevisadoPorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Docente");
+
+                    b.Navigation("RevisadoPor");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.Docente", b =>

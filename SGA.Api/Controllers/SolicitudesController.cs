@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace SGA.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/solicitudascenso")]
 [Authorize]
 public class SolicitudesController : ControllerBase
 {
@@ -131,6 +131,28 @@ public class SolicitudesController : ControllerBase
                 return BadRequest("No se pudo procesar la solicitud");
 
             return Ok(new { message = request.Aprobar ? "Solicitud aprobada" : "Solicitud rechazada" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("tiene-solicitud-activa")]
+    public async Task<ActionResult<bool>> TieneSolicitudActiva()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var tieneSolicitudActiva = await _solicitudService.TieneDocumenteSolicitudActivaAsync(docente.Id);
+            return Ok(tieneSolicitudActiva);
         }
         catch (Exception ex)
         {

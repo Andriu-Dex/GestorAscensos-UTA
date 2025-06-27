@@ -394,6 +394,9 @@
 }
 
 @code {
+    // GUID fijo para datos de demostración
+    private static readonly Guid DEMO_USER_ID = new Guid("00000000-0000-0000-0000-000000000001");
+    
     private UserInfoModel userInfo = new UserInfoModel();
     private IndicadoresModel indicadores = new IndicadoresModel();
     private RequisitosModel requisitos = new RequisitosModel();
@@ -435,7 +438,7 @@
             await LoadUserInfo();
             
             // Verificar si se cargó correctamente la información del usuario
-            if (userInfo != null && userInfo.Id > 0)
+            if (userInfo != null && userInfo.Id != Guid.Empty)
             {
                 await LoadIndicadores();
                 await LoadRequisitos();
@@ -504,7 +507,7 @@
                 
                 userInfo = new UserInfoModel
                 {
-                    Id = 1,
+                    Id = DEMO_USER_ID,
                     Nombres = "Usuario",
                     Apellidos = "Demo",
                     Cedula = "1234567890",
@@ -547,7 +550,7 @@
                 
                 userInfo = new UserInfoModel
                 {
-                    Id = 1,
+                    Id = DEMO_USER_ID,
                     Nombres = "Usuario",
                     Apellidos = "Demo",
                     Cedula = "1234567890",
@@ -588,7 +591,7 @@
             
             // En modo DEBUG, si estamos usando datos de demostración para el usuario,            // también usamos datos de demostración para los indicadores
             #if DEBUG
-            if (userInfo.Id == 1 && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
+            if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
                 indicadores = new IndicadoresModel
                 {
@@ -649,7 +652,7 @@
             await EnsureAuthTokenAsync();
             
             // Verificar si tenemos información del usuario
-            if (userInfo == null || userInfo.Id <= 0)
+            if (userInfo == null || userInfo.Id == Guid.Empty)
             {
                 ToastService.ShowWarning("No se pudo cargar los requisitos: información del usuario no disponible");
                 return;
@@ -657,7 +660,7 @@
             
             // En modo DEBUG, si estamos usando datos de demostración para el usuario,            // también usamos datos de demostración para los requisitos
             #if DEBUG
-            if (userInfo.Id == 1 && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
+            if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
                 requisitos = new RequisitosModel
                 {
@@ -799,12 +802,12 @@
             
             // En modo DEBUG, si estamos usando datos de demostración, simular éxito
             #if DEBUG
-            if (userInfo.Id == 1 && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
+            if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
-                userInfo.Nombres = editUserModel.Nombres;
-                userInfo.Apellidos = editUserModel.Apellidos;
-                userInfo.Email = editUserModel.Email;
-                userInfo.TelefonoContacto = editUserModel.TelefonoContacto;
+                userInfo.Nombres = editUserModel.Nombres ?? "";
+                userInfo.Apellidos = editUserModel.Apellidos ?? "";
+                userInfo.Email = editUserModel.Email ?? "";
+                userInfo.TelefonoContacto = editUserModel.TelefonoContacto ?? "";
                 
                 ToastService.ShowSuccess("Perfil actualizado correctamente (modo demostración)");
                 CloseEditModal();
@@ -865,7 +868,7 @@
             
             // En modo DEBUG, si estamos usando datos de demostración, simular éxito
             #if DEBUG
-            if (userInfo.Id == 1 && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
+            if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
                 ToastService.ShowSuccess("Contraseña cambiada correctamente (modo demostración)");
                 ClosePasswordModal();

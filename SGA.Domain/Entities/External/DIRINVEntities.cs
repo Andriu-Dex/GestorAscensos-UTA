@@ -11,8 +11,11 @@ public class ObraAcademicaDIRINV
     public string? Editorial { get; set; }
     public string? Revista { get; set; }
     public string? ISBN_ISSN { get; set; }
+    public string? DOI { get; set; }
     public bool EsIndexada { get; set; }
     public string? IndiceIndexacion { get; set; }
+    public string? Autores { get; set; }
+    public string? Descripcion { get; set; }
 }
 
 public class ProyectoInvestigacionDIRINV

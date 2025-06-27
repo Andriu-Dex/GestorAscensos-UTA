@@ -8,6 +8,93 @@
 <div class="container mt-4">
     <h3>Gestión de Documentos</h3>
     
+    <!-- Nueva sección para Obras Académicas -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Obras Académicas</h5>
+            <button class="btn btn-light" @onclick="() => ShowObrasModal()">
+                <i class="bi bi-plus-circle"></i> Agregar Obras
+            </button>
+        </div>
+        <div class="card-body">
+            @if (isLoadingObras)
+            {
+                <div class="d-flex justify-content-center my-3">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Cargando obras...</span>
+                    </div>
+                </div>
+            }
+            else if (obrasAcademicas == null || !obrasAcademicas.Any())
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene obras académicas registradas. Utilice el botón "Agregar Obras" para solicitar la inclusión de nuevas obras.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Fecha Publicación</th>
+                                <th>Revista/Editorial</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var obra in obrasAcademicas)
+                            {
+                                <tr>
+                                    <td>@obra.Titulo</td>
+                                    <td>@obra.TipoObra</td>
+                                    <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                    <td>@(obra.Revista ?? obra.Editorial ?? "N/A")</td>
+                                    <td>
+                                        <span class="badge bg-success">Aprobada</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            
+            @if (solicitudesPendientes != null && solicitudesPendientes.Any())
+            {
+                <hr />
+                <h6 class="text-warning">Solicitudes Pendientes de Aprobación</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var solicitud in solicitudesPendientes)
+                            {
+                                <tr>
+                                    <td>@solicitud.Titulo</td>
+                                    <td>@solicitud.TipoObra</td>
+                                    <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+    
     <div class="card">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Mis Documentos</h5>
@@ -179,24 +266,333 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal de Obras Académicas -->
+@if (showObrasModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Obras Académicas</h5>
+                    <button type="button" class="btn-close" @onclick="CloseObrasModal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Comentarios adicionales</label>
+                        <textarea class="form-control" rows="2" @bind="comentariosSolicitud" placeholder="Comentarios opcionales sobre la solicitud..."></textarea>
+                    </div>
+                    
+                    @for (int i = 0; i < nuevasObras.Count; i++)
+                    {
+                        var index = i;
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Obra Académica @(index + 1)</h6>
+                                @if (nuevasObras.Count > 1)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoverObra(index)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        <label class="form-label">Título *</label>
+                                        <input type="text" class="form-control" @bind="nuevasObras[index].Titulo" required />
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Tipo de Obra *</label>
+                                        <select class="form-select" @bind="nuevasObras[index].TipoObra" required>
+                                            <option value="">Seleccione...</option>
+                                            <option value="Artículo">Artículo</option>
+                                            <option value="Libro">Libro</option>
+                                            <option value="Capítulo de Libro">Capítulo de Libro</option>
+                                            <option value="Tesis">Tesis</option>
+                                            <option value="Ponencia">Ponencia</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Fecha de Publicación *</label>
+                                        <input type="date" class="form-control" @bind="nuevasObras[index].FechaPublicacion" required />
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Revista</label>
+                                        <input type="text" class="form-control" @bind="nuevasObras[index].Revista" />
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Editorial</label>
+                                        <input type="text" class="form-control" @bind="nuevasObras[index].Editorial" />
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">ISBN/ISSN</label>
+                                        <input type="text" class="form-control" @bind="nuevasObras[index].ISBN_ISSN" />
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">DOI</label>
+                                        <input type="text" class="form-control" @bind="nuevasObras[index].DOI" placeholder="10.xxxx/xxxxx" />
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" @bind="nuevasObras[index].EsIndexada" />
+                                            <label class="form-check-label">Es indexada</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Autores</label>
+                                    <input type="text" class="form-control" @bind="nuevasObras[index].Autores" placeholder="Autor 1, Autor 2, etc." />
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Descripción</label>
+                                    <textarea class="form-control" rows="2" @bind="nuevasObras[index].Descripcion"></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Archivo PDF (opcional)</label>
+                                    <InputFile OnChange="@((e) => OnObraFileChange(e, index))" class="form-control" accept=".pdf" />
+                                    @if (!string.IsNullOrEmpty(nuevasObras[index].ArchivoNombre))
+                                    {
+                                        <small class="text-success">
+                                            <i class="bi bi-check-circle"></i> Archivo: @nuevasObras[index].ArchivoNombre
+                                        </small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="button" class="btn btn-outline-primary" @onclick="AgregarOtraObra">
+                            <i class="bi bi-plus-circle"></i> Añadir otra obra
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseObrasModal">Cancelar</button>
+                    <button type="button" class="btn btn-success" @onclick="EnviarSolicitudObras" disabled="@(!PuedeEnviarSolicitud() || isEnviandoObras)">
+                        @if (isEnviandoObras)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span> Enviando...</span>
+                        }
+                        else
+                        {
+                            <span>Enviar Solicitud</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
-    private List<DocumentoDto> documentos;
-    private List<TipoDocumentoDto> tiposDocumento;
+    // Variables existentes para documentos
+    private List<DocumentoDto>? documentos;
+    private List<TipoDocumentoDto>? tiposDocumento;
     private bool isLoading = true;
     private bool showUploadModal = false;
     private bool showViewModal = false;
     private DocumentoDto newDocumento = new DocumentoDto();
-    private DocumentoDto selectedDocumento;
-    private IBrowserFile selectedFile;
+    private DocumentoDto? selectedDocumento;
+    private IBrowserFile? selectedFile;
     private bool isFileSelected = false;
     private bool isUploading = false;
     private int uploadProgress = 0;
-    private string viewUrl;
+    private string? viewUrl;
+
+    // Variables para obras académicas
+    private List<ObraAcademicaDetalleDto>? obrasAcademicas;
+    private List<ObraAcademicaDetalleDto>? solicitudesPendientes;
+    private bool isLoadingObras = true;
+    private bool showObrasModal = false;
+    private bool isEnviandoObras = false;
+    private List<NuevaObraAcademicaDto> nuevasObras = new();
+    private string comentariosSolicitud = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
         await LoadDocumentos();
         await LoadTiposDocumento();
+        await LoadObrasAcademicas();
+        await LoadSolicitudesPendientes();
+    }
+
+    private async Task LoadObrasAcademicas()
+    {
+        try
+        {
+            isLoadingObras = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/mis-obras");
+            if (response != null && response.Exitoso)
+            {
+                obrasAcademicas = response.Obras;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar obras académicas: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingObras = false;
+        }
+    }
+
+    private async Task LoadSolicitudesPendientes()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/solicitudes-pendientes");
+            if (response != null && response.Exitoso)
+            {
+                solicitudesPendientes = response.Obras;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar solicitudes pendientes: {ex.Message}");
+        }
+    }
+
+    private void ShowObrasModal()
+    {
+        nuevasObras = new List<NuevaObraAcademicaDto> { new NuevaObraAcademicaDto() };
+        comentariosSolicitud = string.Empty;
+        showObrasModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseObrasModal()
+    {
+        showObrasModal = false;
+        nuevasObras.Clear();
+        StateHasChanged();
+    }
+
+    private void AgregarOtraObra()
+    {
+        nuevasObras.Add(new NuevaObraAcademicaDto());
+    }
+
+    private void RemoverObra(int index)
+    {
+        if (nuevasObras.Count > 1)
+        {
+            nuevasObras.RemoveAt(index);
+        }
+    }
+
+    private async Task OnObraFileChange(InputFileChangeEventArgs e, int index)
+    {
+        var file = e.File;
+        if (file != null && file.Size <= 10 * 1024 * 1024) // 10MB max
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var bytes = memoryStream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+            
+            nuevasObras[index].ArchivoNombre = file.Name;
+            nuevasObras[index].ArchivoContenido = base64;
+            nuevasObras[index].ArchivoTipo = file.ContentType;
+        }
+        else if (file != null)
+        {
+            ToastService.ShowError("El archivo excede el tamaño máximo permitido de 10MB");
+        }
+    }
+
+    private bool PuedeEnviarSolicitud()
+    {
+        return nuevasObras.Any() && nuevasObras.All(o => 
+            !string.IsNullOrWhiteSpace(o.Titulo) && 
+            !string.IsNullOrWhiteSpace(o.TipoObra) && 
+            o.FechaPublicacion != default);
+    }
+
+    private async Task EnviarSolicitudObras()
+    {
+        if (!PuedeEnviarSolicitud())
+        {
+            ToastService.ShowWarning("Por favor complete todos los campos obligatorios.");
+            return;
+        }
+
+        try
+        {
+            isEnviandoObras = true;
+            StateHasChanged(); // Actualizar UI inmediatamente
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var solicitud = new SolicitudObrasAcademicasDto
+            {
+                Obras = nuevasObras,
+                Comentarios = comentariosSolicitud
+            };
+
+            Console.WriteLine($"[DEBUG] Enviando solicitud con {solicitud.Obras.Count} obras");
+            
+            var response = await Http.PostAsJsonAsync("api/obraacademicas/solicitar-nuevas", solicitud);
+            
+            Console.WriteLine($"[DEBUG] Respuesta del servidor: {response.StatusCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseObrasAcademicasDto>();
+                Console.WriteLine($"[DEBUG] Resultado parseado: {result?.Exitoso}, Mensaje: {result?.Mensaje}");
+                
+                if (result != null && result.Exitoso)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    CloseObrasModal();
+                    await LoadSolicitudesPendientes();
+                    await LoadObrasAcademicas(); // Recargar obras también
+                }
+                else
+                {
+                    var mensaje = result?.Mensaje ?? "Error desconocido al enviar solicitud";
+                    Console.WriteLine($"[DEBUG] Error en resultado: {mensaje}");
+                    ToastService.ShowError(mensaje);
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[DEBUG] Error HTTP: {response.StatusCode} - {errorContent}");
+                ToastService.ShowError($"Error al enviar solicitud: {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Excepción: {ex.Message}");
+            ToastService.ShowError($"Error al enviar solicitud: {ex.Message}");
+        }
+        finally
+        {
+            isEnviandoObras = false;
+            StateHasChanged(); // Actualizar UI al final
+        }
     }
     
     private async Task LoadDocumentos()
@@ -370,11 +766,11 @@
     public class DocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Descripcion { get; set; }
-        public string RutaArchivo { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public string RutaArchivo { get; set; } = string.Empty;
         public int TipoDocumentoId { get; set; }
-        public TipoDocumentoDto TipoDocumento { get; set; }
+        public TipoDocumentoDto? TipoDocumento { get; set; }
         public DateTime FechaCreacion { get; set; }
         public bool Verificado { get; set; }
     }
@@ -382,7 +778,60 @@
     public class TipoDocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Descripcion { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+    }
+
+    // DTOs para obras académicas
+    public class NuevaObraAcademicaDto
+    {
+        public string Titulo { get; set; } = string.Empty;
+        public string TipoObra { get; set; } = string.Empty;
+        public DateTime FechaPublicacion { get; set; } = DateTime.Today;
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }
+        public bool EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public string? ArchivoContenido { get; set; }
+        public string? ArchivoTipo { get; set; }
+    }
+
+    public class SolicitudObrasAcademicasDto
+    {
+        public List<NuevaObraAcademicaDto> Obras { get; set; } = new();
+        public string? Comentarios { get; set; }
+    }
+
+    public class ObraAcademicaDetalleDto
+    {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string TipoObra { get; set; } = string.Empty;
+        public DateTime FechaPublicacion { get; set; }
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }
+        public bool EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public bool TieneArchivo { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaActualizacion { get; set; }
+    }
+
+    public class ResponseObrasAcademicasDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public List<ObraAcademicaDetalleDto> Obras { get; set; } = new();
+        public int TotalObras { get; set; }
     }
 }
