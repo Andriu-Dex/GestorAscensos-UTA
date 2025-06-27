@@ -177,6 +177,41 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Estilos específicos para la sección de tiempo */
+.tiempo-transcurrido {
+  margin-bottom: 0.5rem;
+}
+
+.tiempo-actual {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #8a1538;
+  line-height: 1.2;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.tiempo-restante {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.tiempo-restante.text-success {
+  color: #28a745 !important;
+  background-color: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.tiempo-restante.text-warning {
+  color: #ffc107 !important;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
 .indicator-value:after {
   content: "";
   position: absolute;

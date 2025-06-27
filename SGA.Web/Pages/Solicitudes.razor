@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-@inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
@@ -224,10 +223,10 @@
 }
 
 @code {
-    private List<SolicitudAscensoDto> solicitudes;
+    private List<SolicitudAscensoDto>? solicitudes;
     private bool isLoading = true;
     private bool showDetails = false;
-    private SolicitudAscensoDto selectedSolicitud;
+    private SolicitudAscensoDto? selectedSolicitud;
     
     protected override async Task OnInitializedAsync()
     {
@@ -245,7 +244,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
+            // Error al cargar solicitudes
         }
         finally
         {
@@ -269,7 +268,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cargar detalles de la solicitud: {ex.Message}");
+            // Error al cargar detalles de la solicitud
         }
     }
     
@@ -292,18 +291,17 @@
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Solicitud cancelada con éxito");
                 await LoadSolicitudes();
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al cancelar solicitud: {error}");
+                // Error al cancelar solicitud
             }
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cancelar solicitud: {ex.Message}");
+            // Error al cancelar solicitud
         }
     }
     
@@ -317,7 +315,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al generar reporte: {ex.Message}");
+            // Error al generar reporte
         }
     }
     
@@ -331,25 +329,25 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
+            // Error al descargar documento
         }
     }
     
     public class SolicitudAscensoDto
     {
         public int Id { get; set; }
-        public string NumeroSolicitud { get; set; }
+        public string NumeroSolicitud { get; set; } = string.Empty;
         public int DocenteId { get; set; }
-        public DocenteDto Docente { get; set; }
+        public DocenteDto? Docente { get; set; }
         public int NivelActual { get; set; }
         public int NivelSolicitado { get; set; }
         public int EstadoSolicitudId { get; set; }
-        public EstadoSolicitudDto EstadoSolicitud { get; set; }
+        public EstadoSolicitudDto? EstadoSolicitud { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaRevision { get; set; }
         public int? RevisorId { get; set; }
-        public DocenteDto Revisor { get; set; }
-        public string MotivoRechazo { get; set; }
+        public DocenteDto? Revisor { get; set; }
+        public string MotivoRechazo { get; set; } = string.Empty;
         public int TiempoRol { get; set; }
         public int NumeroObras { get; set; }
         public decimal PuntajeEvaluacion { get; set; }
@@ -360,7 +358,7 @@
         public bool CumpleEvaluacion { get; set; }
         public bool CumpleCapacitacion { get; set; }
         public bool CumpleInvestigacion { get; set; }
-        public List<DocumentoSolicitudDto> DocumentosSolicitud { get; set; }
+        public List<DocumentoSolicitudDto> DocumentosSolicitud { get; set; } = new List<DocumentoSolicitudDto>();
     }
     
     public class DocumentoSolicitudDto
@@ -368,28 +366,28 @@
         public int Id { get; set; }
         public int SolicitudAscensoId { get; set; }
         public int DocumentoId { get; set; }
-        public DocumentoDto Documento { get; set; }
+        public DocumentoDto? Documento { get; set; }
         public DateTime FechaAsociacion { get; set; }
     }
     
     public class DocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
-        public TipoDocumentoDto TipoDocumento { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public TipoDocumentoDto? TipoDocumento { get; set; }
     }
     
     public class TipoDocumentoDto
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
     }
     
     public class DocenteDto
     {
         public int Id { get; set; }
-        public string Nombres { get; set; }
-        public string Apellidos { get; set; }
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
     }
     
     public class EstadoSolicitudDto

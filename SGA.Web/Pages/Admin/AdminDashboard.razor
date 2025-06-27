@@ -1,0 +1,200 @@
+@page "/admin"
+@page "/admin/dashboard"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-shield-check"></i> Panel de Administración
+                </h2>
+                <div class="badge bg-primary fs-6">Administrador</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas generales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title mb-0">@totalDocentes</h4>
+                            <p class="card-text">Total Docentes</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-people-fill fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title mb-0">@solicitudesPendientes</h4>
+                            <p class="card-text">Solicitudes Pendientes</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-hourglass-split fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title mb-0">@solicitudesAprobadas</h4>
+                            <p class="card-text">Solicitudes Aprobadas</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-check-circle-fill fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title mb-0">@solicitudesRechazadas</h4>
+                            <p class="card-text">Solicitudes Rechazadas</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-x-circle-fill fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning-charge"></i> Acciones Rápidas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-clipboard-check fs-1 text-primary mb-3"></i>
+                                    <h6 class="card-title">Gestionar Solicitudes</h6>
+                                    <p class="card-text">Revisar y procesar solicitudes de ascenso</p>
+                                    <a href="/admin/solicitudes" class="btn btn-primary">
+                                        <i class="bi bi-arrow-right"></i> Ir a Solicitudes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-people fs-1 text-success mb-3"></i>
+                                    <h6 class="card-title">Gestionar Docentes</h6>
+                                    <p class="card-text">Administrar información de docentes</p>
+                                    <a href="/admin/docentes" class="btn btn-success">
+                                        <i class="bi bi-arrow-right"></i> Ir a Docentes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-graph-up fs-1 text-info mb-3"></i>
+                                    <h6 class="card-title">Ver Reportes</h6>
+                                    <p class="card-text">Generar reportes y estadísticas</p>
+                                    <a href="/admin/reportes" class="btn btn-info">
+                                        <i class="bi bi-arrow-right"></i> Ir a Reportes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando datos...</span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private int totalDocentes = 0;
+    private int solicitudesPendientes = 0;
+    private int solicitudesAprobadas = 0;
+    private int solicitudesRechazadas = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarEstadisticas();
+    }
+
+    private async Task CargarEstadisticas()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // Obtener estadísticas del servidor
+            var response = await Http.GetFromJsonAsync<EstadisticasResponse>("api/admin/estadisticas");
+            
+            if (response != null)
+            {
+                totalDocentes = response.TotalDocentes;
+                solicitudesPendientes = response.SolicitudesPendientes;
+                solicitudesAprobadas = response.SolicitudesAprobadas;
+                solicitudesRechazadas = response.SolicitudesRechazadas;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar estadísticas: {ex.Message}");
+            // Valores por defecto en caso de error
+            totalDocentes = 0;
+            solicitudesPendientes = 0;
+            solicitudesAprobadas = 0;
+            solicitudesRechazadas = 0;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public class EstadisticasResponse
+    {
+        public int TotalDocentes { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+    }
+}

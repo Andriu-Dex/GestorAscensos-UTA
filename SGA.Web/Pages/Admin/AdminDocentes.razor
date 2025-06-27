@@ -1,0 +1,451 @@
+@page "/admin/docentes"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>
+                    <i class="bi bi-people"></i> 
+                    Gestión de Docentes
+                </h3>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/admin">Panel Admin</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Docentes</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y búsqueda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label">Nivel académico:</label>
+                            <select @onchange="FiltrarPorNivel" class="form-select">
+                                <option value="">Todos los niveles</option>
+                                <option value="1">Titular 1</option>
+                                <option value="2">Titular 2</option>
+                                <option value="3">Titular 3</option>
+                                <option value="4">Titular 4</option>
+                                <option value="5">Titular 5</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Facultad:</label>
+                            <select @onchange="FiltrarPorFacultad" class="form-select">
+                                <option value="">Todas las facultades</option>
+                                @foreach (var facultad in facultades)
+                                {
+                                    <option value="@facultad">@facultad</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Buscar docente:</label>
+                            <input type="text" @bind="filtroBusqueda" @onkeypress="BuscarEnter" 
+                                   class="form-control" placeholder="Nombre, apellido o cédula" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button @onclick="LimpiarFiltros" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas por nivel -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count(d => d.NivelActual == 1)</h5>
+                    <small>Titular 1</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count(d => d.NivelActual == 2)</h5>
+                    <small>Titular 2</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count(d => d.NivelActual == 3)</h5>
+                    <small>Titular 3</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count(d => d.NivelActual == 4)</h5>
+                    <small>Titular 4</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count(d => d.NivelActual == 5)</h5>
+                    <small>Titular 5</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-dark text-white">
+                <div class="card-body text-center">
+                    <h5>@docentesFiltrados.Count</h5>
+                    <small>Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando docentes...</span>
+            </div>
+        </div>
+    }
+    else if (!docentesFiltrados.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i>
+            No se encontraron docentes que coincidan con los filtros aplicados.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list"></i> Lista de Docentes (@docentesFiltrados.Count)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Cédula</th>
+                                <th>Docente</th>
+                                <th>Email</th>
+                                <th>Facultad</th>
+                                <th>Nivel Actual</th>
+                                <th>Tiempo en Nivel</th>
+                                <th>Solicitudes</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var docente in docentesFiltrados)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">@docente.Cedula</span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>@docente.Nombres @docente.Apellidos</strong>
+                                            <br>
+                                            <small class="text-muted">@docente.Departamento</small>
+                                        </div>
+                                    </td>
+                                    <td>@docente.Email</td>
+                                    <td>@docente.Facultad</td>
+                                    <td>
+                                        <span class="badge @GetNivelBadgeClass(docente.NivelActual)">
+                                            Titular @docente.NivelActual
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="@GetTiempoClass(docente.TiempoEnNivelAnios)">
+                                            @docente.TiempoEnNivelAnios años
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            @if (docente.SolicitudesPendientes > 0)
+                                            {
+                                                <span class="badge bg-warning">@docente.SolicitudesPendientes P</span>
+                                            }
+                                            @if (docente.SolicitudesAprobadas > 0)
+                                            {
+                                                <span class="badge bg-success">@docente.SolicitudesAprobadas A</span>
+                                            }
+                                            @if (docente.SolicitudesRechazadas > 0)
+                                            {
+                                                <span class="badge bg-danger">@docente.SolicitudesRechazadas R</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button @onclick="() => VerPerfil(docente.Id)" 
+                                                    class="btn btn-outline-primary" title="Ver perfil">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button @onclick="() => VerSolicitudes(docente.Id)" 
+                                                    class="btn btn-outline-info" title="Ver solicitudes">
+                                                <i class="bi bi-clipboard-check"></i>
+                                            </button>
+                                            <button @onclick="() => GenerarReporte(docente.Id)" 
+                                                    class="btn btn-outline-success" title="Generar reporte">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paginación -->
+        @if (totalPaginas > 1)
+        {
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Paginación de docentes">
+                    <ul class="pagination">
+                        <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                        </li>
+                        
+                        @for (int i = Math.Max(1, paginaActual - 2); i <= Math.Min(totalPaginas, paginaActual + 2); i++)
+                        {
+                            <li class="page-item @(i == paginaActual ? "active" : "")">
+                                <button class="page-link" @onclick="() => CambiarPagina(i)">@i</button>
+                            </li>
+                        }
+                        
+                        <li class="page-item @(paginaActual == totalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private List<DocenteAdminModel> docentes = new();
+    private List<DocenteAdminModel> docentesFiltrados = new();
+    private List<string> facultades = new();
+    
+    private string filtroNivel = "";
+    private string filtroFacultad = "";
+    private string filtroBusqueda = "";
+    
+    private int paginaActual = 1;
+    private int registrosPorPagina = 20;
+    private int totalPaginas = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDocentes();
+        await CargarFacultades();
+    }
+
+    private async Task CargarDocentes()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var response = await Http.GetFromJsonAsync<List<DocenteAdminModel>>("api/admin/docentes");
+            docentes = response ?? new List<DocenteAdminModel>();
+            
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar docentes: {ex.Message}");
+            // Error al cargar los docentes
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarFacultades()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<string>>("api/admin/facultades");
+            facultades = response ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar facultades: {ex.Message}");
+        }
+    }
+
+    private void FiltrarPorNivel(ChangeEventArgs e)
+    {
+        filtroNivel = e.Value?.ToString() ?? "";
+        paginaActual = 1;
+        AplicarFiltros();
+    }
+
+    private void FiltrarPorFacultad(ChangeEventArgs e)
+    {
+        filtroFacultad = e.Value?.ToString() ?? "";
+        paginaActual = 1;
+        AplicarFiltros();
+    }
+
+    private async Task BuscarEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            paginaActual = 1;
+            AplicarFiltros();
+        }
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtroNivel = "";
+        filtroFacultad = "";
+        filtroBusqueda = "";
+        paginaActual = 1;
+        AplicarFiltros();
+    }
+
+    private void AplicarFiltros()
+    {
+        var docentesTemp = docentes.Where(d =>
+            (string.IsNullOrEmpty(filtroNivel) || d.NivelActual.ToString() == filtroNivel) &&
+            (string.IsNullOrEmpty(filtroFacultad) || d.Facultad == filtroFacultad) &&
+            (string.IsNullOrEmpty(filtroBusqueda) || 
+             d.Nombres.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
+             d.Apellidos.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
+             d.Cedula.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase) ||
+             d.Email.Contains(filtroBusqueda, StringComparison.OrdinalIgnoreCase))
+        ).OrderBy(d => d.Apellidos).ThenBy(d => d.Nombres).ToList();
+
+        totalPaginas = (int)Math.Ceiling((double)docentesTemp.Count / registrosPorPagina);
+        
+        docentesFiltrados = docentesTemp
+            .Skip((paginaActual - 1) * registrosPorPagina)
+            .Take(registrosPorPagina)
+            .ToList();
+        
+        StateHasChanged();
+    }
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas)
+        {
+            paginaActual = nuevaPagina;
+            AplicarFiltros();
+        }
+    }
+
+    private string GetNivelBadgeClass(int nivel)
+    {
+        return nivel switch
+        {
+            1 => "bg-secondary",
+            2 => "bg-primary",
+            3 => "bg-info",
+            4 => "bg-warning",
+            5 => "bg-success",
+            _ => "bg-dark"
+        };
+    }
+
+    private string GetTiempoClass(double anios)
+    {
+        return anios >= 4 ? "text-success fw-bold" : "text-muted";
+    }
+
+    private async Task VerPerfil(Guid docenteId)
+    {
+        // Ver perfil del docente
+        // Implementar navegación al perfil del docente
+    }
+
+    private async Task VerSolicitudes(Guid docenteId)
+    {
+        // Ver solicitudes del docente
+        // Implementar navegación a las solicitudes del docente
+    }
+
+    private async Task GenerarReporte(Guid docenteId)
+    {
+        try
+        {
+            // Generando reporte...
+            
+            var response = await Http.GetAsync($"api/admin/docentes/{docenteId}/reporte");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"reporte-docente-{docenteId}.pdf";
+                
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/pdf", contenido);
+                // Reporte generado exitosamente
+            }
+            else
+            {
+                // Error al generar el reporte
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al generar reporte: {ex.Message}");
+            // Error al generar el reporte
+        }
+    }
+
+    public class DocenteAdminModel
+    {
+        public Guid Id { get; set; }
+        public string Cedula { get; set; } = "";
+        public string Nombres { get; set; } = "";
+        public string Apellidos { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Facultad { get; set; } = "";
+        public string Departamento { get; set; } = "";
+        public int NivelActual { get; set; }
+        public DateTime FechaInicioNivelActual { get; set; }
+        public double TiempoEnNivelAnios { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+    }
+}

@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-@inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
@@ -151,7 +150,7 @@
                                             <td>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" 
-                                                           @onchange="e => ToggleDocumentSelection(doc.Id, (bool)e.Value)" />
+                                                           @onchange="e => ToggleDocumentSelection(doc.Id, e.Value as bool? ?? false)" />
                                                 </div>
                                             </td>
                                         </tr>
@@ -233,9 +232,9 @@
             // Cargar indicadores y validar requisitos
             await CargarIndicadores();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ToastService.ShowError($"Error al cargar datos: {ex.Message}");
+           // Error al cargar datos iniciales
         }
         finally
         {
@@ -255,15 +254,13 @@
                 
                 if (solicitudActiva != null)
                 {
-                    ToastService.ShowWarning($"Ya tiene una solicitud activa con estado: {solicitudActiva.Estado}. Debe esperar a que se procese antes de crear una nueva.");
                     NavigationManager.NavigateTo("/solicitudes");
                     return;
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error al verificar solicitudes activas: {ex.Message}");
             // Continuar con el flujo normal si hay error en la verificación
         }
     }
@@ -306,9 +303,9 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ToastService.ShowError($"Error al cargar indicadores: {ex.Message}");
+            // Error al cargar indicadores
         }
     }
     
@@ -334,13 +331,11 @@
     {
         if (documentosSeleccionados.Count == 0)
         {
-            ToastService.ShowWarning("Debe seleccionar al menos un documento de respaldo.");
             return;
         }
         
         if (!aceptaTerminos)
         {
-            ToastService.ShowWarning("Debe aceptar los términos para continuar.");
             return;
         }
         
@@ -357,18 +352,17 @@
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Solicitud de ascenso enviada con éxito");
                 NavigationManager.NavigateTo("/solicitudes");
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al enviar solicitud: {error}");
+                // Error al enviar solicitud
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ToastService.ShowError($"Error al enviar solicitud: {ex.Message}");
+            // Error al enviar solicitud
         }
         finally
         {

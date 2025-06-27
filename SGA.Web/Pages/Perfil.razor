@@ -6,17 +6,17 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.JSInterop
-@using Blazored.Toast.Services
 @using SGA.Web.Services
 @using SGA.Web.Models
+@using System.Threading
 
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-@inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject AuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 
 <div class="container mt-4">
     <h3>Mi Perfil</h3>
@@ -102,14 +102,42 @@
                             <div class="col-md-6 mb-3">
                                 <div class="card h-100">
                                     <div class="card-body text-center">
-                                        <h1 class="display-4">@indicadores.TiempoRol</h1>
-                                        <p class="text-muted">Meses en nivel actual</p>
-                                        <div class="progress" style="height: 10px;">
-                                            <div class="progress-bar bg-primary" role="progressbar" 
-                                                 style="width: @GetPercentage(indicadores.TiempoRol, 48)%;" 
-                                                 aria-valuenow="@indicadores.TiempoRol" aria-valuemin="0" aria-valuemax="48"></div>
+                                        <div class="tiempo-transcurrido">
+                                            @if (indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoTranscurridoTexto))
+                                            {
+                                                <h4 class="display-6">@indicadores.TiempoTranscurridoTexto</h4>
+                                            }
+                                            else
+                                            {
+                                                <h4 class="display-6">@(indicadores?.TiempoRol ?? 0) meses</h4>
+                                            }
                                         </div>
-                                        <small class="text-muted mt-2 d-block">Meta: 48 meses</small>
+                                        <p class="text-muted">Tiempo en nivel actual</p>
+                                        @if (indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoRestanteTexto))
+                                        {
+                                            <div class="tiempo-restante @(indicadores.CumpleTiempoMinimo ? "text-success" : "text-warning") mb-2">
+                                                @if (indicadores.CumpleTiempoMinimo)
+                                                {
+                                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                                    <small>¡Tiempo mínimo cumplido!</small>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-hourglass-split me-1"></i>
+                                                    <small>Falta: @indicadores.TiempoRestanteTexto</small>
+                                                }
+                                            </div>
+                                        }
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar @(indicadores?.CumpleTiempoMinimo == true ? "bg-success" : "bg-primary")" role="progressbar" 
+                                                 style="width: @GetTiempoPercentage()%;" 
+                                                 aria-valuenow="@GetTiempoPercentage()" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Meta: 4 años (48 meses) - @GetTiempoPercentage()%</small>
+                                        @if (userInfo != null)
+                                        {
+                                            <small class="text-muted d-block">Desde: @userInfo.FechaIngresoNivelActual.ToString("dd/MM/yyyy")</small>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -408,6 +436,10 @@
     private bool showPasswordModal = false;
     private bool cumpleTodosRequisitos = false;
     private string authToken = string.Empty;
+    
+    // Variables para el timer y cálculo de tiempo
+    private Timer? _timer;
+    private DateTime _currentTime = DateTime.Now;
 
     protected override async Task OnInitializedAsync()
     {
@@ -432,21 +464,28 @@
             requisitos = new RequisitosModel();
             
             // Mostrar mensaje de carga
-            ToastService.ShowInfo("Cargando información del perfil...");
+            // Cargando información del perfil...
             
             // Cargar datos de manera secuencial
             await LoadUserInfo();
             
+            // Inicializar el timer para actualización en tiempo real
+            IniciarTimer();
+            
             // Verificar si se cargó correctamente la información del usuario
             if (userInfo != null && userInfo.Id != Guid.Empty)
             {
+                // Cargar indicadores primero
                 await LoadIndicadores();
+                // Esperar un momento para asegurar que los indicadores se carguen completamente
+                await Task.Delay(100);
+                // Luego cargar requisitos basados en los indicadores
                 await LoadRequisitos();
                 
                 // Inicializar componentes de JS
                 await JSRuntime.InvokeVoidAsync("initializeTooltips");
                 
-                ToastService.ShowSuccess("Información cargada correctamente");
+                // Información cargada correctamente
             }
         }
         catch (Exception ex)
@@ -458,7 +497,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al cargar la página: {ex.Message}");
+                // Error al cargar la página
             }
         }
         finally
@@ -495,7 +534,7 @@
                 }
                 else
                 {
-                    ToastService.ShowWarning("No se pudo obtener la información del usuario");
+                    // No se pudo obtener la información del usuario
                     userInfo = new UserInfoModel(); // Objeto vacío para evitar null references
                 }
             }
@@ -527,7 +566,7 @@
                     TelefonoContacto = userInfo.TelefonoContacto
                 };
                 
-                ToastService.ShowWarning("Usando datos de demostración debido a un problema de autenticación");
+                // Toast message removed
                 #else
                 // En producción, mostrar error de autenticación
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -537,7 +576,7 @@
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al cargar información del usuario: {response.StatusCode} - {errorContent}");
+                // Toast message removed
             }
         }
         catch (Exception ex)
@@ -546,7 +585,6 @@
             {
                 // En modo DEBUG, usar datos de demostración
                 #if DEBUG
-                Console.WriteLine("Error de autenticación, usando datos de demostración para desarrollo");
                 
                 userInfo = new UserInfoModel
                 {
@@ -570,7 +608,7 @@
                     TelefonoContacto = userInfo.TelefonoContacto
                 };
                 
-                ToastService.ShowWarning("Usando datos de demostración debido a un problema de autenticación");
+                // Toast message removed
                 #else
                 // En producción, mostrar error de autenticación
                 await HandleAuthenticationError($"Error de autenticación: {ex.Message}");
@@ -578,7 +616,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al cargar información del usuario: {ex.Message}");
+                // Toast message removed
             }
         }
     }
@@ -595,12 +633,14 @@
             {
                 indicadores = new IndicadoresModel
                 {
-                    TiempoRol = 36,
-                    NumeroObras = 2,
-                    PuntajeEvaluacion = 85,
-                    HorasCapacitacion = 90,
-                    TiempoInvestigacion = 18
+                    TiempoRol = 81, // 81 meses (cumple - mínimo 48)
+                    NumeroObras = 0, // 0 obras (no cumple - mínimo 3)
+                    PuntajeEvaluacion = 0, // 0% (no cumple - mínimo 80%)
+                    HorasCapacitacion = 0, // 0 horas (no cumple - mínimo 120)
+                    TiempoInvestigacion = 0 // 0 meses (no cumple - mínimo 24)
                 };
+                // Calcular tiempo detallado para datos de demostración
+                CalcularTiempoDetallado();
                 return;
             }
             #endif
@@ -615,10 +655,12 @@
                 if (tempIndicadores != null)
                 {
                     indicadores = tempIndicadores;
+                    // Calcular tiempo detallado después de cargar los indicadores
+                    CalcularTiempoDetallado();
                 }
                 else
                 {
-                    ToastService.ShowWarning("No se pudo obtener los indicadores");
+                    // Toast message removed
                     indicadores = new IndicadoresModel(); // Objeto vacío para evitar null references
                 }
             }
@@ -629,7 +671,7 @@
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al cargar indicadores: {response.StatusCode} - {errorContent}");
+                // Toast message removed
             }
         }
         catch (Exception ex)
@@ -640,7 +682,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al cargar indicadores: {ex.Message}");
+                // Toast message removed
             }
         }
     }
@@ -651,10 +693,17 @@
         {            // Verificar y configurar el token
             await EnsureAuthTokenAsync();
             
-            // Verificar si tenemos información del usuario
+            // Verificar si tenemos información del usuario e indicadores
             if (userInfo == null || userInfo.Id == Guid.Empty)
             {
-                ToastService.ShowWarning("No se pudo cargar los requisitos: información del usuario no disponible");
+                // Toast message removed
+                return;
+            }
+            
+            // Asegurar que los indicadores estén cargados
+            if (indicadores == null)
+            {
+                // Toast message removed  
                 return;
             }
             
@@ -662,19 +711,35 @@
             #if DEBUG
             if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
+                // Logging para debug
+                Console.WriteLine($"DEBUG - Indicadores: TiempoInvestigacion = {indicadores.TiempoInvestigacion}");
+                Console.WriteLine($"DEBUG - Validando: {indicadores.TiempoInvestigacion} >= 24 = {indicadores.TiempoInvestigacion >= 24}");
+                
                 requisitos = new RequisitosModel
                 {
-                    CumpleTiempoRol = false,
-                    CumpleObras = false,
-                    CumpleEvaluacion = true,
-                    CumpleCapacitacion = false,
-                    CumpleInvestigacion = false
+                    CumpleTiempoRol = indicadores.TiempoRol >= 48, // 81 meses >= 48 meses requeridos
+                    CumpleObras = indicadores.NumeroObras >= 3, // 0 obras < 3 obras requeridas
+                    CumpleEvaluacion = indicadores.PuntajeEvaluacion >= 80, // 0% < 80% requerido
+                    CumpleCapacitacion = indicadores.HorasCapacitacion >= 120, // 0 horas < 120 horas requeridas
+                    CumpleInvestigacion = indicadores.TiempoInvestigacion >= 24 // 0 meses < 24 meses requeridos
                 };
-                  cumpleTodosRequisitos = requisitos.CumpleTiempoRol && 
+                
+                // Logging adicional para verificar valores
+                Console.WriteLine($"DEBUG - Requisitos calculados:");
+                Console.WriteLine($"  CumpleTiempoRol: {requisitos.CumpleTiempoRol}");
+                Console.WriteLine($"  CumpleObras: {requisitos.CumpleObras}");
+                Console.WriteLine($"  CumpleEvaluacion: {requisitos.CumpleEvaluacion}");
+                Console.WriteLine($"  CumpleCapacitacion: {requisitos.CumpleCapacitacion}");
+                Console.WriteLine($"  CumpleInvestigacion: {requisitos.CumpleInvestigacion}");
+                
+                cumpleTodosRequisitos = requisitos.CumpleTiempoRol && 
                                         requisitos.CumpleObras && 
                                         requisitos.CumpleEvaluacion && 
                                         requisitos.CumpleCapacitacion && 
                                         requisitos.CumpleInvestigacion;
+                
+                // Forzar actualización de la UI
+                StateHasChanged();
                 return;
             }
             #endif
@@ -695,10 +760,13 @@
                                             requisitos.CumpleEvaluacion && 
                                             requisitos.CumpleCapacitacion && 
                                             requisitos.CumpleInvestigacion;
+                    
+                    // Forzar actualización de la UI
+                    StateHasChanged();
                 }
                 else
                 {
-                    ToastService.ShowWarning("No se pudo obtener los requisitos");
+                    // Toast message removed
                     requisitos = new RequisitosModel(); // Objeto vacío para evitar null references
                 }
             }
@@ -709,14 +777,14 @@
             else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 // El endpoint de requisitos no existe
-                ToastService.ShowWarning("El servicio de validación de requisitos no está disponible");
+                // Toast message removed
                 requisitos = new RequisitosModel(); // Objeto vacío para evitar null references
                 cumpleTodosRequisitos = false;
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                ToastService.ShowWarning($"Servicio de requisitos no disponible: {response.StatusCode}");
+                // Toast message removed
                 requisitos = new RequisitosModel(); // Objeto vacío para evitar null references
                 cumpleTodosRequisitos = false;
             }
@@ -729,7 +797,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al cargar requisitos: {ex.Message}");
+                // Toast message removed
             }
         }
     }
@@ -742,13 +810,13 @@
             // Verificar y configurar el token
             await EnsureAuthTokenAsync();
             
-            ToastService.ShowInfo("Actualizando indicadores...");
+            // Toast message removed
             
             var response = await Http.PostAsync("api/docente/actualizar-indicadores", null);
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Indicadores actualizados correctamente");
+                // Toast message removed
                 await LoadIndicadores();
                 await LoadRequisitos();
             }
@@ -759,7 +827,7 @@
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al actualizar indicadores: {error}");
+                // Toast message removed
             }
         }
         catch (Exception ex)
@@ -770,7 +838,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al actualizar indicadores: {ex.Message}");
+                // Toast message removed
             }
         }
         finally
@@ -798,7 +866,7 @@
             // Verificar y configurar el token
             await EnsureAuthTokenAsync();
             
-            ToastService.ShowInfo("Guardando cambios...");
+            // Toast message removed
             
             // En modo DEBUG, si estamos usando datos de demostración, simular éxito
             #if DEBUG
@@ -809,7 +877,7 @@
                 userInfo.Email = editUserModel.Email ?? "";
                 userInfo.TelefonoContacto = editUserModel.TelefonoContacto ?? "";
                 
-                ToastService.ShowSuccess("Perfil actualizado correctamente (modo demostración)");
+                // Perfil actualizado correctamente (modo demostración)
                 CloseEditModal();
                 return;
             }
@@ -819,7 +887,7 @@
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Perfil actualizado correctamente");
+                // Toast message removed
                 await LoadUserInfo();
                 CloseEditModal();
             }
@@ -830,7 +898,7 @@
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al actualizar perfil: {error}");
+                // Toast message removed
             }
         }
         catch (Exception ex)
@@ -841,7 +909,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al actualizar perfil: {ex.Message}");
+                // Toast message removed
             }
         }
         finally
@@ -854,7 +922,7 @@
     {
         if (passwordModel.NewPassword != passwordModel.ConfirmPassword)
         {
-            ToastService.ShowError("Las contraseñas no coinciden");
+            // Toast message removed
             return;
         }
         
@@ -864,13 +932,13 @@
             // Verificar y configurar el token
             await EnsureAuthTokenAsync();
             
-            ToastService.ShowInfo("Cambiando contraseña...");
+            // Toast message removed
             
             // En modo DEBUG, si estamos usando datos de demostración, simular éxito
             #if DEBUG
             if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
-                ToastService.ShowSuccess("Contraseña cambiada correctamente (modo demostración)");
+                // Contraseña cambiada correctamente (modo demostración)
                 ClosePasswordModal();
                 return;
             }
@@ -880,7 +948,7 @@
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Contraseña cambiada correctamente");
+                // Toast message removed
                 ClosePasswordModal();
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
@@ -890,7 +958,7 @@
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al cambiar contraseña: {error}");
+                // Toast message removed
             }
         }
         catch (Exception ex)
@@ -901,7 +969,7 @@
             }
             else
             {
-                ToastService.ShowError($"Error al cambiar contraseña: {ex.Message}");
+                // Toast message removed
             }
         }
         finally
@@ -913,7 +981,7 @@
     private async Task HandleAuthenticationError(string message)
     {
         // Mostrar mensaje al usuario con más detalles
-        ToastService.ShowError($"Error de autenticación: {message}");
+        // Toast message removed
         
         // Limpiar el token y la sesión antes de redirigir
         await LocalStorage.RemoveItemAsync("authToken");
@@ -923,7 +991,6 @@
         }
         catch (Exception ex) {
             // Ignorar errores en el logout
-            Console.WriteLine($"Error en logout: {ex.Message}");
         }
         
         // Limpiar las cabeceras de autorización
@@ -936,7 +1003,7 @@
         requisitos = new RequisitosModel();
         
         // Mostrar mensaje de sesión expirada
-        ToastService.ShowWarning("Su sesión ha expirado o no tiene los permisos necesarios. Será redirigido a la página de inicio de sesión.");
+        // Toast message removed
         
         // Redireccionar al login después de un breve delay para que el usuario vea el mensaje
         await Task.Delay(2000);
@@ -993,7 +1060,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error de autenticación: {ex.Message}");
+            // Toast message removed
         }
     }
       private async Task EnsureAuthTokenAsync()
@@ -1016,8 +1083,118 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error de autenticación: {ex.Message}");
+            // Toast message removed
         }
+    }
+    
+    // Métodos para cálculo de tiempo detallado
+    private void CalcularTiempoDetallado()
+    {
+        if (indicadores == null || userInfo == null)
+            return;
+            
+        _currentTime = DateTime.Now;
+        var fechaInicio = userInfo.FechaIngresoNivelActual;
+        var tiempoTranscurrido = _currentTime - fechaInicio;
+        var tiempoMinimoRequerido = TimeSpan.FromDays(4 * 365.25); // 4 años
+        
+        indicadores.FechaInicioRol = fechaInicio;
+        indicadores.TiempoTranscurrido = tiempoTranscurrido;
+        indicadores.CumpleTiempoMinimo = tiempoTranscurrido >= tiempoMinimoRequerido;
+        
+        if (indicadores.CumpleTiempoMinimo)
+        {
+            indicadores.TiempoRestante = TimeSpan.Zero;
+            indicadores.TiempoRestanteTexto = "¡Tiempo cumplido!";
+        }
+        else
+        {
+            indicadores.TiempoRestante = tiempoMinimoRequerido - tiempoTranscurrido;
+            indicadores.TiempoRestanteTexto = FormatearTiempoRestante(indicadores.TiempoRestante);
+        }
+        
+        indicadores.TiempoTranscurridoTexto = FormatearTiempoTranscurrido(tiempoTranscurrido);
+    }
+    
+    private string FormatearTiempoTranscurrido(TimeSpan tiempo)
+    {
+        var años = (int)(tiempo.TotalDays / 365.25);
+        var meses = (int)((tiempo.TotalDays % 365.25) / 30.44);
+        var dias = (int)((tiempo.TotalDays % 365.25) % 30.44);
+        var horas = tiempo.Hours;
+        var minutos = tiempo.Minutes;
+        
+        var partes = new List<string>();
+        
+        if (años > 0)
+            partes.Add($"{años} año{(años != 1 ? "s" : "")}");
+        if (meses > 0)
+            partes.Add($"{meses} mes{(meses != 1 ? "es" : "")}");
+        if (dias > 0 && años == 0) // Solo mostrar días si no hay años
+            partes.Add($"{dias} día{(dias != 1 ? "s" : "")}");
+        if (horas > 0 && años == 0 && meses == 0) // Solo mostrar horas si no hay años ni meses
+            partes.Add($"{horas} hora{(horas != 1 ? "s" : "")}");
+        if (minutos > 0 && años == 0 && meses == 0 && dias == 0) // Solo mostrar minutos si solo hay horas y minutos
+            partes.Add($"{minutos} minuto{(minutos != 1 ? "s" : "")}");
+            
+        return partes.Count > 0 ? string.Join(", ", partes) : "Menos de 1 minuto";
+    }
+    
+    private string FormatearTiempoRestante(TimeSpan tiempo)
+    {
+        var años = (int)(tiempo.TotalDays / 365.25);
+        var meses = (int)((tiempo.TotalDays % 365.25) / 30.44);
+        var dias = (int)((tiempo.TotalDays % 365.25) % 30.44);
+        var horas = tiempo.Hours;
+        var minutos = tiempo.Minutes;
+        
+        var partes = new List<string>();
+        
+        if (años > 0)
+            partes.Add($"{años} año{(años != 1 ? "s" : "")}");
+        if (meses > 0)
+            partes.Add($"{meses} mes{(meses != 1 ? "es" : "")}");
+        if (dias > 0 && años < 2) // Mostrar días solo si hay menos de 2 años
+            partes.Add($"{dias} día{(dias != 1 ? "s" : "")}");
+        if (horas > 0 && años == 0 && meses < 6) // Mostrar horas solo si hay menos de 6 meses
+            partes.Add($"{horas} hora{(horas != 1 ? "s" : "")}");
+        if (minutos > 0 && años == 0 && meses == 0 && dias < 7) // Mostrar minutos solo en los últimos días
+            partes.Add($"{minutos} minuto{(minutos != 1 ? "s" : "")}");
+            
+        return partes.Count > 0 ? string.Join(", ", partes) : "Menos de 1 minuto";
+    }
+    
+    private int GetTiempoPercentage()
+    {
+        if (indicadores == null || userInfo == null)
+            return 0;
+            
+        var tiempoTranscurrido = _currentTime - userInfo.FechaIngresoNivelActual;
+        var tiempoMinimoEnDias = 4 * 365.25; // 4 años en días
+        var porcentaje = (int)Math.Min(100, (tiempoTranscurrido.TotalDays / tiempoMinimoEnDias) * 100);
+        
+        return porcentaje;
+    }
+    
+    private void IniciarTimer()
+    {
+        _timer = new Timer(async _ =>
+        {
+            _currentTime = DateTime.Now;
+            CalcularTiempoDetallado();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromMinutes(1)); // Actualizar cada minuto
+    }
+    
+    private void DetenerTimer()
+    {
+        _timer?.Dispose();
+        _timer = null;
+    }
+    
+    public void Dispose()
+    {
+        DetenerTimer();
     }
     
     public class EditUserModel

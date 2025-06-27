@@ -389,14 +389,12 @@
             {
                 // Para otros errores, inicializar con valores predeterminados
                 indicadores = new IndicadoresModel();
-                Console.WriteLine($"Error al cargar indicadores: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             // En caso de error, inicializar con valores predeterminados
             indicadores = new IndicadoresModel();
-            Console.WriteLine($"Error al cargar indicadores: {ex.Message}");
         }
     }    private async Task LoadRequisitos()
     {
@@ -418,13 +416,11 @@
                 {
                     // El endpoint no existe, inicializar con valores predeterminados
                     requisitos = new RequisitosModel();
-                    Console.WriteLine("Endpoint de requisitos no encontrado, usando valores predeterminados");
                 }
                 else
                 {
                     // Para otros errores, inicializar con valores predeterminados
                     requisitos = new RequisitosModel();
-                    Console.WriteLine($"Error al cargar requisitos: {response.StatusCode}");
                 }
             }
         }
@@ -432,7 +428,6 @@
         {
             // En caso de error, inicializar con valores predeterminados
             requisitos = new RequisitosModel();
-            Console.WriteLine($"Error al cargar requisitos: {ex.Message}");
         }
     }
     
@@ -449,13 +444,11 @@
             else
             {
                 tieneSolicitudActiva = false;
-                Console.WriteLine($"Error al verificar solicitud activa: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             tieneSolicitudActiva = false;
-            Console.WriteLine($"Error al verificar solicitud activa: {ex.Message}");
         }
     }
     
@@ -476,14 +469,10 @@
                 await LoadIndicadores();
                 await LoadRequisitos();
             }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("showToast", "Error al actualizar indicadores", "error");
-            }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+            // Silenciar errores de actualización de indicadores
         }
         finally
         {
@@ -542,10 +531,6 @@
                     await LoadIndicadores();
                     await LoadRequisitos();
                 }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("showToast", "Error al importar indicador", "error");
-                }
             }
             else if (mensaje == "tiempo_actualizado")
             {
@@ -555,7 +540,7 @@
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+            // Silenciar errores de importación de indicadores
         }
         finally
         {

@@ -1,0 +1,459 @@
+@page "/admin/solicitudes"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>
+                    <i class="bi bi-clipboard-check"></i> 
+                    Gestión de Solicitudes de Ascenso
+                </h3>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/admin">Panel Admin</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Solicitudes</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label">Filtrar por estado:</label>
+                            <select @onchange="FiltrarPorEstado" class="form-select">
+                                <option value="Todas">Todas las solicitudes</option>
+                                <option value="Pendiente">Pendientes</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Aprobada">Aprobadas</option>
+                                <option value="Rechazada">Rechazadas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Nivel solicitado:</label>
+                            <select @onchange="FiltrarPorNivel" class="form-select">
+                                <option value="">Todos los niveles</option>
+                                <option value="2">Titular 2</option>
+                                <option value="3">Titular 3</option>
+                                <option value="4">Titular 4</option>
+                                <option value="5">Titular 5</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Buscar docente:</label>
+                            <input type="text" @bind="filtroDocente" @onkeypress="BuscarEnter" 
+                                   class="form-control" placeholder="Nombre, apellido o cédula" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button @onclick="LimpiarFiltros" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas de solicitudes -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4>@solicitudesFiltradas.Count(s => s.Estado == "Pendiente")</h4>
+                    <small>Pendientes</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4>@solicitudesFiltradas.Count(s => s.Estado == "En Proceso")</h4>
+                    <small>En Proceso</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4>@solicitudesFiltradas.Count(s => s.Estado == "Aprobada")</h4>
+                    <small>Aprobadas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h4>@solicitudesFiltradas.Count(s => s.Estado == "Rechazada")</h4>
+                    <small>Rechazadas</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando solicitudes...</span>
+            </div>
+        </div>
+    }
+    else if (!solicitudesFiltradas.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i>
+            No se encontraron solicitudes que coincidan con los filtros aplicados.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list"></i> Lista de Solicitudes (@solicitudesFiltradas.Count)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Docente</th>
+                                <th>Cédula</th>
+                                <th>Nivel Actual</th>
+                                <th>Nivel Solicitado</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var solicitud in solicitudesFiltradas)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">SOL-@solicitud.Id</span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>@solicitud.DocenteNombres @solicitud.DocenteApellidos</strong>
+                                            <br>
+                                            <small class="text-muted">@solicitud.DocenteEmail</small>
+                                        </div>
+                                    </td>
+                                    <td>@solicitud.DocenteCedula</td>
+                                    <td>
+                                        <span class="badge bg-info">Titular @solicitud.NivelActual</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">Titular @solicitud.NivelSolicitado</span>
+                                    </td>
+                                    <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <span class="badge @GetEstadoBadgeClass(solicitud.Estado)">
+                                            @solicitud.Estado
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button @onclick="() => VerDetalle(solicitud.Id)" 
+                                                    class="btn btn-outline-primary" title="Ver detalles">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            @if (solicitud.Estado == "Pendiente" || solicitud.Estado == "En Proceso")
+                                            {
+                                                <button @onclick="() => AprobarSolicitud(solicitud.Id)" 
+                                                        class="btn btn-outline-success" title="Aprobar">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                                <button @onclick="() => RechazarSolicitud(solicitud.Id)" 
+                                                        class="btn btn-outline-danger" title="Rechazar">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal para aprobar solicitud -->
+<div class="modal fade" id="modalAprobar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle"></i> Aprobar Solicitud
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de que desea aprobar esta solicitud de ascenso?</p>
+                <div class="mb-3">
+                    <label class="form-label">Observaciones (opcional):</label>
+                    <textarea @bind="observacionesAprobacion" class="form-control" rows="3" 
+                              placeholder="Observaciones sobre la aprobación..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button @onclick="ConfirmarAprobacion" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Aprobar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para rechazar solicitud -->
+<div class="modal fade" id="modalRechazar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-x-circle"></i> Rechazar Solicitud
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de que desea rechazar esta solicitud de ascenso?</p>
+                <div class="mb-3">
+                    <label class="form-label">Motivo del rechazo (requerido):</label>
+                    <textarea @bind="motivoRechazo" class="form-control" rows="3" 
+                              placeholder="Explique el motivo del rechazo..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button @onclick="ConfirmarRechazo" class="btn btn-danger" disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))">
+                    <i class="bi bi-x-circle"></i> Rechazar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private List<SolicitudAdminModel> solicitudes = new();
+    private List<SolicitudAdminModel> solicitudesFiltradas = new();
+    
+    private string filtroEstado = "Todas";
+    private string filtroNivel = "";
+    private string filtroDocente = "";
+    
+    private int solicitudSeleccionadaId = 0;
+    private string observacionesAprobacion = "";
+    private string motivoRechazo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarSolicitudes();
+    }
+
+    private async Task CargarSolicitudes()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var response = await Http.GetFromJsonAsync<List<SolicitudAdminModel>>("api/admin/solicitudes");
+            solicitudes = response ?? new List<SolicitudAdminModel>();
+            
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar solicitudes: {ex.Message}");
+            // Error al cargar las solicitudes
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FiltrarPorEstado(ChangeEventArgs e)
+    {
+        filtroEstado = e.Value?.ToString() ?? "Todas";
+        AplicarFiltros();
+    }
+
+    private void FiltrarPorNivel(ChangeEventArgs e)
+    {
+        filtroNivel = e.Value?.ToString() ?? "";
+        AplicarFiltros();
+    }
+
+    private async Task BuscarEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AplicarFiltros();
+        }
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtroEstado = "Todas";
+        filtroNivel = "";
+        filtroDocente = "";
+        AplicarFiltros();
+    }
+
+    private void AplicarFiltros()
+    {
+        solicitudesFiltradas = solicitudes.Where(s =>
+            (filtroEstado == "Todas" || s.Estado == filtroEstado) &&
+            (string.IsNullOrEmpty(filtroNivel) || s.NivelSolicitado.ToString() == filtroNivel) &&
+            (string.IsNullOrEmpty(filtroDocente) || 
+             s.DocenteNombres.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase) ||
+             s.DocenteApellidos.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase) ||
+             s.DocenteCedula.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase))
+        ).OrderByDescending(s => s.FechaSolicitud).ToList();
+        
+        StateHasChanged();
+    }
+
+    private string GetEstadoBadgeClass(string estado)
+    {
+        return estado switch
+        {
+            "Pendiente" => "bg-warning",
+            "En Proceso" => "bg-info",
+            "Aprobada" => "bg-success",
+            "Rechazada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task VerDetalle(int solicitudId)
+    {
+        // Redirigir a página de detalle o mostrar modal con detalles
+        // Por ahora, mostrar un mensaje
+        // Ver detalle de solicitud
+    }
+
+    private async Task AprobarSolicitud(int solicitudId)
+    {
+        solicitudSeleccionadaId = solicitudId;
+        observacionesAprobacion = "";
+        await JSRuntime.InvokeVoidAsync("bootstrap.Modal.getOrCreateInstance", "#modalAprobar").AsTask();
+        await JSRuntime.InvokeVoidAsync("showModal", "#modalAprobar");
+    }
+
+    private async Task RechazarSolicitud(int solicitudId)
+    {
+        solicitudSeleccionadaId = solicitudId;
+        motivoRechazo = "";
+        await JSRuntime.InvokeVoidAsync("bootstrap.Modal.getOrCreateInstance", "#modalRechazar").AsTask();
+        await JSRuntime.InvokeVoidAsync("showModal", "#modalRechazar");
+    }
+
+    private async Task ConfirmarAprobacion()
+    {
+        try
+        {
+            var request = new ProcesarSolicitudRequest
+            {
+                SolicitudId = solicitudSeleccionadaId,
+                Accion = "Aprobar",
+                Observaciones = observacionesAprobacion
+            };
+
+            var response = await Http.PostAsJsonAsync("api/admin/procesar-solicitud", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("hideModal", "#modalAprobar");
+                await CargarSolicitudes();
+            }
+            else
+            {
+                // Error al aprobar la solicitud
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al aprobar solicitud: {ex.Message}");
+            // Error al aprobar la solicitud
+        }
+    }
+
+    private async Task ConfirmarRechazo()
+    {
+        if (string.IsNullOrWhiteSpace(motivoRechazo))
+        {
+            return;
+        }
+
+        try
+        {
+            var request = new ProcesarSolicitudRequest
+            {
+                SolicitudId = solicitudSeleccionadaId,
+                Accion = "Rechazar",
+                Observaciones = motivoRechazo
+            };
+
+            var response = await Http.PostAsJsonAsync("api/admin/procesar-solicitud", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("hideModal", "#modalRechazar");
+                await CargarSolicitudes();
+            }
+            else
+            {
+                // Error al rechazar la solicitud
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al rechazar solicitud: {ex.Message}");
+            // Error al rechazar la solicitud
+        }
+    }
+
+    public class SolicitudAdminModel
+    {
+        public int Id { get; set; }
+        public string DocenteNombres { get; set; } = "";
+        public string DocenteApellidos { get; set; } = "";
+        public string DocenteEmail { get; set; } = "";
+        public string DocenteCedula { get; set; } = "";
+        public int NivelActual { get; set; }
+        public int NivelSolicitado { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public string Estado { get; set; } = "";
+        public string? Observaciones { get; set; }
+    }
+
+    public class ProcesarSolicitudRequest
+    {
+        public int SolicitudId { get; set; }
+        public string Accion { get; set; } = "";
+        public string? Observaciones { get; set; }
+    }
+}

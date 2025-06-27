@@ -94,7 +94,7 @@ namespace SGA.Web.Services
                 }
                 else
                 {
-                    Console.WriteLine($"[AUTH DEBUG] Error HTTP: {response.StatusCode}");
+                    // Error HTTP, usar mensaje genérico
                     
                     string errorMessage = "Credenciales inválidas";
                     try
@@ -104,11 +104,9 @@ namespace SGA.Web.Services
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[AUTH DEBUG] Error deserializando error response: {ex.Message}");
                         errorMessage = "Error al procesar la respuesta del servidor";
                     }
                     
-                    Console.WriteLine($"[AUTH DEBUG] Retornando error: {errorMessage}");
                     return new LoginResult { Success = false, Message = errorMessage };
                 }
             }
@@ -202,14 +200,14 @@ namespace SGA.Web.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[AUTH DEBUG] Error parsing JWT claims: {ex.Message}");
+                    // Error parsing JWT claims
                 }
 
                 return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AUTH DEBUG] Error in GetUserInfo: {ex.Message}");
+                // Error in GetUserInfo
                 return null;
             }
         }

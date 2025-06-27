@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SGA.Application.DTOs.Auth;
+using SGA.Application.DTOs.Docentes;
 using SGA.Application.Interfaces;
 using System.Security.Claims;
 
@@ -30,10 +31,23 @@ public class AuthController : ControllerBase
                 return Ok(new LoginResponse
                 {
                     Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkb2NlbnRlQHV0YS5lZHUuZWMiLCJlbWFpbCI6ImRvY2VudGVAdXRhLmVkdS5lYyIsInJvbGUiOiJEb2NlbnRlIiwibmFtZSI6IkRyLiBKdWFuIFDDqXJleiIsImV4cCI6MTc0NTgxNDEwMH0.demo-token-for-presentation",
-                    Email = "docente@uta.edu.ec",
-                    Role = "Docente",
-                    FullName = "Dr. Juan Pérez",
-                    ExpiresAt = DateTime.UtcNow.AddHours(24)
+                    RefreshToken = "refresh-token-demo",
+                    Expiration = DateTime.UtcNow.AddHours(24),
+                    Usuario = new UsuarioDto
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = "docente@uta.edu.ec",
+                        Rol = "Docente",
+                        Docente = new DocenteDto
+                        {
+                            Id = Guid.NewGuid(),
+                            Cedula = "1234567890",
+                            Nombres = "Juan",
+                            Apellidos = "Pérez",
+                            Email = "docente@uta.edu.ec",
+                            NombreCompleto = "Dr. Juan Pérez"
+                        }
+                    }
                 });
             }
             
@@ -42,10 +56,14 @@ public class AuthController : ControllerBase
                 return Ok(new LoginResponse
                 {
                     Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkB1dGEuZWR1LmVjIiwiZW1haWwiOiJhZG1pbkB1dGEuZWR1LmVjIiwicm9sZSI6IkFkbWluaXN0cmFkb3IiLCJuYW1lIjoiQWRtaW5pc3RyYWRvciBTaXN0ZW1hIiwiZXhwIjoxNzQ1ODE0MTAwfQ.demo-admin-token-for-presentation",
-                    Email = "admin@uta.edu.ec",
-                    Role = "Administrador",
-                    FullName = "Administrador Sistema",
-                    ExpiresAt = DateTime.UtcNow.AddHours(24)
+                    RefreshToken = "refresh-token-admin-demo",
+                    Expiration = DateTime.UtcNow.AddHours(24),
+                    Usuario = new UsuarioDto
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = "admin@uta.edu.ec",
+                        Rol = "Administrador"
+                    }
                 });
             }
 
@@ -53,7 +71,7 @@ public class AuthController : ControllerBase
             var response = await _authService.LoginAsync(request);
             return Ok(response);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Unauthorized(new { message = "Credenciales inválidas. Use: docente@uta.edu.ec/123456 o admin@uta.edu.ec/admin123" });
         }
@@ -75,7 +93,7 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return StatusCode(500, new { message = "Error interno del servidor" });
         }

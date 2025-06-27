@@ -543,10 +543,10 @@ public class DocenteService : IDocenteService
     {
         return nivel switch
         {
-            "Titular2" => (48, 1, 75, 96, 0),    // Titular 1 → 2
-            "Titular3" => (48, 2, 75, 96, 12),   // Titular 2 → 3
-            "Titular4" => (48, 3, 75, 128, 24),  // Titular 3 → 4
-            "Titular5" => (48, 5, 75, 160, 24),  // Titular 4 → 5
+            "Titular2" => (48, 3, 80, 120, 24),  // Titular 1 → 2
+            "Titular3" => (48, 3, 80, 120, 24),  // Titular 2 → 3
+            "Titular4" => (48, 3, 80, 120, 24),  // Titular 3 → 4
+            "Titular5" => (48, 3, 80, 120, 24),  // Titular 4 → 5
             _ => throw new ArgumentException($"Nivel no válido: {nivel}")
         };
     }

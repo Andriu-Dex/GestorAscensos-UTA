@@ -1,0 +1,457 @@
+@page "/admin/reportes"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>
+                    <i class="bi bi-graph-up"></i> 
+                    Reportes y Estadísticas
+                </h3>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/admin">Panel Admin</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Reportes</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reportes Rápidos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-download"></i> Reportes Rápidos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-file-earmark-pdf fs-1 text-primary mb-3"></i>
+                                    <h6 class="card-title">Reporte General de Docentes</h6>
+                                    <p class="card-text">Lista completa de todos los docentes con sus niveles actuales</p>
+                                    <button @onclick="GenerarReporteDocentes" class="btn btn-primary" disabled="@isGenerandoReporte">
+                                        @if (isGenerandoReporte)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bi bi-download"></i> Generar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-clipboard-check fs-1 text-success mb-3"></i>
+                                    <h6 class="card-title">Reporte de Solicitudes</h6>
+                                    <p class="card-text">Estado de todas las solicitudes de ascenso por período</p>
+                                    <button @onclick="GenerarReporteSolicitudes" class="btn btn-success" disabled="@isGenerandoReporte">
+                                        @if (isGenerandoReporte)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bi bi-download"></i> Generar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-bar-chart fs-1 text-info mb-3"></i>
+                                    <h6 class="card-title">Estadísticas Generales</h6>
+                                    <p class="card-text">Resumen estadístico del sistema de ascensos</p>
+                                    <button @onclick="GenerarReporteEstadisticas" class="btn btn-info" disabled="@isGenerandoReporte">
+                                        @if (isGenerandoReporte)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        <i class="bi bi-download"></i> Generar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros para reportes personalizados -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-funnel"></i> Reportes Personalizados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha desde:</label>
+                            <input type="date" @bind="fechaDesde" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha hasta:</label>
+                            <input type="date" @bind="fechaHasta" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Facultad:</label>
+                            <select @bind="facultadSeleccionada" class="form-select">
+                                <option value="">Todas las facultades</option>
+                                @foreach (var facultad in facultades)
+                                {
+                                    <option value="@facultad">@facultad</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Estado solicitud:</label>
+                            <select @bind="estadoSeleccionado" class="form-select">
+                                <option value="">Todos los estados</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="Rechazada">Rechazada</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button @onclick="GenerarReportePersonalizado" class="btn btn-warning" disabled="@isGenerandoReporte">
+                                @if (isGenerandoReporte)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-file-earmark-pdf"></i> Generar Reporte Personalizado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard de estadísticas en tiempo real -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-speedometer2"></i> Panel de Estadísticas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (isLoadingStats)
+                    {
+                        <div class="d-flex justify-content-center my-4">
+                            <div class="spinner-border text-primary"></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <!-- Estadísticas por nivel -->
+                            <div class="col-md-6 mb-4">
+                                <h6><i class="bi bi-bar-chart-line"></i> Distribución por Nivel Académico</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Nivel</th>
+                                                <th>Cantidad</th>
+                                                <th>Porcentaje</th>
+                                                <th>Gráfico</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                var cantidad = estadisticas?.DocentesPorNivel?.GetValueOrDefault(i, 0) ?? 0;
+                                                var porcentaje = estadisticas?.TotalDocentes > 0 ? (cantidad * 100.0 / estadisticas.TotalDocentes) : 0;
+                                                <tr>
+                                                    <td><span class="badge @GetNivelBadgeClass(i)">Titular @i</span></td>
+                                                    <td><strong>@cantidad</strong></td>
+                                                    <td>@porcentaje.ToString("F1")%</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar @GetNivelProgressClass(i)" role="progressbar" 
+                                                                 style="width: @porcentaje%" aria-valuenow="@porcentaje" 
+                                                                 aria-valuemin="0" aria-valuemax="100">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Estadísticas de solicitudes -->
+                            <div class="col-md-6 mb-4">
+                                <h6><i class="bi bi-pie-chart"></i> Estado de Solicitudes</h6>
+                                <div class="row">
+                                    <div class="col-6 mb-2">
+                                        <div class="card bg-warning text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4>@(estadisticas?.SolicitudesPendientes ?? 0)</h4>
+                                                <small>Pendientes</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="card bg-info text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4>@(estadisticas?.SolicitudesEnProceso ?? 0)</h4>
+                                                <small>En Proceso</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="card bg-success text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4>@(estadisticas?.SolicitudesAprobadas ?? 0)</h4>
+                                                <small>Aprobadas</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 mb-2">
+                                        <div class="card bg-danger text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4>@(estadisticas?.SolicitudesRechazadas ?? 0)</h4>
+                                                <small>Rechazadas</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información adicional -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6><i class="bi bi-info-circle"></i> Información Adicional</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="border rounded p-3 text-center">
+                                            <i class="bi bi-people fs-2 text-primary"></i>
+                                            <h5>@(estadisticas?.TotalDocentes ?? 0)</h5>
+                                            <small class="text-muted">Total Docentes</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="border rounded p-3 text-center">
+                                            <i class="bi bi-clipboard-check fs-2 text-success"></i>
+                                            <h5>@(estadisticas?.TotalSolicitudes ?? 0)</h5>
+                                            <small class="text-muted">Total Solicitudes</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="border rounded p-3 text-center">
+                                            <i class="bi bi-calendar-month fs-2 text-info"></i>
+                                            <h5>@(estadisticas?.SolicitudesEsteMes ?? 0)</h5>
+                                            <small class="text-muted">Solicitudes Este Mes</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="border rounded p-3 text-center">
+                                            <i class="bi bi-trophy fs-2 text-warning"></i>
+                                            <h5>@(estadisticas?.AscensosEsteAnio ?? 0)</h5>
+                                            <small class="text-muted">Ascensos Este Año</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isGenerandoReporte = false;
+    private bool isLoadingStats = true;
+    
+    private List<string> facultades = new();
+    private EstadisticasCompletas? estadisticas;
+    
+    // Filtros para reportes personalizados
+    private DateTime? fechaDesde;
+    private DateTime? fechaHasta = DateTime.Today;
+    private string facultadSeleccionada = "";
+    private string estadoSeleccionado = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(
+            CargarFacultades(),
+            CargarEstadisticas()
+        );
+    }
+
+    private async Task CargarFacultades()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<string>>("api/admin/facultades");
+            facultades = response ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar facultades: {ex.Message}");
+        }
+    }
+
+    private async Task CargarEstadisticas()
+    {
+        try
+        {
+            isLoadingStats = true;
+            
+            var response = await Http.GetFromJsonAsync<EstadisticasCompletas>("api/admin/estadisticas-completas");
+            estadisticas = response;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar estadísticas: {ex.Message}");
+            // Error al cargar las estadísticas
+        }
+        finally
+        {
+            isLoadingStats = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GenerarReporteDocentes()
+    {
+        await GenerarReporte("docentes", "Reporte de Docentes");
+    }
+
+    private async Task GenerarReporteSolicitudes()
+    {
+        await GenerarReporte("solicitudes", "Reporte de Solicitudes");
+    }
+
+    private async Task GenerarReporteEstadisticas()
+    {
+        await GenerarReporte("estadisticas", "Reporte de Estadísticas");
+    }
+
+    private async Task GenerarReportePersonalizado()
+    {
+        var parametros = new Dictionary<string, object>
+        {
+            ["fechaDesde"] = fechaDesde?.ToString("yyyy-MM-dd") ?? "",
+            ["fechaHasta"] = fechaHasta?.ToString("yyyy-MM-dd") ?? "",
+            ["facultad"] = facultadSeleccionada,
+            ["estado"] = estadoSeleccionado
+        };
+
+        await GenerarReporte("personalizado", "Reporte Personalizado", parametros);
+    }
+
+    private async Task GenerarReporte(string tipoReporte, string nombreReporte, Dictionary<string, object>? parametros = null)
+    {
+        try
+        {
+            isGenerandoReporte = true;
+            // Generando reporte...
+            
+            var url = $"api/admin/reportes/{tipoReporte}";
+            
+            // Agregar parámetros a la URL si existen
+            if (parametros != null && parametros.Any())
+            {
+                var queryString = string.Join("&", parametros
+                    .Where(p => !string.IsNullOrEmpty(p.Value?.ToString()))
+                    .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value.ToString())}"));
+                
+                if (!string.IsNullOrEmpty(queryString))
+                {
+                    url += "?" + queryString;
+                }
+            }
+            
+            var response = await Http.GetAsync(url);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"{nombreReporte.Replace(" ", "-").ToLower()}-{DateTime.Now:yyyyMMdd-HHmmss}.pdf";
+                
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/pdf", contenido);
+                // Reporte generado exitosamente
+            }
+            else
+            {
+                // Error al generar reporte
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al generar reporte: {ex.Message}");
+            // Error al generar reporte
+        }
+        finally
+        {
+            isGenerandoReporte = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetNivelBadgeClass(int nivel)
+    {
+        return nivel switch
+        {
+            1 => "bg-secondary",
+            2 => "bg-primary",
+            3 => "bg-info",
+            4 => "bg-warning",
+            5 => "bg-success",
+            _ => "bg-dark"
+        };
+    }
+
+    private string GetNivelProgressClass(int nivel)
+    {
+        return nivel switch
+        {
+            1 => "bg-secondary",
+            2 => "bg-primary",
+            3 => "bg-info",
+            4 => "bg-warning",
+            5 => "bg-success",
+            _ => "bg-dark"
+        };
+    }
+
+    public class EstadisticasCompletas
+    {
+        public int TotalDocentes { get; set; }
+        public int TotalSolicitudes { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesEnProceso { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public int SolicitudesEsteMes { get; set; }
+        public int AscensosEsteAnio { get; set; }
+        public Dictionary<int, int> DocentesPorNivel { get; set; } = new();
+    }
+}
