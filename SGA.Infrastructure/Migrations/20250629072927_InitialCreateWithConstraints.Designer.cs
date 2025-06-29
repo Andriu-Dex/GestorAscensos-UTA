@@ -12,8 +12,8 @@ using SGA.Infrastructure.Data;
 namespace SGA.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250627122903_CrearSolicitudObraAcademica")]
-    partial class CrearSolicitudObraAcademica
+    [Migration("20250629072927_InitialCreateWithConstraints")]
+    partial class InitialCreateWithConstraints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -107,16 +107,16 @@ namespace SGA.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("80a42eb2-0777-4b91-b20d-9d38cc30daed"),
+                            Id = new Guid("8ef569a9-342c-4e85-a8e1-29b5e697f2b6"),
                             Apellidos = "Sistema",
                             Cedula = "1800000000",
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2969),
-                            FechaInicioNivelActual = new DateTime(2020, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2485),
+                            FechaCreacion = new DateTime(2025, 6, 29, 7, 29, 27, 141, DateTimeKind.Utc).AddTicks(387),
+                            FechaInicioNivelActual = new DateTime(2020, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(9930),
                             NivelActual = "Titular5",
                             Nombres = "Administrador",
-                            UsuarioId = new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214")
+                            UsuarioId = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad")
                         });
                 });
 
@@ -261,6 +261,9 @@ namespace SGA.Infrastructure.Migrations
 
                     b.Property<int>("NumeroObrasAcademicas")
                         .HasColumnType("int");
+
+                    b.Property<string>("Observaciones")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("PromedioEvaluaciones")
                         .HasColumnType("decimal(5,2)");
@@ -444,12 +447,12 @@ namespace SGA.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214"),
+                            Id = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad"),
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 27, 12, 29, 2, 726, DateTimeKind.Utc).AddTicks(4900),
+                            FechaCreacion = new DateTime(2025, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(2564),
                             IntentosLogin = 0,
-                            PasswordHash = "$2a$11$6O062mcgFNytReZF.LPdv.FNAqEy/XKrg6vcDrTYBUCyspsjrF0hW",
+                            PasswordHash = "$2a$11$Htd5IHWrNNNE9zlTolsnZ.BCk3CAHaoEVr8jH6MFZ1cuLvZecjypC",
                             Rol = "Administrador",
                             UltimoLogin = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });

@@ -1,5 +1,6 @@
 using SGA.Domain.Common;
 using SGA.Domain.Enums;
+using SGA.Domain.Extensions;
 
 namespace SGA.Domain.Entities;
 
@@ -27,39 +28,108 @@ public class Docente : BaseEntity
     public virtual Usuario Usuario { get; set; } = null!;
     public virtual ICollection<SolicitudAscenso> SolicitudesAscenso { get; set; } = new List<SolicitudAscenso>();
     
-    // Métodos de validación
+    // Propiedades calculadas
+    public string NombreCompleto => $"{Nombres} {Apellidos}";
+    public string NivelDescripcion => NivelActual.GetDescription();
+    public bool PuedeAscender => !NivelActual.EsNivelMaximo();
+    public NivelTitular? SiguienteNivel => NivelActual.GetSiguienteNivel();
+    
+    // Métodos de validación usando las extensiones de enum
     public bool CumpleRequisitosParaNivel(NivelTitular nivelObjetivo)
     {
+        // Validar que el ascenso sea secuencial
+        if (!NivelActual.EsAscensoValido(nivelObjetivo))
+            return false;
+            
         var tiempoEnNivel = DateTime.UtcNow - FechaInicioNivelActual;
-        var cumpleTiempo = tiempoEnNivel.TotalDays >= (4 * 365); // 4 años
+        var requisitos = nivelObjetivo.GetRequisitos();
         
-        return nivelObjetivo switch
-        {
-            NivelTitular.Titular2 => cumpleTiempo && 
-                                    (NumeroObrasAcademicas ?? 0) >= 1 && 
-                                    (PromedioEvaluaciones ?? 0) >= 75 && 
-                                    (HorasCapacitacion ?? 0) >= 96,
-                                    
-            NivelTitular.Titular3 => cumpleTiempo && 
-                                    (NumeroObrasAcademicas ?? 0) >= 2 && 
-                                    (PromedioEvaluaciones ?? 0) >= 75 && 
-                                    (HorasCapacitacion ?? 0) >= 96 && 
-                                    (MesesInvestigacion ?? 0) >= 12,
-                                    
-            NivelTitular.Titular4 => cumpleTiempo && 
-                                    (NumeroObrasAcademicas ?? 0) >= 3 && 
-                                    (PromedioEvaluaciones ?? 0) >= 75 && 
-                                    (HorasCapacitacion ?? 0) >= 128 && 
-                                    (MesesInvestigacion ?? 0) >= 24,
-                                    
-            NivelTitular.Titular5 => cumpleTiempo && 
-                                    (NumeroObrasAcademicas ?? 0) >= 5 && 
-                                    (PromedioEvaluaciones ?? 0) >= 75 && 
-                                    (HorasCapacitacion ?? 0) >= 160 && 
-                                    (MesesInvestigacion ?? 0) >= 24,
-            _ => false
-        };
+        return tiempoEnNivel.TotalDays >= (requisitos.AnosEnNivel * 365) &&
+               (NumeroObrasAcademicas ?? 0) >= requisitos.ObrasMinimas &&
+               (PromedioEvaluaciones ?? 0) >= requisitos.PromedioEvaluacionMinimo &&
+               (HorasCapacitacion ?? 0) >= requisitos.HorasCapacitacionMinimas &&
+               (MesesInvestigacion ?? 0) >= requisitos.MesesInvestigacionMinimos;
     }
     
-    public string NombreCompleto => $"{Nombres} {Apellidos}";
+    /// <summary>
+    /// Valida si el docente puede crear una nueva solicitud de ascenso
+    /// </summary>
+    /// <returns>True si puede crear una solicitud</returns>
+    public bool PuedeCrearSolicitudAscenso()
+    {
+        // No puede ascender si ya está en el nivel máximo
+        if (NivelActual.EsNivelMaximo())
+            return false;
+            
+        // No puede crear solicitud si ya tiene una activa
+        if (TieneSolicitudActiva())
+            return false;
+            
+        // Debe cumplir los requisitos para el siguiente nivel
+        var siguienteNivel = NivelActual.GetSiguienteNivel();
+        return siguienteNivel.HasValue && CumpleRequisitosParaNivel(siguienteNivel.Value);
+    }
+    
+    /// <summary>
+    /// Verifica si el docente tiene una solicitud activa
+    /// </summary>
+    /// <returns>True si tiene una solicitud activa</returns>
+    public bool TieneSolicitudActiva()
+    {
+        return SolicitudesAscenso.Any(s => s.Estado.EsEstadoActivo());
+    }
+    
+    /// <summary>
+    /// Obtiene los requisitos que cumple actualmente para el siguiente nivel
+    /// </summary>
+    /// <returns>Objeto con el estado de cumplimiento de requisitos</returns>
+    public EstadoRequisitos GetEstadoRequisitos()
+    {
+        var siguienteNivel = NivelActual.GetSiguienteNivel();
+        if (!siguienteNivel.HasValue)
+        {
+            return new EstadoRequisitos { NivelMaximoAlcanzado = true };
+        }
+        
+        var requisitos = siguienteNivel.Value.GetRequisitos();
+        var tiempoEnNivel = DateTime.UtcNow - FechaInicioNivelActual;
+        
+        return new EstadoRequisitos
+        {
+            NivelObjetivo = siguienteNivel.Value,
+            CumpleTiempo = tiempoEnNivel.TotalDays >= (requisitos.AnosEnNivel * 365),
+            CumpleObras = (NumeroObrasAcademicas ?? 0) >= requisitos.ObrasMinimas,
+            CumpleEvaluaciones = (PromedioEvaluaciones ?? 0) >= requisitos.PromedioEvaluacionMinimo,
+            CumpleCapacitacion = (HorasCapacitacion ?? 0) >= requisitos.HorasCapacitacionMinimas,
+            CumpleInvestigacion = (MesesInvestigacion ?? 0) >= requisitos.MesesInvestigacionMinimos,
+            DiasEnNivel = (int)tiempoEnNivel.TotalDays,
+            ObrasActuales = NumeroObrasAcademicas ?? 0,
+            PromedioActual = PromedioEvaluaciones ?? 0,
+            HorasActuales = HorasCapacitacion ?? 0,
+            MesesInvestigacionActuales = MesesInvestigacion ?? 0
+        };
+    }
+}
+
+/// <summary>
+/// Clase que representa el estado de cumplimiento de requisitos
+/// </summary>
+public class EstadoRequisitos
+{
+    public bool NivelMaximoAlcanzado { get; set; }
+    public NivelTitular? NivelObjetivo { get; set; }
+    public bool CumpleTiempo { get; set; }
+    public bool CumpleObras { get; set; }
+    public bool CumpleEvaluaciones { get; set; }
+    public bool CumpleCapacitacion { get; set; }
+    public bool CumpleInvestigacion { get; set; }
+    public int DiasEnNivel { get; set; }
+    public int ObrasActuales { get; set; }
+    public decimal PromedioActual { get; set; }
+    public int HorasActuales { get; set; }
+    public int MesesInvestigacionActuales { get; set; }
+    
+    public bool CumpleTodosLosRequisitos => 
+        CumpleTiempo && CumpleObras && CumpleEvaluaciones && 
+        CumpleCapacitacion && CumpleInvestigacion;
 }

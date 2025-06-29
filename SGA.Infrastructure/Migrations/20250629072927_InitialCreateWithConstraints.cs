@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SGA.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class CrearSolicitudObraAcademica : Migration
+    public partial class InitialCreateWithConstraints : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -96,6 +96,7 @@ namespace SGA.Infrastructure.Migrations
                     NivelSolicitado = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     MotivoRechazo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Observaciones = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FechaSolicitud = table.Column<DateTime>(type: "datetime2", nullable: false),
                     FechaAprobacion = table.Column<DateTime>(type: "datetime2", nullable: true),
                     AprobadoPorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -200,12 +201,12 @@ namespace SGA.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "Usuarios",
                 columns: new[] { "Id", "Email", "EstaActivo", "FechaCreacion", "FechaModificacion", "IntentosLogin", "PasswordHash", "Rol", "UltimoBloqueado", "UltimoLogin" },
-                values: new object[] { new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214"), "admin@uta.edu.ec", true, new DateTime(2025, 6, 27, 12, 29, 2, 726, DateTimeKind.Utc).AddTicks(4900), null, 0, "$2a$11$6O062mcgFNytReZF.LPdv.FNAqEy/XKrg6vcDrTYBUCyspsjrF0hW", "Administrador", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
+                values: new object[] { new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad"), "admin@uta.edu.ec", true, new DateTime(2025, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(2564), null, 0, "$2a$11$Htd5IHWrNNNE9zlTolsnZ.BCk3CAHaoEVr8jH6MFZ1cuLvZecjypC", "Administrador", null, new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified) });
 
             migrationBuilder.InsertData(
                 table: "Docentes",
                 columns: new[] { "Id", "Apellidos", "Cedula", "Email", "EstaActivo", "FechaCreacion", "FechaInicioNivelActual", "FechaModificacion", "FechaNombramiento", "FechaUltimaImportacion", "FechaUltimoAscenso", "HorasCapacitacion", "MesesInvestigacion", "NivelActual", "Nombres", "NumeroObrasAcademicas", "PromedioEvaluaciones", "UsuarioId" },
-                values: new object[] { new Guid("80a42eb2-0777-4b91-b20d-9d38cc30daed"), "Sistema", "1800000000", "admin@uta.edu.ec", true, new DateTime(2025, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2969), new DateTime(2020, 6, 27, 12, 29, 2, 727, DateTimeKind.Utc).AddTicks(2485), null, null, null, null, null, null, "Titular5", "Administrador", null, null, new Guid("e9ebfecf-9329-4d89-8d3a-d3c20f819214") });
+                values: new object[] { new Guid("8ef569a9-342c-4e85-a8e1-29b5e697f2b6"), "Sistema", "1800000000", "admin@uta.edu.ec", true, new DateTime(2025, 6, 29, 7, 29, 27, 141, DateTimeKind.Utc).AddTicks(387), new DateTime(2020, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(9930), null, null, null, null, null, null, "Titular5", "Administrador", null, null, new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad") });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Docentes_Cedula",

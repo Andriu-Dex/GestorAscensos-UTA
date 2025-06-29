@@ -104,16 +104,16 @@ namespace SGA.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("3d1dd39d-6f44-43ce-aef9-6aad10076585"),
+                            Id = new Guid("8ef569a9-342c-4e85-a8e1-29b5e697f2b6"),
                             Apellidos = "Sistema",
                             Cedula = "1800000000",
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 27, 19, 36, 37, 439, DateTimeKind.Utc).AddTicks(6422),
-                            FechaInicioNivelActual = new DateTime(2020, 6, 27, 19, 36, 37, 439, DateTimeKind.Utc).AddTicks(5968),
+                            FechaCreacion = new DateTime(2025, 6, 29, 7, 29, 27, 141, DateTimeKind.Utc).AddTicks(387),
+                            FechaInicioNivelActual = new DateTime(2020, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(9930),
                             NivelActual = "Titular5",
                             Nombres = "Administrador",
-                            UsuarioId = new Guid("a0b11659-95a3-4c43-9513-230b1fb9dfc8")
+                            UsuarioId = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad")
                         });
                 });
 
@@ -444,12 +444,12 @@ namespace SGA.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("a0b11659-95a3-4c43-9513-230b1fb9dfc8"),
+                            Id = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad"),
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 6, 27, 19, 36, 37, 438, DateTimeKind.Utc).AddTicks(8828),
+                            FechaCreacion = new DateTime(2025, 6, 29, 7, 29, 27, 140, DateTimeKind.Utc).AddTicks(2564),
                             IntentosLogin = 0,
-                            PasswordHash = "$2a$11$eKpJt5rTrXhghmKlIGwp5eL6FUgBNZoIzQd/RO8Eccxr/MKIfqyo.",
+                            PasswordHash = "$2a$11$Htd5IHWrNNNE9zlTolsnZ.BCk3CAHaoEVr8jH6MFZ1cuLvZecjypC",
                             Rol = "Administrador",
                             UltimoLogin = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });

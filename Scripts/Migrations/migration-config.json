@@ -1,0 +1,92 @@
+{
+  "environments": {
+    "Development": {
+      "connectionString": "Server=.\\SQLEXPRESS;Database=SGA_Main;Trusted_Connection=true;MultipleActiveResultSets=true",
+      "serverInstance": ".\\SQLEXPRESS",
+      "databaseName": "SGA_Main",
+      "allowReset": true,
+      "autoBackup": false,
+      "requireConfirmation": false
+    },
+    "Staging": {
+      "connectionString": "Server=.\\SQLEXPRESS;Database=SGA_Staging;Trusted_Connection=true;MultipleActiveResultSets=true",
+      "serverInstance": ".\\SQLEXPRESS",
+      "databaseName": "SGA_Staging",
+      "allowReset": false,
+      "autoBackup": true,
+      "requireConfirmation": true
+    },
+    "Production": {
+      "connectionString": "Server=.\\SQLEXPRESS;Database=SGA_Production;Trusted_Connection=true;MultipleActiveResultSets=true",
+      "serverInstance": ".\\SQLEXPRESS",
+      "databaseName": "SGA_Production",
+      "allowReset": false,
+      "autoBackup": true,
+      "requireConfirmation": true
+    }
+  },
+  "projects": {
+    "main": {
+      "projectPath": "SGA.Infrastructure",
+      "startupProject": "SGA.Api",
+      "contexts": [
+        {
+          "name": "ApplicationDbContext",
+          "contextClass": "ApplicationDbContext",
+          "migrationPath": "SGA.Infrastructure\\Migrations",
+          "scriptsPath": "Scripts\\Migrations"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "preMigration": {
+      "enabled": true,
+      "path": "Scripts\\Migrations\\Pre-Migration",
+      "pattern": "*.sql",
+      "executeOrder": "alphabetical"
+    },
+    "postMigration": {
+      "enabled": true,
+      "path": "Scripts\\Migrations\\Post-Migration",
+      "pattern": "*.sql",
+      "executeOrder": "alphabetical"
+    },
+    "rollback": {
+      "enabled": true,
+      "path": "Scripts\\Migrations\\Rollback",
+      "pattern": "*.sql",
+      "executeOrder": "reverse-alphabetical"
+    }
+  },
+  "backup": {
+    "enabled": true,
+    "path": "Backups",
+    "retentionDays": 30,
+    "compressionEnabled": true,
+    "namingPattern": "{environment}_{database}_{timestamp}"
+  },
+  "logging": {
+    "enabled": true,
+    "path": "Logs\\Migrations",
+    "level": "Info",
+    "retentionDays": 90,
+    "filePattern": "migration_{date}.log"
+  },
+  "validation": {
+    "checkDatabaseExists": true,
+    "checkMigrationHistory": true,
+    "checkConstraints": true,
+    "checkIndexes": true,
+    "customValidationScripts": []
+  },
+  "cicd": {
+    "enabled": false,
+    "hooks": {
+      "preMigration": [],
+      "postMigration": [],
+      "onFailure": [],
+      "onSuccess": []
+    }
+  }
+}

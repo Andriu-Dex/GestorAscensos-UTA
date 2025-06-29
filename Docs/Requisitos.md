@@ -133,10 +133,10 @@ Crear bases de datos independientes que representen los sistemas universitarios 
 
 El sistema debe validar automáticamente usando datos reales importados:
 
-- **Titular 1 → 2**: 4 años en rol, 1 obra, 75% evaluación, 96h capacitación
-- **Titular 2 → 3**: 4 años en rol, 2 obras, 75% evaluación, 96h capacitación, 12 meses investigación
-- **Titular 3 → 4**: 4 años en rol, 3 obras, 75% evaluación, 128h capacitación, 24 meses investigación
-- **Titular 4 → 5**: 4 años en rol, 5 obras, 75% evaluación, 160h capacitación, 24 meses investigación
+- **Titular Auxiliar 1 → 2**: 4 años en rol, 1 obra, 75% evaluación, 96h capacitación
+- **Titular Auxiliar 2 → 3**: 4 años en rol, 2 obras, 75% evaluación, 96h capacitación, 12 meses investigación
+- **Titular Auxiliar 3 → 4**: 4 años en rol, 3 obras, 75% evaluación, 128h capacitación, 24 meses investigación
+- **Titular Auxiliar 4 → 5**: 4 años en rol, 5 obras, 75% evaluación, 160h capacitación, 24 meses investigación
 
 ### Gestión de Solicitudes de Ascenso
 
@@ -247,7 +247,7 @@ El sistema debe validar automáticamente usando datos reales importados:
 - **Docentes que cumplen**: Todos los requisitos para ascender
 - **Docentes que no cumplen**: Faltan uno o más requisitos
 - **Casos límite**: Docentes que están muy cerca de cumplir requisitos
-- **Diferentes niveles**: Docentes en cada nivel de Titular 1 a Titular 4
+- **Diferentes niveles**: Docentes en cada nivel de Titular Auxiliar 1 a Titular Auxiliar 4
 
 ## 10. Configuración y Seguridad
 
