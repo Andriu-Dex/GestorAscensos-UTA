@@ -10,6 +10,7 @@ public class SolicitudAscenso : BaseEntity
     public NivelTitular NivelSolicitado { get; set; }
     public EstadoSolicitud Estado { get; set; } = EstadoSolicitud.Pendiente;
     public string? MotivoRechazo { get; set; }
+    public string? Observaciones { get; set; }
     public DateTime FechaSolicitud { get; set; }
     public DateTime? FechaAprobacion { get; set; }
     public Guid? AprobadoPorId { get; set; }

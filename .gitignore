@@ -13,6 +13,16 @@
 *.svclog
 *.scc
 
+# Archivos de configuración sensible
+.env
+.env.local
+.env.development
+.env.production
+appsettings.Local.json
+connectionstrings.json
+*.config.backup
+appsettings.*.bak
+
 # Carpetas de Visual Studio
 .vs/
 .vscode/

@@ -255,14 +255,14 @@
 
 @code {
     private bool isLoading = true;
-    private List<SolicitudAdminModel> solicitudes = new();
-    private List<SolicitudAdminModel> solicitudesFiltradas = new();
+    private List<SolicitudAscensoDto> solicitudes = new();
+    private List<SolicitudAscensoDto> solicitudesFiltradas = new();
     
     private string filtroEstado = "Todas";
     private string filtroNivel = "";
     private string filtroDocente = "";
     
-    private int solicitudSeleccionadaId = 0;
+    private Guid solicitudSeleccionadaId = Guid.Empty;
     private string observacionesAprobacion = "";
     private string motivoRechazo = "";
 
@@ -276,9 +276,11 @@
         try
         {
             isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.GetFromJsonAsync<List<SolicitudAdminModel>>("api/admin/solicitudes");
-            solicitudes = response ?? new List<SolicitudAdminModel>();
+            var response = await Http.GetFromJsonAsync<List<SolicitudAscensoDto>>("api/solicitudascenso");
+            solicitudes = response ?? new List<SolicitudAscensoDto>();
             
             AplicarFiltros();
         }
@@ -306,12 +308,13 @@
         AplicarFiltros();
     }
 
-    private async Task BuscarEnter(KeyboardEventArgs e)
+    private Task BuscarEnter(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
             AplicarFiltros();
         }
+        return Task.CompletedTask;
     }
 
     private void LimpiarFiltros()
@@ -326,7 +329,7 @@
     {
         solicitudesFiltradas = solicitudes.Where(s =>
             (filtroEstado == "Todas" || s.Estado == filtroEstado) &&
-            (string.IsNullOrEmpty(filtroNivel) || s.NivelSolicitado.ToString() == filtroNivel) &&
+            (string.IsNullOrEmpty(filtroNivel) || s.NivelSolicitado == filtroNivel) &&
             (string.IsNullOrEmpty(filtroDocente) || 
              s.DocenteNombres.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase) ||
              s.DocenteApellidos.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase) ||
@@ -341,21 +344,22 @@
         return estado switch
         {
             "Pendiente" => "bg-warning",
-            "En Proceso" => "bg-info",
+            "EnProceso" => "bg-info",
             "Aprobada" => "bg-success",
             "Rechazada" => "bg-danger",
             _ => "bg-secondary"
         };
     }
 
-    private async Task VerDetalle(int solicitudId)
+    private Task VerDetalle(Guid solicitudId)
     {
         // Redirigir a página de detalle o mostrar modal con detalles
         // Por ahora, mostrar un mensaje
         // Ver detalle de solicitud
+        return Task.CompletedTask;
     }
 
-    private async Task AprobarSolicitud(int solicitudId)
+    private async Task AprobarSolicitud(Guid solicitudId)
     {
         solicitudSeleccionadaId = solicitudId;
         observacionesAprobacion = "";
@@ -363,7 +367,7 @@
         await JSRuntime.InvokeVoidAsync("showModal", "#modalAprobar");
     }
 
-    private async Task RechazarSolicitud(int solicitudId)
+    private async Task RechazarSolicitud(Guid solicitudId)
     {
         solicitudSeleccionadaId = solicitudId;
         motivoRechazo = "";
@@ -375,14 +379,17 @@
     {
         try
         {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
             var request = new ProcesarSolicitudRequest
             {
                 SolicitudId = solicitudSeleccionadaId,
-                Accion = "Aprobar",
-                Observaciones = observacionesAprobacion
+                Aprobar = true,
+                MotivoRechazo = null
             };
 
-            var response = await Http.PostAsJsonAsync("api/admin/procesar-solicitud", request);
+            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudSeleccionadaId}/procesar", request);
             
             if (response.IsSuccessStatusCode)
             {
@@ -403,21 +410,19 @@
 
     private async Task ConfirmarRechazo()
     {
-        if (string.IsNullOrWhiteSpace(motivoRechazo))
-        {
-            return;
-        }
-
         try
         {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
             var request = new ProcesarSolicitudRequest
             {
                 SolicitudId = solicitudSeleccionadaId,
-                Accion = "Rechazar",
-                Observaciones = motivoRechazo
+                Aprobar = false,
+                MotivoRechazo = motivoRechazo
             };
 
-            var response = await Http.PostAsJsonAsync("api/admin/procesar-solicitud", request);
+            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudSeleccionadaId}/procesar", request);
             
             if (response.IsSuccessStatusCode)
             {
@@ -436,6 +441,49 @@
         }
     }
 
+    public class SolicitudAscensoDto
+    {
+        public Guid Id { get; set; }
+        public Guid DocenteId { get; set; }
+        public string DocenteNombre { get; set; } = string.Empty;
+        public string DocenteNombres { get; set; } = string.Empty;
+        public string DocenteApellidos { get; set; } = string.Empty;
+        public string DocenteEmail { get; set; } = string.Empty;
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public string Estado { get; set; } = string.Empty;
+        public string? MotivoRechazo { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaAprobacion { get; set; }
+        public string? AprobadoPor { get; set; }
+        
+        // Datos al momento de la solicitud
+        public decimal PromedioEvaluaciones { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int NumeroObrasAcademicas { get; set; }
+        public int MesesInvestigacion { get; set; }
+        public int TiempoEnNivelDias { get; set; }
+        
+        public List<DocumentoDto> Documentos { get; set; } = new();
+    }
+
+    public class ProcesarSolicitudRequest
+    {
+        public Guid SolicitudId { get; set; }
+        public bool Aprobar { get; set; }
+        public string? MotivoRechazo { get; set; }
+    }
+
+    public class DocumentoDto
+    {
+        public Guid Id { get; set; }
+        public string NombreArchivo { get; set; } = string.Empty;
+        public long TamanoArchivo { get; set; }
+        public string TipoDocumento { get; set; } = string.Empty;
+        public DateTime FechaCreacion { get; set; }
+    }
+
     public class SolicitudAdminModel
     {
         public int Id { get; set; }
@@ -447,13 +495,6 @@
         public int NivelSolicitado { get; set; }
         public DateTime FechaSolicitud { get; set; }
         public string Estado { get; set; } = "";
-        public string? Observaciones { get; set; }
-    }
-
-    public class ProcesarSolicitudRequest
-    {
-        public int SolicitudId { get; set; }
-        public string Accion { get; set; } = "";
         public string? Observaciones { get; set; }
     }
 }

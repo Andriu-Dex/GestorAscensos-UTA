@@ -3,9 +3,38 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SGA.Application;
 using SGA.Infrastructure;
+using SGA.Api.Configuration;
 using System.Text;
+using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Cargar archivo .env si existe
+var envFile = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+if (File.Exists(envFile))
+{
+    Env.Load(envFile);
+    Console.WriteLine("✅ Archivo .env cargado correctamente");
+}
+else
+{
+    Console.WriteLine("ℹ️  Archivo .env no encontrado, usando variables de entorno del sistema");
+}
+
+// Cargar variables de entorno
+builder.Configuration.AddEnvironmentVariables("SGA_");
+
+// Validar configuración requerida al inicio
+try 
+{
+    ConfigurationHelper.ValidateRequiredConfiguration(builder.Configuration);
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"❌ Error de configuración: {ex.Message}");
+    Console.WriteLine("💡 Consulta ENVIRONMENT_SETUP.md para configurar las variables de entorno");
+    throw;
+}
 
 // Configurar servicios
 builder.Services.AddControllers();
@@ -46,24 +75,27 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Configurar CORS
+// Configurar CORS con orígenes desde configuración
+var corsOrigins = builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>() 
+                 ?? Environment.GetEnvironmentVariable("SGA_CORS_ORIGINS")?.Split(',')
+                 ?? new[] { "https://localhost:7149", "http://localhost:5039" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorApp", policy =>
     {
-        policy.WithOrigins(
-                "https://localhost:7149", "http://localhost:5039", // SGA.Web (puertos correctos)
-                "https://localhost:7030", "http://localhost:5115"   // API local para testing
-              )
+        policy.WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
 });
 
-// Configurar autenticación JWT
+// Configurar autenticación JWT con variables de entorno
 var jwtSettings = builder.Configuration.GetSection("JWT");
-var secretKey = jwtSettings["SecretKey"] ?? "DefaultSecretKeyForDevelopment123456789012345678901234567890";
+var secretKey = Environment.GetEnvironmentVariable("SGA_JWT_SECRET_KEY") 
+               ?? jwtSettings["SecretKey"] 
+               ?? throw new InvalidOperationException("JWT SecretKey not configured. Set SGA_JWT_SECRET_KEY environment variable.");
 
 builder.Services.AddAuthentication(options =>
 {

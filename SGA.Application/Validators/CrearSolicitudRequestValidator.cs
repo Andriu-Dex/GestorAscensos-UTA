@@ -8,15 +8,21 @@ public class CrearSolicitudRequestValidator : AbstractValidator<CrearSolicitudRe
     public CrearSolicitudRequestValidator()
     {
         RuleFor(x => x.NivelSolicitado)
-            .NotEmpty()
-            .WithMessage("El nivel solicitado es requerido");
+            .GreaterThan(0)
+            .LessThanOrEqualTo(5)
+            .WithMessage("El nivel solicitado debe estar entre 1 y 5");
 
-        RuleFor(x => x.Documentos)
-            .NotEmpty()
-            .WithMessage("Debe adjuntar al menos un documento de respaldo");
+        RuleFor(x => x.NivelActual)
+            .GreaterThan(0)
+            .LessThanOrEqualTo(5)
+            .WithMessage("El nivel actual debe estar entre 1 y 5");
 
-        RuleFor(x => x.Documentos)
+        RuleFor(x => x.DocumentosIds)
+            .NotEmpty()
+            .WithMessage("Debe seleccionar al menos un documento de respaldo");
+
+        RuleFor(x => x.DocumentosIds)
             .Must(docs => docs.Count <= 10)
-            .WithMessage("No puede adjuntar más de 10 documentos");
+            .WithMessage("No puede seleccionar más de 10 documentos");
     }
 }

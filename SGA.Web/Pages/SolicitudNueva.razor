@@ -46,6 +46,17 @@
                     <div class="alert alert-info">
                         Los siguientes indicadores serán verificados automáticamente con los servicios universitarios. 
                         Si algún valor no es correcto, contacte a la unidad correspondiente.
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" @onclick="ActualizarIndicadores" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            }
+                            else
+                            {
+                                <i class="fas fa-refresh"></i>
+                            }
+                            Actualizar
+                        </button>
                     </div>
                     
                     <div class="row mb-3">
@@ -218,23 +229,47 @@
         {
             isLoading = true;
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            if (string.IsNullOrEmpty(token))
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
             // Cargar información del usuario
-            userInfo = await Http.GetFromJsonAsync<UserInfoModel>("api/auth/me");
+            try
+            {
+                userInfo = await Http.GetFromJsonAsync<UserInfoModel>("api/auth/me");
+                Console.WriteLine($"Usuario cargado: {userInfo?.Nombres} {userInfo?.Apellidos}, Nivel: {userInfo?.NivelActual}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar información del usuario: {ex.Message}");
+                return;
+            }
             
             // Verificar si ya tiene una solicitud activa antes de permitir crear una nueva
             await VerificarSolicitudActiva();
             
             // Cargar documentos del usuario
-            documentos = await Http.GetFromJsonAsync<List<DocumentoDto>>("api/documento/mis-documentos");
+            try
+            {
+                documentos = await Http.GetFromJsonAsync<List<DocumentoDto>>("api/documento/mis-documentos");
+                Console.WriteLine($"Documentos cargados: {documentos?.Count ?? 0}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar documentos: {ex.Message}");
+                documentos = new List<DocumentoDto>();
+            }
             
             // Cargar indicadores y validar requisitos
             await CargarIndicadores();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-           // Error al cargar datos iniciales
+            Console.WriteLine($"Error general en OnInitializedAsync: {ex.Message}");
         }
         finally
         {
@@ -269,10 +304,15 @@
     {
         try
         {
+            Console.WriteLine("Iniciando carga de indicadores...");
+            
+            // Primero obtener los indicadores actuales
             var indicadoresResponse = await Http.GetFromJsonAsync<IndicadoresResponse>("api/docente/indicadores");
             
             if (indicadoresResponse != null && userInfo != null)
             {
+                Console.WriteLine($"Indicadores recibidos: Tiempo={indicadoresResponse.TiempoRol}, Obras={indicadoresResponse.NumeroObras}");
+                
                 // Asignar valores a la solicitud
                 solicitud.TiempoRol = indicadoresResponse.TiempoRol;
                 solicitud.NumeroObras = indicadoresResponse.NumeroObras;
@@ -284,28 +324,76 @@
                 solicitud.NivelActual = userInfo.NivelActual;
                 solicitud.NivelSolicitado = userInfo.NivelActual + 1;
                 
-                // Validar requisitos
-                var requisitosResponse = await Http.GetFromJsonAsync<RequisitosResponse>($"api/validacion/requisitos?nivelActual={solicitud.NivelActual}");
+                Console.WriteLine($"Nivel actual: {solicitud.NivelActual}, Nivel solicitado: {solicitud.NivelSolicitado}");
+                
+                // Validar requisitos usando el endpoint correcto
+                var requisitosUrl = $"api/validacion/requisitos?nivelActual={solicitud.NivelActual}";
+                Console.WriteLine($"Consultando requisitos en: {requisitosUrl}");
+                
+                var requisitosResponse = await Http.GetFromJsonAsync<RequisitosResponse>(requisitosUrl);
                 
                 if (requisitosResponse != null)
                 {
+                    Console.WriteLine($"Requisitos recibidos - Tiempo: {requisitosResponse.CumpleTiempoRol}, Obras: {requisitosResponse.CumpleObras}");
+                    
                     solicitud.CumpleTiempoRol = requisitosResponse.CumpleTiempoRol;
                     solicitud.CumpleObras = requisitosResponse.CumpleObras;
                     solicitud.CumpleEvaluacion = requisitosResponse.CumpleEvaluacion;
                     solicitud.CumpleCapacitacion = requisitosResponse.CumpleCapacitacion;
                     solicitud.CumpleInvestigacion = requisitosResponse.CumpleInvestigacion;
                     
-                    cumpleTodosRequisitos = solicitud.CumpleTiempoRol && 
-                                            solicitud.CumpleObras && 
-                                            solicitud.CumpleEvaluacion && 
-                                            solicitud.CumpleCapacitacion && 
-                                            solicitud.CumpleInvestigacion;
+                    cumpleTodosRequisitos = requisitosResponse.CumpleTodosRequisitos;
+                    
+                    Console.WriteLine($"Cumple todos los requisitos: {cumpleTodosRequisitos}");
                 }
+                else
+                {
+                    Console.WriteLine("No se recibió respuesta de requisitos");
+                    // Establecer valores por defecto
+                    solicitud.CumpleTiempoRol = false;
+                    solicitud.CumpleObras = false;
+                    solicitud.CumpleEvaluacion = false;
+                    solicitud.CumpleCapacitacion = false;
+                    solicitud.CumpleInvestigacion = false;
+                    cumpleTodosRequisitos = false;
+                }
+                
+                // Forzar actualización de la UI
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine($"Error: indicadoresResponse={indicadoresResponse != null}, userInfo={userInfo != null}");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al cargar indicadores
+            Console.WriteLine($"Error al cargar indicadores: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            // Establecer valores por defecto en caso de error
+            if (userInfo != null)
+            {
+                solicitud.NivelActual = userInfo.NivelActual;
+                solicitud.NivelSolicitado = userInfo.NivelActual + 1;
+            }
+            
+            // Valores por defecto para indicadores
+            solicitud.TiempoRol = 0;
+            solicitud.NumeroObras = 0;
+            solicitud.PuntajeEvaluacion = 0;
+            solicitud.HorasCapacitacion = 0;
+            solicitud.TiempoInvestigacion = 0;
+            
+            // Todos los requisitos fallan por defecto
+            solicitud.CumpleTiempoRol = false;
+            solicitud.CumpleObras = false;
+            solicitud.CumpleEvaluacion = false;
+            solicitud.CumpleCapacitacion = false;
+            solicitud.CumpleInvestigacion = false;
+            cumpleTodosRequisitos = false;
+            
+            StateHasChanged();
         }
     }
     
@@ -331,11 +419,13 @@
     {
         if (documentosSeleccionados.Count == 0)
         {
+            await JSRuntime.InvokeVoidAsync("alert", "Debe seleccionar al menos un documento de respaldo.");
             return;
         }
         
         if (!aceptaTerminos)
         {
+            await JSRuntime.InvokeVoidAsync("alert", "Debe aceptar los términos y condiciones.");
             return;
         }
         
@@ -348,21 +438,26 @@
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
+            Console.WriteLine($"Enviando solicitud: {System.Text.Json.JsonSerializer.Serialize(solicitud)}");
+            
             var response = await Http.PostAsJsonAsync("api/solicitudascenso", solicitud);
             
             if (response.IsSuccessStatusCode)
             {
+                await JSRuntime.InvokeVoidAsync("alert", "Solicitud enviada exitosamente.");
                 NavigationManager.NavigateTo("/solicitudes");
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                // Error al enviar solicitud
+                Console.WriteLine($"Error del servidor: {error}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Error al enviar la solicitud: {error}");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al enviar solicitud
+            Console.WriteLine($"Error al enviar solicitud: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error inesperado: {ex.Message}");
         }
         finally
         {
@@ -373,6 +468,29 @@
     private void GoBack()
     {
         NavigationManager.NavigateTo("/solicitudes");
+    }
+    
+    private async Task ActualizarIndicadores()
+    {
+        if (isLoading) return;
+        
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            await CargarIndicadores();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al actualizar indicadores: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Error al actualizar los indicadores. Intente nuevamente.");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
     
     private string GetValidationClass(bool cumple)
@@ -386,6 +504,10 @@
         public string Nombres { get; set; } = string.Empty;
         public string Apellidos { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Cedula { get; set; } = string.Empty;
+        public string TelefonoContacto { get; set; } = string.Empty;
+        public int FacultadId { get; set; }
+        public string Facultad { get; set; } = string.Empty;
         public int NivelActual { get; set; }
         public DateTime FechaIngresoNivelActual { get; set; }
     }
@@ -420,6 +542,23 @@
         public bool CumpleEvaluacion { get; set; }
         public bool CumpleCapacitacion { get; set; }
         public bool CumpleInvestigacion { get; set; }
+        
+        public int TiempoRolRequerido { get; set; }
+        public int TiempoRolActual { get; set; }
+        
+        public int ObrasRequeridas { get; set; }
+        public int ObrasActuales { get; set; }
+        
+        public decimal EvaluacionRequerida { get; set; }
+        public decimal EvaluacionActual { get; set; }
+        
+        public int CapacitacionRequerida { get; set; }
+        public int CapacitacionActual { get; set; }
+        
+        public int InvestigacionRequerida { get; set; }
+        public int InvestigacionActual { get; set; }
+        
+        public bool CumpleTodosRequisitos { get; set; }
     }
     
     public class CrearSolicitudAscensoDto

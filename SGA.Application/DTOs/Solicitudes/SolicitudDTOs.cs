@@ -5,6 +5,10 @@ public class SolicitudAscensoDto
     public Guid Id { get; set; }
     public Guid DocenteId { get; set; }
     public string DocenteNombre { get; set; } = string.Empty;
+    public string DocenteNombres { get; set; } = string.Empty;
+    public string DocenteApellidos { get; set; } = string.Empty;
+    public string DocenteEmail { get; set; } = string.Empty;
+    public string DocenteCedula { get; set; } = string.Empty;
     public string NivelActual { get; set; } = string.Empty;
     public string NivelSolicitado { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
@@ -25,8 +29,20 @@ public class SolicitudAscensoDto
 
 public class CrearSolicitudRequest
 {
-    public string NivelSolicitado { get; set; } = string.Empty;
-    public List<DocumentoUploadDto> Documentos { get; set; } = new();
+    public int NivelActual { get; set; }
+    public int NivelSolicitado { get; set; }
+    public int TiempoRol { get; set; }
+    public int NumeroObras { get; set; }
+    public decimal PuntajeEvaluacion { get; set; }
+    public int HorasCapacitacion { get; set; }
+    public int TiempoInvestigacion { get; set; }
+    public bool CumpleTiempoRol { get; set; }
+    public bool CumpleObras { get; set; }
+    public bool CumpleEvaluacion { get; set; }
+    public bool CumpleCapacitacion { get; set; }
+    public bool CumpleInvestigacion { get; set; }
+    public string Observaciones { get; set; } = string.Empty;
+    public List<int> DocumentosIds { get; set; } = new List<int>();
 }
 
 public class ProcesarSolicitudRequest
@@ -38,11 +54,18 @@ public class ProcesarSolicitudRequest
 
 public class DocumentoDto
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
     public string NombreArchivo { get; set; } = string.Empty;
     public long TamanoArchivo { get; set; }
-    public string TipoDocumento { get; set; } = string.Empty;
+    public TipoDocumentoDto? TipoDocumento { get; set; }
     public DateTime FechaCreacion { get; set; }
+}
+
+public class TipoDocumentoDto
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
 }
 
 public class DocumentoUploadDto

@@ -1,19 +1,53 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SGA.Application.Interfaces;
+using SGA.Application.DTOs.Docentes;
 using SGA.Domain.Enums;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace SGA.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ValidacionController : ControllerBase
     {
         private readonly IValidacionAscensoService _validacionService;
+        private readonly IDocenteService _docenteService;
 
-        public ValidacionController(IValidacionAscensoService validacionService)
+        public ValidacionController(IValidacionAscensoService validacionService, IDocenteService docenteService)
         {
             _validacionService = validacionService;
+            _docenteService = docenteService;
+        }
+
+        [HttpGet("requisitos")]
+        public async Task<ActionResult<RequisitosAscensoDto>> GetRequisitos([FromQuery] int nivelActual)
+        {
+            try
+            {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (string.IsNullOrEmpty(email))
+                    return Unauthorized();
+
+                var docente = await _docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return NotFound("Docente no encontrado");
+
+                // Calcular el siguiente nivel
+                var nivelSiguiente = nivelActual + 1;
+                var nivelDestinoString = $"Titular{nivelSiguiente}";
+                
+                // Usar el método existente que ya devuelve RequisitosAscensoDto
+                var requisitos = await _docenteService.GetRequisitosAscensoAsync(docente.Cedula, nivelDestinoString);
+                
+                return Ok(requisitos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error al obtener requisitos: {ex.Message}" });
+            }
         }
 
         [HttpGet("validar-ascenso/{cedula}")]

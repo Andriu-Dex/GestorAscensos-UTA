@@ -39,46 +39,37 @@ public class SolicitudService : ISolicitudService
         if (await TieneDocumenteSolicitudActivaAsync(docenteId))
             throw new InvalidOperationException("Ya tiene una solicitud activa");
 
-        // Validar requisitos
-        if (!Enum.TryParse<NivelTitular>(request.NivelSolicitado, out var nivelSolicitado))
+        // Validar que el nivel solicitado sea válido
+        if (request.NivelSolicitado < 1 || request.NivelSolicitado > 5)
             throw new ArgumentException("Nivel solicitado inválido");
 
-        var validacion = await _docenteService.ValidarRequisitosAscensoAsync(docente.Cedula, request.NivelSolicitado);
-        if (!validacion.CumpleTodos)
-            throw new InvalidOperationException("No cumple todos los requisitos para el ascenso");
+        // Convertir nivel numérico a enum
+        var nivelSolicitadoEnum = (NivelTitular)request.NivelSolicitado;
 
         var solicitud = new SolicitudAscenso
         {
             DocenteId = docenteId,
-            NivelActual = docente.NivelActual,
-            NivelSolicitado = nivelSolicitado,
+            NivelActual = (NivelTitular)request.NivelActual,
+            NivelSolicitado = nivelSolicitadoEnum,
             Estado = EstadoSolicitud.Pendiente,
             FechaSolicitud = DateTime.UtcNow,
-            PromedioEvaluaciones = docente.PromedioEvaluaciones ?? 0,
-            HorasCapacitacion = docente.HorasCapacitacion ?? 0,
-            NumeroObrasAcademicas = docente.NumeroObrasAcademicas ?? 0,
-            MesesInvestigacion = docente.MesesInvestigacion ?? 0,
-            TiempoEnNivelDias = (int)(DateTime.UtcNow - docente.FechaInicioNivelActual).TotalDays
+            PromedioEvaluaciones = request.PuntajeEvaluacion,
+            HorasCapacitacion = request.HorasCapacitacion,
+            NumeroObrasAcademicas = request.NumeroObras,
+            MesesInvestigacion = request.TiempoInvestigacion,
+            TiempoEnNivelDias = request.TiempoRol * 30, // Convertir meses a días aproximados
+            Observaciones = request.Observaciones
         };
 
-        solicitud = await _solicitudRepository.CreateAsync(solicitud);        // Subir documentos
-        foreach (var doc in request.Documentos)
-        {            // Convertir DocumentoUploadDto a SubirDocumentoRequestDto
-            var subirDocumentoRequest = new SubirDocumentoRequestDto
-            {
-                Nombre = doc.NombreArchivo,
-                Tipo = Enum.Parse<TipoDocumento>(doc.TipoDocumento),
-                SolicitudId = solicitud.Id,
-                Contenido = doc.ContenidoArchivo,
-                TipoContenido = doc.ContentType
-            };
-            
-            await _documentoService.SubirDocumentoAsync(solicitud.Id, subirDocumentoRequest);
-        }
+        solicitud = await _solicitudRepository.CreateAsync(solicitud);
+
+        // Asociar documentos existentes a la solicitud (si es necesario)
+        // Por ahora omitimos esta funcionalidad ya que los documentos
+        // se asocian directamente en la base de datos
 
         await _auditoriaService.RegistrarAccionAsync("CREAR_SOLICITUD", 
             docente.Id.ToString(), docente.Email, "SolicitudAscenso", 
-            null, $"Nivel solicitado: {request.NivelSolicitado}", null);
+            null, $"Nivel solicitado: Titular{request.NivelSolicitado}", null);
 
         return await GetSolicitudByIdAsync(solicitud.Id) ?? throw new Exception("Error al recuperar solicitud creada");
     }
@@ -167,6 +158,10 @@ public class SolicitudService : ISolicitudService
             Id = solicitud.Id,
             DocenteId = solicitud.DocenteId,
             DocenteNombre = docente?.NombreCompleto ?? "N/A",
+            DocenteNombres = docente?.Nombres ?? "N/A",
+            DocenteApellidos = docente?.Apellidos ?? "N/A", 
+            DocenteEmail = docente?.Email ?? "N/A",
+            DocenteCedula = docente?.Cedula ?? "N/A",
             NivelActual = solicitud.NivelActual.ToString(),
             NivelSolicitado = solicitud.NivelSolicitado.ToString(),
             Estado = solicitud.Estado.ToString(),

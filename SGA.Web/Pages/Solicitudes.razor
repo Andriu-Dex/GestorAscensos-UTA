@@ -36,7 +36,7 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Número</th>
+                                <th>ID</th>
                                 <th>Fecha</th>
                                 <th>Estado</th>
                                 <th>Nivel Actual</th>
@@ -48,21 +48,21 @@
                             @foreach (var solicitud in solicitudes)
                             {
                                 <tr @onclick="() => ViewSolicitudDetails(solicitud.Id)" style="cursor: pointer;">
-                                    <td>@solicitud.NumeroSolicitud</td>
-                                    <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                    <td>SOL-@solicitud.Id.ToString().Substring(0, 8)</td>
+                                    <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
                                     <td>
-                                        <span class="badge" style="background-color: @solicitud.EstadoSolicitud?.Color">
-                                            @solicitud.EstadoSolicitud?.Nombre
+                                        <span class="badge @GetEstadoBadgeClass(solicitud.Estado)">
+                                            @solicitud.Estado
                                         </span>
                                     </td>
-                                    <td>Titular @solicitud.NivelActual</td>
-                                    <td>Titular @solicitud.NivelSolicitado</td>
+                                    <td>@solicitud.NivelActual</td>
+                                    <td>@solicitud.NivelSolicitado</td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-primary" @onclick="() => ViewSolicitudDetails(solicitud.Id)">
                                                 <i class="bi bi-eye"></i>
                                             </button>
-                                            @if (solicitud.EstadoSolicitudId == 1) // Si está en estado "ENVIADA"
+                                            @if (solicitud.Estado == "Pendiente")
                                             {
                                                 <button class="btn btn-sm btn-danger" @onclick="() => CancelSolicitud(solicitud.Id)">
                                                     <i class="bi bi-x-circle"></i>
@@ -89,7 +89,7 @@
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Solicitud #@selectedSolicitud.NumeroSolicitud</h5>
+                    <h5 class="modal-title">Solicitud #@selectedSolicitud.Id.ToString().Substring(0, 8)</h5>
                     <button type="button" class="btn-close" @onclick="CloseDetailsModal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
@@ -99,21 +99,21 @@
                             <ul class="list-group">
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Fecha de Solicitud:</span>
-                                    <strong>@selectedSolicitud.FechaCreacion.ToString("dd/MM/yyyy")</strong>
+                                    <strong>@selectedSolicitud.FechaSolicitud.ToString("dd/MM/yyyy")</strong>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Estado:</span>
-                                    <span class="badge" style="background-color: @selectedSolicitud.EstadoSolicitud?.Color">
-                                        @selectedSolicitud.EstadoSolicitud?.Nombre
+                                    <span class="badge @GetEstadoBadgeClass(selectedSolicitud.Estado)">
+                                        @selectedSolicitud.Estado
                                     </span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Nivel Actual:</span>
-                                    <strong>Titular @selectedSolicitud.NivelActual</strong>
+                                    <strong>@selectedSolicitud.NivelActual</strong>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Nivel Solicitado:</span>
-                                    <strong>Titular @selectedSolicitud.NivelSolicitado</strong>
+                                    <strong>@selectedSolicitud.NivelSolicitado</strong>
                                 </li>
                             </ul>
                         </div>
@@ -122,15 +122,15 @@
                             <ul class="list-group">
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Tiempo en Rol Actual:</span>
-                                    <strong>@selectedSolicitud.TiempoRol meses</strong>
+                                    <strong>@((int)(selectedSolicitud.TiempoEnNivelDias / 30.0)) meses</strong>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Número de Obras:</span>
-                                    <strong>@selectedSolicitud.NumeroObras</strong>
+                                    <strong>@selectedSolicitud.NumeroObrasAcademicas</strong>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Puntaje Evaluación:</span>
-                                    <strong>@selectedSolicitud.PuntajeEvaluacion%</strong>
+                                    <strong>@selectedSolicitud.PromedioEvaluaciones.ToString("F1")%</strong>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Horas Capacitación:</span>
@@ -138,14 +138,14 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Tiempo Investigación:</span>
-                                    <strong>@selectedSolicitud.TiempoInvestigacion meses</strong>
+                                    <strong>@selectedSolicitud.MesesInvestigacion meses</strong>
                                 </li>
                             </ul>
                         </div>
                     </div>
                     
                     <h6>Documentos Adjuntos</h6>
-                    @if (selectedSolicitud.DocumentosSolicitud != null && selectedSolicitud.DocumentosSolicitud.Any())
+                    @if (selectedSolicitud.Documentos != null && selectedSolicitud.Documentos.Any())
                     {
                         <div class="table-responsive">
                             <table class="table table-striped">
@@ -158,14 +158,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var docSolicitud in selectedSolicitud.DocumentosSolicitud)
+                                    @foreach (var documento in selectedSolicitud.Documentos)
                                     {
                                         <tr>
-                                            <td>@docSolicitud.Documento.Nombre</td>
-                                            <td>@docSolicitud.Documento.TipoDocumento?.Nombre</td>
-                                            <td>@docSolicitud.FechaAsociacion.ToString("dd/MM/yyyy")</td>
+                                            <td>@documento.NombreArchivo</td>
+                                            <td>@documento.TipoDocumento</td>
+                                            <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary" @onclick="() => DownloadDocument(docSolicitud.Documento.Id)">
+                                                <button class="btn btn-sm btn-primary" @onclick="() => DownloadDocument(documento.Id)">
                                                     <i class="bi bi-download"></i>
                                                 </button>
                                             </td>
@@ -180,7 +180,7 @@
                         <div class="alert alert-info">No hay documentos adjuntos a esta solicitud.</div>
                     }
                     
-                    @if (selectedSolicitud.EstadoSolicitudId == 4) // Si está rechazada
+                    @if (selectedSolicitud.Estado == "Rechazada" && !string.IsNullOrEmpty(selectedSolicitud.MotivoRechazo))
                     {
                         <div class="mt-3">
                             <h6>Motivo de Rechazo</h6>
@@ -190,20 +190,20 @@
                         </div>
                     }
                     
-                    @if (selectedSolicitud.FechaRevision.HasValue)
+                    @if (selectedSolicitud.FechaAprobacion.HasValue)
                     {
                         <div class="mt-3">
                             <h6>Información de Revisión</h6>
                             <ul class="list-group">
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>Fecha de Revisión:</span>
-                                    <strong>@selectedSolicitud.FechaRevision.Value.ToString("dd/MM/yyyy")</strong>
+                                    <strong>@selectedSolicitud.FechaAprobacion.Value.ToString("dd/MM/yyyy")</strong>
                                 </li>
-                                @if (selectedSolicitud.RevisorId.HasValue)
+                                @if (!string.IsNullOrEmpty(selectedSolicitud.AprobadoPor))
                                 {
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>Revisado por:</span>
-                                        <strong>@(selectedSolicitud.Revisor?.Nombres) @(selectedSolicitud.Revisor?.Apellidos)</strong>
+                                        <strong>@selectedSolicitud.AprobadoPor</strong>
                                     </li>
                                 }
                             </ul>
@@ -242,7 +242,7 @@
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             solicitudes = await Http.GetFromJsonAsync<List<SolicitudAscensoDto>>("api/solicitudascenso/mis-solicitudes");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Error al cargar solicitudes
         }
@@ -257,7 +257,7 @@
         NavigationManager.NavigateTo("/solicitudes/nueva");
     }
     
-    private async Task ViewSolicitudDetails(int solicitudId)
+    private async Task ViewSolicitudDetails(Guid solicitudId)
     {
         try
         {
@@ -266,7 +266,7 @@
             selectedSolicitud = await Http.GetFromJsonAsync<SolicitudAscensoDto>($"api/solicitudascenso/{solicitudId}");
             showDetails = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Error al cargar detalles de la solicitud
         }
@@ -277,7 +277,7 @@
         showDetails = false;
     }
     
-    private async Task CancelSolicitud(int solicitudId)
+    private async Task CancelSolicitud(Guid solicitudId)
     {
         if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea cancelar esta solicitud?"))
             return;
@@ -293,19 +293,14 @@
             {
                 await LoadSolicitudes();
             }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                // Error al cancelar solicitud
-            }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Error al cancelar solicitud
         }
     }
     
-    private async Task GenerateReport(int solicitudId)
+    private async Task GenerateReport(Guid solicitudId)
     {
         try
         {
@@ -313,13 +308,13 @@
             var url = $"api/reporte/solicitud/{solicitudId}?token={token}";
             await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Error al generar reporte
         }
     }
     
-    private async Task DownloadDocument(int documentoId)
+    private async Task DownloadDocument(Guid documentoId)
     {
         try
         {
@@ -327,73 +322,57 @@
             var url = $"api/documento/{documentoId}/download?token={token}";
             await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Error al descargar documento
         }
     }
+
+    private string GetEstadoBadgeClass(string estado)
+    {
+        return estado switch
+        {
+            "Pendiente" => "bg-warning",
+            "EnProceso" => "bg-info",
+            "Aprobada" => "bg-success",
+            "Rechazada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
     
     public class SolicitudAscensoDto
     {
-        public int Id { get; set; }
-        public string NumeroSolicitud { get; set; } = string.Empty;
-        public int DocenteId { get; set; }
-        public DocenteDto? Docente { get; set; }
-        public int NivelActual { get; set; }
-        public int NivelSolicitado { get; set; }
-        public int EstadoSolicitudId { get; set; }
-        public EstadoSolicitudDto? EstadoSolicitud { get; set; }
-        public DateTime FechaCreacion { get; set; }
-        public DateTime? FechaRevision { get; set; }
-        public int? RevisorId { get; set; }
-        public DocenteDto? Revisor { get; set; }
-        public string MotivoRechazo { get; set; } = string.Empty;
-        public int TiempoRol { get; set; }
-        public int NumeroObras { get; set; }
-        public decimal PuntajeEvaluacion { get; set; }
+        public Guid Id { get; set; }
+        public Guid DocenteId { get; set; }
+        public string DocenteNombre { get; set; } = string.Empty;
+        public string DocenteNombres { get; set; } = string.Empty;
+        public string DocenteApellidos { get; set; } = string.Empty;
+        public string DocenteEmail { get; set; } = string.Empty;
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public string Estado { get; set; } = string.Empty;
+        public string? MotivoRechazo { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaAprobacion { get; set; }
+        public string? AprobadoPor { get; set; }
+        
+        // Datos al momento de la solicitud  
+        public decimal PromedioEvaluaciones { get; set; }
         public int HorasCapacitacion { get; set; }
-        public int TiempoInvestigacion { get; set; }
-        public bool CumpleTiempoRol { get; set; }
-        public bool CumpleObras { get; set; }
-        public bool CumpleEvaluacion { get; set; }
-        public bool CumpleCapacitacion { get; set; }
-        public bool CumpleInvestigacion { get; set; }
-        public List<DocumentoSolicitudDto> DocumentosSolicitud { get; set; } = new List<DocumentoSolicitudDto>();
-    }
-    
-    public class DocumentoSolicitudDto
-    {
-        public int Id { get; set; }
-        public int SolicitudAscensoId { get; set; }
-        public int DocumentoId { get; set; }
-        public DocumentoDto? Documento { get; set; }
-        public DateTime FechaAsociacion { get; set; }
+        public int NumeroObrasAcademicas { get; set; }
+        public int MesesInvestigacion { get; set; }
+        public int TiempoEnNivelDias { get; set; }
+        
+        public List<DocumentoDto> Documentos { get; set; } = new();
     }
     
     public class DocumentoDto
     {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public TipoDocumentoDto? TipoDocumento { get; set; }
-    }
-    
-    public class TipoDocumentoDto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-    }
-    
-    public class DocenteDto
-    {
-        public int Id { get; set; }
-        public string Nombres { get; set; } = string.Empty;
-        public string Apellidos { get; set; } = string.Empty;
-    }
-    
-    public class EstadoSolicitudDto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Color { get; set; }
+        public Guid Id { get; set; }
+        public string NombreArchivo { get; set; } = string.Empty;
+        public long TamanoArchivo { get; set; }
+        public string TipoDocumento { get; set; } = string.Empty;
+        public DateTime FechaCreacion { get; set; }
     }
 }
