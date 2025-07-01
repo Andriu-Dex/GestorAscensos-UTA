@@ -339,4 +339,43 @@ public class ExternalDataService : IExternalDataService
             }).ToList()
         };
     }
+
+    public async Task<List<DTOs.ExternalData.ObraAcademicaConPdfDto>> ObtenerObrasAcademicasConPdfAsync(string cedula)
+    {
+        var connectionString = _configuration.GetConnectionString("DIRINVConnection");
+        
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Consultar obras académicas con PDF
+        var obras = await connection.QueryAsync<dynamic>(@"
+            SELECT 
+                Id,
+                Titulo,
+                TipoObra,
+                FechaPublicacion,
+                Revista,
+                EsIndexada,
+                IndiceIndexacion,
+                Autores,
+                ArchivoPdf,
+                NombreArchivo,
+                TamañoOriginal
+            FROM ObrasAcademicasDIRINV 
+            WHERE Cedula = @Cedula 
+            AND ArchivoPdf IS NOT NULL
+            ORDER BY FechaPublicacion DESC", new { Cedula = cedula });
+
+        return obras.Select(o => new DTOs.ExternalData.ObraAcademicaConPdfDto
+        {
+            Titulo = o.Titulo ?? string.Empty,
+            Tipo = o.TipoObra ?? string.Empty,
+            FechaPublicacion = o.FechaPublicacion,
+            Revista = o.Revista ?? string.Empty,
+            Autores = o.Autores ?? string.Empty,
+            PdfComprimido = o.ArchivoPdf as byte[],
+            NombreArchivo = o.NombreArchivo ?? $"{o.Titulo}.pdf",
+            TamañoOriginal = o.TamañoOriginal
+        }).ToList();
+    }
 }

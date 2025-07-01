@@ -2,21 +2,26 @@ using SGA.Application.DTOs.Docentes;
 using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Enums;
+using SGA.Domain.Entities;
+using System.Linq;
 
 namespace SGA.Application.Services;
 
 public class DocenteService : IDocenteService
 {
     private readonly IDocenteRepository _docenteRepository;
+    private readonly IObraAcademicaRepository _obraAcademicaRepository;
     private readonly IExternalDataService _externalDataService;
     private readonly IAuditoriaService _auditoriaService;
 
     public DocenteService(
         IDocenteRepository docenteRepository,
+        IObraAcademicaRepository obraAcademicaRepository,
         IExternalDataService externalDataService,
         IAuditoriaService auditoriaService)
     {
         _docenteRepository = docenteRepository;
+        _obraAcademicaRepository = obraAcademicaRepository;
         _externalDataService = externalDataService;
         _auditoriaService = auditoriaService;
     }
@@ -488,7 +493,8 @@ public class DocenteService : IDocenteService
 
     public async Task<IndicadoresDocenteDto> GetIndicadoresAsync(string cedula)
     {
-        var docente = await _docenteRepository.GetByCedulaAsync(cedula);
+        // Usar consulta optimizada sin includes innecesarios
+        var docente = await _docenteRepository.GetByCedulaSimpleAsync(cedula);
         if (docente == null)
             throw new ArgumentException("Docente no encontrado");
 
@@ -624,6 +630,108 @@ public class DocenteService : IDocenteService
             {
                 Exitoso = false,
                 Mensaje = $"Error al importar tiempo en rol desde TTHH: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<ImportarDatosResponse> ImportarObrasAcademicasAsync(string cedula)
+    {
+        try
+        {
+            // Usar consulta optimizada sin includes innecesarios
+            var docente = await _docenteRepository.GetByCedulaSimpleAsync(cedula);
+            if (docente == null)
+            {
+                return new ImportarDatosResponse
+                {
+                    Exitoso = false,
+                    Mensaje = "Docente no encontrado"
+                };
+            }
+
+            // Obtener obras académicas con PDF desde DIRINV
+            var obrasExterna = await _externalDataService.ObtenerObrasAcademicasConPdfAsync(cedula);
+            
+            if (!obrasExterna.Any())
+            {
+                return new ImportarDatosResponse
+                {
+                    Exitoso = false,
+                    Mensaje = "No se encontraron obras académicas con PDF en DIRINV para la cédula proporcionada"
+                };
+            }
+
+            var obrasImportadas = 0;
+            var obrasOmitidas = 0;
+
+            foreach (var obraExterna in obrasExterna)
+            {
+                // Verificar si ya existe una obra con el mismo título y fecha
+                var obraExiste = await _obraAcademicaRepository.ExisteObraAsync(
+                    obraExterna.Titulo, docente.Id, obraExterna.FechaPublicacion);
+
+                if (obraExiste)
+                {
+                    obrasOmitidas++;
+                    continue;
+                }
+
+                // Crear nueva obra académica
+                var nuevaObra = new ObraAcademica
+                {
+                    DocenteId = docente.Id,
+                    Titulo = obraExterna.Titulo,
+                    TipoObra = obraExterna.Tipo,
+                    FechaPublicacion = obraExterna.FechaPublicacion,
+                    Revista = obraExterna.Revista,
+                    Autores = obraExterna.Autores,
+                    NombreArchivo = obraExterna.NombreArchivo ?? $"{obraExterna.Titulo}.pdf",
+                    OrigenDatos = "DIRINV",
+                    EsVerificada = true
+                };
+
+                // Comprimir y almacenar el PDF si existe
+                if (obraExterna.PdfComprimido != null && obraExterna.PdfComprimido.Length > 0)
+                {
+                    await nuevaObra.AsignarArchivoPDFAsync(obraExterna.PdfComprimido, nuevaObra.NombreArchivo);
+                }
+
+                await _obraAcademicaRepository.CreateAsync(nuevaObra);
+                obrasImportadas++;
+            }
+
+            // Actualizar SOLO el contador de obras en el docente, sin tocar otros campos
+            var totalObras = await _obraAcademicaRepository.CountByDocenteIdAsync(docente.Id);
+            docente.NumeroObrasAcademicas = totalObras;
+            // NO actualizar FechaUltimaImportacion para no afectar otros indicadores
+            
+            await _docenteRepository.UpdateAsync(docente);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync("IMPORTAR_OBRAS_ACADEMICAS", 
+                docente.Id.ToString(), docente.Email, "Docente", null, 
+                $"Obras importadas: {obrasImportadas}, Obras omitidas: {obrasOmitidas}, Total obras: {totalObras}", null);
+
+            return new ImportarDatosResponse
+            {
+                Exitoso = true,
+                Mensaje = $"Importación completada. {obrasImportadas} obras importadas" + 
+                         (obrasOmitidas > 0 ? $", {obrasOmitidas} obras ya existían" : ""),
+                DatosImportados = new Dictionary<string, object?>
+                {
+                    ["obrasImportadas"] = obrasImportadas,
+                    ["obrasOmitidas"] = obrasOmitidas,
+                    ["totalObras"] = totalObras,
+                    ["fechaImportacion"] = DateTime.UtcNow
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = $"Error al importar obras académicas: {ex.Message}"
             };
         }
     }

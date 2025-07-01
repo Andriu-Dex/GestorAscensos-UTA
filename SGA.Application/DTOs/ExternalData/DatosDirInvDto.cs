@@ -23,6 +23,14 @@ public class ObraAcademicaDto
     public string Autores { get; set; } = string.Empty;
 }
 
+// DTO extendido para incluir el PDF
+public class ObraAcademicaConPdfDto : ObraAcademicaDto
+{
+    public byte[]? PdfComprimido { get; set; }
+    public string? NombreArchivo { get; set; }
+    public int? TamañoOriginal { get; set; }
+}
+
 public class ProyectoInvestigacionDto
 {
     public string Titulo { get; set; } = string.Empty;

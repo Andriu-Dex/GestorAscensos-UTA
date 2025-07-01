@@ -21,6 +21,9 @@ public interface IDocenteRepository
     Task<Docente> UpdateAsync(Docente docente);
     Task<bool> DeleteAsync(Guid id);
     Task<List<Docente>> GetAllAsync();
+    // Métodos optimizados sin includes
+    Task<Docente?> GetByCedulaSimpleAsync(string cedula);
+    Task<Docente?> GetByIdSimpleAsync(Guid id);
 }
 
 public interface ISolicitudAscensoRepository

@@ -24,6 +24,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Documento> Documentos { get; set; }
     public DbSet<LogAuditoria> LogsAuditoria { get; set; }
     public DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
+    public DbSet<ObraAcademica> ObrasAcademicas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +136,36 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                   .WithMany()
                   .HasForeignKey(e => e.RevisadoPorId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuración ObraAcademica
+        modelBuilder.Entity<ObraAcademica>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.TipoObra).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FechaPublicacion).IsRequired();
+            entity.Property(e => e.Editorial).HasMaxLength(255);
+            entity.Property(e => e.Revista).HasMaxLength(255);
+            entity.Property(e => e.ISBN_ISSN).HasMaxLength(50);
+            entity.Property(e => e.DOI).HasMaxLength(200);
+            entity.Property(e => e.IndiceIndexacion).HasMaxLength(100);
+            entity.Property(e => e.Autores).HasMaxLength(1000);
+            entity.Property(e => e.Descripcion).HasMaxLength(2000);
+            entity.Property(e => e.NombreArchivo).HasMaxLength(255);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.OrigenDatos).HasMaxLength(50);
+            
+            // Configuración de la relación con Docente
+            entity.HasOne(e => e.Docente)
+                  .WithMany(d => d.ObrasAcademicas)
+                  .HasForeignKey(e => e.DocenteId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            // Índices para optimizar consultas
+            entity.HasIndex(e => e.DocenteId);
+            entity.HasIndex(e => new { e.DocenteId, e.FechaPublicacion });
+            entity.HasIndex(e => new { e.Titulo, e.DocenteId }).IsUnique();
         });
 
         // Datos semilla

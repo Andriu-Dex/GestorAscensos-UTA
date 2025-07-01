@@ -124,4 +124,18 @@ public class DocenteRepository : IDocenteRepository
             .Include(d => d.SolicitudesAscenso)
             .ToListAsync();
     }
+
+    // Método optimizado para consultas simples sin includes
+    public async Task<Docente?> GetByCedulaSimpleAsync(string cedula)
+    {
+        return await _context.Docentes
+            .FirstOrDefaultAsync(d => d.Cedula == cedula);
+    }
+
+    // Método optimizado para consultas simples sin includes
+    public async Task<Docente?> GetByIdSimpleAsync(Guid id)
+    {
+        return await _context.Docentes
+            .FirstOrDefaultAsync(d => d.Id == id);
+    }
 }

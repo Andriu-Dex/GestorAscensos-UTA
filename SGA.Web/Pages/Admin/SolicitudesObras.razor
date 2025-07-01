@@ -1,0 +1,797 @@
+@page "/admin/solicitudes-obras"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
+@using System.Net.Http.Json
+@attribute [Authorize(Roles = "Administrador")]
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Solicitudes de Obras Académicas</h3>
+        <button class="btn btn-primary" @onclick="RefreshSolicitudes">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando solicitudes...</span>
+            </div>
+        </div>
+    }
+    else if (solicitudes == null || !solicitudes.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i> No hay solicitudes de obras académicas pendientes de revisión.
+        </div>
+    }
+    else
+    {
+        <!-- Filtros -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">Filtrar por estado:</label>
+                <select class="form-select" @bind="filtroEstado" @bind:event="onchange">
+                    <option value="">Todas</option>
+                    <option value="Pendiente">Pendientes</option>
+                    <option value="Aprobada">Aprobadas</option>
+                    <option value="Rechazada">Rechazadas</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Buscar por docente:</label>
+                <input type="text" class="form-control" @bind="filtroDocente" @bind:event="oninput" placeholder="Nombre o cédula..." />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Buscar por título:</label>
+                <input type="text" class="form-control" @bind="filtroTitulo" @bind:event="oninput" placeholder="Título de la obra..." />
+            </div>
+        </div>
+
+        <!-- Resumen de estados -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center bg-warning bg-opacity-10">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">@solicitudes.Count(s => s.Estado == "Pendiente")</h5>
+                        <p class="card-text">Pendientes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-success bg-opacity-10">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">@solicitudes.Count(s => s.Estado == "Aprobada")</h5>
+                        <p class="card-text">Aprobadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-danger bg-opacity-10">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">@solicitudes.Count(s => s.Estado == "Rechazada")</h5>
+                        <p class="card-text">Rechazadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-info bg-opacity-10">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">@solicitudes.Count()</h5>
+                        <p class="card-text">Total</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de solicitudes agrupadas -->
+        @if (solicitudesFiltradas != null && solicitudesFiltradas.Any())
+        {
+            var gruposSolicitudes = solicitudesFiltradas
+                .GroupBy(s => s.SolicitudGrupoId)
+                .OrderByDescending(g => g.Max(s => s.FechaCreacion));
+
+            foreach (var grupo in gruposSolicitudes)
+            {
+                var primeraObra = grupo.First();
+                var totalObrasGrupo = grupo.Count();
+                
+                <div class="card mb-4 border-start border-@(GetEstadoColor(primeraObra.Estado)) border-3">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">
+                                    <strong>Docente:</strong> @primeraObra.DocenteNombre
+                                    <span class="text-muted">(@primeraObra.DocenteCedula)</span>
+                                </h6>
+                                <small class="text-muted">
+                                    Solicitud de @totalObrasGrupo obra(s) • @primeraObra.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="badge bg-@(GetEstadoColor(primeraObra.Estado)) fs-6">
+                                    @primeraObra.Estado
+                                </span>
+                                @if (primeraObra.Estado == "Pendiente")
+                                {
+                                    <div class="btn-group ms-2" role="group">
+                                        <button class="btn btn-sm btn-success" @onclick="() => MostrarModalAprobacion(grupo.ToList())">
+                                            <i class="bi bi-check-circle"></i> Aprobar
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => MostrarModalRechazo(grupo.ToList())">
+                                            <i class="bi bi-x-circle"></i> Rechazar
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(primeraObra.ComentariosSolicitud))
+                        {
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small><strong>Comentarios del docente:</strong> @primeraObra.ComentariosSolicitud</small>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th>
+                                        <th>Tipo</th>
+                                        <th>Fecha Pub.</th>
+                                        <th>Revista/Editorial</th>
+                                        <th>Archivo</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var obra in grupo.OrderBy(o => o.Titulo))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold">@obra.Titulo</div>
+                                                @if (!string.IsNullOrEmpty(obra.Autores))
+                                                {
+                                                    <small class="text-muted">Autores: @obra.Autores</small>
+                                                }
+                                            </td>
+                                            <td>@obra.TipoObra</td>
+                                            <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                            <td>@(obra.Revista ?? obra.Editorial ?? "N/A")</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(obra.ArchivoNombre))
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => DescargarArchivo(obra.Id)">
+                                                        <i class="bi bi-file-earmark-pdf"></i> Ver PDF
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Sin archivo</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-info" @onclick="() => MostrarDetallesObra(obra)">
+                                                    <i class="bi bi-eye"></i> Detalles
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        @if (primeraObra.Estado != "Pendiente")
+                        {
+                            <div class="mt-3">
+                                @if (primeraObra.Estado == "Aprobada")
+                                {
+                                    <div class="alert alert-success alert-sm mb-0">
+                                        <i class="bi bi-check-circle"></i>
+                                        <strong>Aprobada</strong> el @primeraObra.FechaRevision?.ToString("dd/MM/yyyy HH:mm")
+                                        @if (!string.IsNullOrEmpty(primeraObra.ComentariosRevision))
+                                        {
+                                            <br><small><strong>Comentarios:</strong> @primeraObra.ComentariosRevision</small>
+                                        }
+                                    </div>
+                                }
+                                else if (primeraObra.Estado == "Rechazada")
+                                {
+                                    <div class="alert alert-danger alert-sm mb-0">
+                                        <i class="bi bi-x-circle"></i>
+                                        <strong>Rechazada</strong> el @primeraObra.FechaRevision?.ToString("dd/MM/yyyy HH:mm")
+                                        @if (!string.IsNullOrEmpty(primeraObra.MotivoRechazo))
+                                        {
+                                            <br><small><strong>Motivo:</strong> @primeraObra.MotivoRechazo</small>
+                                        }
+                                        @if (!string.IsNullOrEmpty(primeraObra.ComentariosRevision))
+                                        {
+                                            <br><small><strong>Comentarios adicionales:</strong> @primeraObra.ComentariosRevision</small>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-secondary" role="alert">
+                <i class="bi bi-filter"></i> No hay solicitudes que coincidan con los filtros aplicados.
+            </div>
+        }
+    }
+</div>
+
+<!-- Modal de Aprobación -->
+@if (showModalAprobacion && solicitudesParaRevisar != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Aprobar Solicitud de Obras
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success" role="alert">
+                        <h6>¿Está seguro que desea aprobar las siguientes @solicitudesParaRevisar.Count obra(s)?</h6>
+                    </div>
+                    
+                    <div class="list-group mb-3">
+                        @foreach (var obra in solicitudesParaRevisar)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@obra.Titulo</h6>
+                                    <small>@obra.TipoObra</small>
+                                </div>
+                                <p class="mb-1">@obra.Autores</p>
+                                <small>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Comentarios (opcional):</label>
+                        <textarea class="form-control" rows="3" @bind="comentariosRevision" 
+                                  placeholder="Comentarios adicionales sobre la aprobación..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-success" @onclick="AprobarSolicitudes" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <i class="bi bi-check-circle"></i> Aprobar Obras
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Rechazo -->
+@if (showModalRechazo && solicitudesParaRevisar != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle"></i> Rechazar Solicitud de Obras
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModales" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h6>¿Está seguro que desea rechazar las siguientes @solicitudesParaRevisar.Count obra(s)?</h6>
+                    </div>
+                    
+                    <div class="list-group mb-3">
+                        @foreach (var obra in solicitudesParaRevisar)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@obra.Titulo</h6>
+                                    <small>@obra.TipoObra</small>
+                                </div>
+                                <p class="mb-1">@obra.Autores</p>
+                                <small>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Motivo de rechazo *:</label>
+                        <textarea class="form-control" rows="3" @bind="motivoRechazo" 
+                                  placeholder="Explique el motivo del rechazo..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Comentarios adicionales (opcional):</label>
+                        <textarea class="form-control" rows="2" @bind="comentariosRevision" 
+                                  placeholder="Comentarios adicionales..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModales">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="RechazarSolicitudes" 
+                            disabled="@(isProcessing || string.IsNullOrWhiteSpace(motivoRechazo))">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <i class="bi bi-x-circle"></i> Rechazar Obras
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Detalles de Obra -->
+@if (showModalDetalles && obraSeleccionada != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles de la Obra Académica</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalDetalles" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">Título:</th>
+                                    <td>@obraSeleccionada.Titulo</td>
+                                </tr>
+                                <tr>
+                                    <th>Tipo:</th>
+                                    <td>@obraSeleccionada.TipoObra</td>
+                                </tr>
+                                <tr>
+                                    <th>Fecha Publicación:</th>
+                                    <td>@obraSeleccionada.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                                <tr>
+                                    <th>Autores:</th>
+                                    <td>@(obraSeleccionada.Autores ?? "No especificado")</td>
+                                </tr>
+                                <tr>
+                                    <th>Editorial:</th>
+                                    <td>@(obraSeleccionada.Editorial ?? "No especificado")</td>
+                                </tr>
+                                <tr>
+                                    <th>Revista:</th>
+                                    <td>@(obraSeleccionada.Revista ?? "No especificado")</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">ISBN/ISSN:</th>
+                                    <td>@(obraSeleccionada.ISBN_ISSN ?? "No especificado")</td>
+                                </tr>
+                                <tr>
+                                    <th>DOI:</th>
+                                    <td>@(obraSeleccionada.DOI ?? "No especificado")</td>
+                                </tr>
+                                <tr>
+                                    <th>Es Indexada:</th>
+                                    <td>
+                                        @if (obraSeleccionada.EsIndexada)
+                                        {
+                                            <span class="badge bg-success">Sí</span>
+                                            @if (!string.IsNullOrEmpty(obraSeleccionada.IndiceIndexacion))
+                                            {
+                                                <span class="ms-2">(@obraSeleccionada.IndiceIndexacion)</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Archivo:</th>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
+                                                <i class="bi bi-file-earmark-pdf"></i> @obraSeleccionada.ArchivoNombre
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Sin archivo adjunto</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(obraSeleccionada.Descripcion))
+                    {
+                        <hr>
+                        <div>
+                            <h6>Descripción:</h6>
+                            <p>@obraSeleccionada.Descripcion</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalDetalles">Cerrar</button>
+                    @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
+                            <i class="bi bi-download"></i> Descargar PDF
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<SolicitudObraAcademicaAdminDto>? solicitudes;
+    private List<SolicitudObraAcademicaAdminDto>? solicitudesFiltradas;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    
+    // Filtros
+    private string _filtroEstado = "";
+    private string _filtroDocente = "";
+    private string _filtroTitulo = "";
+    
+    private string filtroEstado 
+    { 
+        get => _filtroEstado; 
+        set 
+        { 
+            _filtroEstado = value; 
+            FiltrarSolicitudes(); 
+        } 
+    }
+    
+    private string filtroDocente 
+    { 
+        get => _filtroDocente; 
+        set 
+        { 
+            _filtroDocente = value; 
+            FiltrarSolicitudes(); 
+        } 
+    }
+    
+    private string filtroTitulo 
+    { 
+        get => _filtroTitulo; 
+        set 
+        { 
+            _filtroTitulo = value; 
+            FiltrarSolicitudes(); 
+        } 
+    }
+    
+    // Modales
+    private bool showModalAprobacion = false;
+    private bool showModalRechazo = false;
+    private bool showModalDetalles = false;
+    private List<SolicitudObraAcademicaAdminDto>? solicitudesParaRevisar;
+    private SolicitudObraAcademicaAdminDto? obraSeleccionada;
+    
+    // Campos de formulario
+    private string comentariosRevision = "";
+    private string motivoRechazo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSolicitudes();
+    }
+
+    private async Task LoadSolicitudes()
+    {
+        try
+        {
+            isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetFromJsonAsync<ResponseSolicitudesAdminDto>("api/obraacademicas/admin/solicitudes");
+            if (response != null && response.Exitoso)
+            {
+                solicitudes = response.Solicitudes;
+                solicitudesFiltradas = solicitudes;
+            }
+            else
+            {
+                ToastService.ShowError(response?.Mensaje ?? "Error al cargar solicitudes");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshSolicitudes()
+    {
+        await LoadSolicitudes();
+        ToastService.ShowSuccess("Solicitudes actualizadas");
+    }
+
+    private void FiltrarSolicitudes()
+    {
+        if (solicitudes == null) return;
+
+        solicitudesFiltradas = solicitudes.Where(s =>
+            (string.IsNullOrEmpty(filtroEstado) || s.Estado.Equals(filtroEstado, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filtroDocente) || 
+             s.DocenteNombre.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase) ||
+             s.DocenteCedula.Contains(filtroDocente, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filtroTitulo) || 
+             s.Titulo.Contains(filtroTitulo, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+        
+        StateHasChanged();
+    }
+
+    private void MostrarModalAprobacion(List<SolicitudObraAcademicaAdminDto> obras)
+    {
+        solicitudesParaRevisar = obras;
+        comentariosRevision = "";
+        showModalAprobacion = true;
+    }
+
+    private void MostrarModalRechazo(List<SolicitudObraAcademicaAdminDto> obras)
+    {
+        solicitudesParaRevisar = obras;
+        comentariosRevision = "";
+        motivoRechazo = "";
+        showModalRechazo = true;
+    }
+
+    private void MostrarDetallesObra(SolicitudObraAcademicaAdminDto obra)
+    {
+        obraSeleccionada = obra;
+        showModalDetalles = true;
+    }
+
+    private void CerrarModales()
+    {
+        showModalAprobacion = false;
+        showModalRechazo = false;
+        solicitudesParaRevisar = null;
+        comentariosRevision = "";
+        motivoRechazo = "";
+    }
+
+    private void CerrarModalDetalles()
+    {
+        showModalDetalles = false;
+        obraSeleccionada = null;
+    }
+
+    private async Task AprobarSolicitudes()
+    {
+        if (solicitudesParaRevisar == null) return;
+
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var exitosasCount = 0;
+            var erroresCount = 0;
+
+            foreach (var solicitud in solicitudesParaRevisar)
+            {
+                try
+                {
+                    var revision = new RevisionSolicitudDto
+                    {
+                        SolicitudId = solicitud.Id,
+                        Accion = "Aprobar",
+                        ComentariosRevision = comentariosRevision
+                    };
+
+                    var response = await Http.PostAsJsonAsync("api/obraacademicas/admin/revisar", revision);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        exitosasCount++;
+                    }
+                    else
+                    {
+                        erroresCount++;
+                    }
+                }
+                catch
+                {
+                    erroresCount++;
+                }
+            }
+
+            if (exitosasCount > 0)
+            {
+                ToastService.ShowSuccess($"{exitosasCount} obra(s) aprobada(s) exitosamente");
+            }
+            
+            if (erroresCount > 0)
+            {
+                ToastService.ShowError($"Error al aprobar {erroresCount} obra(s)");
+            }
+
+            CerrarModales();
+            await LoadSolicitudes();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al aprobar solicitudes: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task RechazarSolicitudes()
+    {
+        if (solicitudesParaRevisar == null || string.IsNullOrWhiteSpace(motivoRechazo)) return;
+
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var exitosasCount = 0;
+            var erroresCount = 0;
+
+            foreach (var solicitud in solicitudesParaRevisar)
+            {
+                try
+                {
+                    var revision = new RevisionSolicitudDto
+                    {
+                        SolicitudId = solicitud.Id,
+                        Accion = "Rechazar",
+                        MotivoRechazo = motivoRechazo,
+                        ComentariosRevision = comentariosRevision
+                    };
+
+                    var response = await Http.PostAsJsonAsync("api/obraacademicas/admin/revisar", revision);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        exitosasCount++;
+                    }
+                    else
+                    {
+                        erroresCount++;
+                    }
+                }
+                catch
+                {
+                    erroresCount++;
+                }
+            }
+
+            if (exitosasCount > 0)
+            {
+                ToastService.ShowSuccess($"{exitosasCount} obra(s) rechazada(s) exitosamente");
+            }
+            
+            if (erroresCount > 0)
+            {
+                ToastService.ShowError($"Error al rechazar {erroresCount} obra(s)");
+            }
+
+            CerrarModales();
+            await LoadSolicitudes();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al rechazar solicitudes: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task DescargarArchivo(Guid solicitudId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            var url = $"api/obraacademicas/admin/descargar-archivo/{solicitudId}?token={token}";
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar archivo: {ex.Message}");
+        }
+    }
+
+    private string GetEstadoColor(string estado)
+    {
+        return estado switch
+        {
+            "Pendiente" => "warning",
+            "Aprobada" => "success",
+            "Rechazada" => "danger",
+            _ => "secondary"
+        };
+    }
+
+    // DTOs necesarios
+    public class SolicitudObraAcademicaAdminDto
+    {
+        public Guid Id { get; set; }
+        public Guid SolicitudGrupoId { get; set; }
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string DocenteNombre { get; set; } = string.Empty;
+        public string Titulo { get; set; } = string.Empty;
+        public string TipoObra { get; set; } = string.Empty;
+        public DateTime FechaPublicacion { get; set; }
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }
+        public bool EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public string? ComentariosRevision { get; set; }
+        public string? MotivoRechazo { get; set; }
+        public string? ComentariosSolicitud { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaRevision { get; set; }
+    }
+
+    public class ResponseSolicitudesAdminDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public List<SolicitudObraAcademicaAdminDto> Solicitudes { get; set; } = new();
+    }
+
+    public class RevisionSolicitudDto
+    {
+        public Guid SolicitudId { get; set; }
+        public string Accion { get; set; } = string.Empty;
+        public string? ComentariosRevision { get; set; }
+        public string? MotivoRechazo { get; set; }
+    }
+}

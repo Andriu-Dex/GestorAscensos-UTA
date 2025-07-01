@@ -12,6 +12,7 @@ public interface IDocenteService
     Task<ImportarDatosResponse> ImportarDatosDACAsync(string cedula);
     Task<ImportarDatosResponse> ImportarDatosDITICAsync(string cedula);
     Task<ImportarDatosResponse> ImportarDatosDIRINVAsync(string cedula);
+    Task<ImportarDatosResponse> ImportarObrasAcademicasAsync(string cedula);
     Task<ValidacionRequisitosDto> ValidarRequisitosAscensoAsync(string cedula, string nivelObjetivo);
     Task<bool> ActualizarNivelDocenteAsync(Guid docenteId, string nuevoNivel);
     Task<IndicadoresDocenteDto> GetIndicadoresAsync(string cedula);

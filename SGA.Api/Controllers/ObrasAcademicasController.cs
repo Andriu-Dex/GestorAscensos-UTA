@@ -185,6 +185,41 @@ public class ObrasAcademicasController : ControllerBase
         }
     }
 
+    [HttpGet("mis-solicitudes")]
+    public async Task<ActionResult<ResponseObrasAcademicasDto>> GetMisSolicitudes()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            // Intentar obtener la cédula del claim primero
+            var cedula = User.FindFirst("cedula")?.Value;
+            
+            // Si no está en los claims, buscar por email en la base de datos
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                
+                if (docente == null)
+                {
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                }
+                
+                cedula = docente.Cedula;
+            }
+
+            var response = await _obrasService.GetTodasSolicitudesDocenteAsync(cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
     // Endpoints para administradores
     [HttpGet("admin/solicitudes-por-revisar")]
     [Authorize(Roles = "Administrador")]

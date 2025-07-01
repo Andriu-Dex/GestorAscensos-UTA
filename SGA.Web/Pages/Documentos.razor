@@ -65,7 +65,7 @@
             @if (solicitudesPendientes != null && solicitudesPendientes.Any())
             {
                 <hr />
-                <h6 class="text-warning">Solicitudes Pendientes de Aprobación</h6>
+                <h6>Mis Solicitudes de Obras</h6>
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead>
@@ -74,6 +74,7 @@
                                 <th>Tipo</th>
                                 <th>Fecha Solicitud</th>
                                 <th>Estado</th>
+                                <th>Observaciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,7 +85,39 @@
                                     <td>@solicitud.TipoObra</td>
                                     <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
                                     <td>
-                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                        @if (solicitud.Estado == "Pendiente")
+                                        {
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        }
+                                        else if (solicitud.Estado == "Aprobada")
+                                        {
+                                            <span class="badge bg-success">Aprobada</span>
+                                        }
+                                        else if (solicitud.Estado == "Rechazada")
+                                        {
+                                            <span class="badge bg-danger">Rechazada</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (solicitud.Estado == "Aprobada" && !string.IsNullOrEmpty(solicitud.ComentariosRevision))
+                                        {
+                                            <small class="text-success">@solicitud.ComentariosRevision</small>
+                                        }
+                                        else if (solicitud.Estado == "Rechazada")
+                                        {
+                                            @if (!string.IsNullOrEmpty(solicitud.MotivoRechazo))
+                                            {
+                                                <small class="text-danger"><strong>Motivo:</strong> @solicitud.MotivoRechazo</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(solicitud.ComentariosRevision))
+                                            {
+                                                <br><small class="text-muted">@solicitud.ComentariosRevision</small>
+                                            }
+                                        }
+                                        else if (solicitud.Estado == "Pendiente")
+                                        {
+                                            <small class="text-muted">En revisión</small>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -460,7 +493,8 @@
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/solicitudes-pendientes");
+            // Cargar todas las solicitudes (pendientes, aprobadas y rechazadas)
+            var response = await Http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/mis-solicitudes");
             if (response != null && response.Exitoso)
             {
                 solicitudesPendientes = response.Obras;
@@ -468,7 +502,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cargar solicitudes pendientes: {ex.Message}");
+            ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
         }
     }
 
@@ -825,6 +859,9 @@
         public bool TieneArchivo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaActualizacion { get; set; }
+        public string? Estado { get; set; }
+        public string? ComentariosRevision { get; set; }
+        public string? MotivoRechazo { get; set; }
     }
 
     public class ResponseObrasAcademicasDto

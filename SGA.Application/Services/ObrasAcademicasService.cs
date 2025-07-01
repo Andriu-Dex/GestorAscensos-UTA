@@ -807,35 +807,46 @@ public class ObrasAcademicasService : IObrasAcademicasService
         try
         {
             var solicitudes = await _solicitudRepository.GetAllAsync();
-            var solicitudesDto = solicitudes.Select(s => new SolicitudObraAcademicaAdminDto
+            var solicitudesDto = new List<SolicitudObraAcademicaAdminDto>();
+
+            foreach (var s in solicitudes)
             {
-                Id = s.Id,
-                DocenteCedula = s.DocenteCedula,
-                Titulo = s.Titulo,
-                TipoObra = s.TipoObra,
-                FechaPublicacion = s.FechaPublicacion,
-                Editorial = s.Editorial,
-                Revista = s.Revista,
-                ISBN_ISSN = s.ISBN_ISSN,
-                DOI = s.DOI,
-                EsIndexada = s.EsIndexada,
-                IndiceIndexacion = s.IndiceIndexacion,
-                Autores = s.Autores,
-                Descripcion = s.Descripcion,
-                ArchivoNombre = s.ArchivoNombre,
-                Estado = s.Estado,
-                ComentariosRevision = s.ComentariosRevision,
-                MotivoRechazo = s.MotivoRechazo,
-                ComentariosSolicitud = s.ComentariosSolicitud,
-                FechaCreacion = s.FechaCreacion,
-                FechaRevision = s.FechaRevision
-            }).OrderByDescending(s => s.FechaCreacion).ToList();
+                // Obtener información del docente
+                var docente = await _docenteRepository.GetByCedulaAsync(s.DocenteCedula);
+                var nombreDocente = docente?.NombreCompleto ?? "Docente no encontrado";
+
+                solicitudesDto.Add(new SolicitudObraAcademicaAdminDto
+                {
+                    Id = s.Id,
+                    SolicitudGrupoId = s.SolicitudGrupoId,
+                    DocenteCedula = s.DocenteCedula,
+                    DocenteNombre = nombreDocente,
+                    Titulo = s.Titulo,
+                    TipoObra = s.TipoObra,
+                    FechaPublicacion = s.FechaPublicacion,
+                    Editorial = s.Editorial,
+                    Revista = s.Revista,
+                    ISBN_ISSN = s.ISBN_ISSN,
+                    DOI = s.DOI,
+                    EsIndexada = s.EsIndexada,
+                    IndiceIndexacion = s.IndiceIndexacion,
+                    Autores = s.Autores,
+                    Descripcion = s.Descripcion,
+                    ArchivoNombre = s.ArchivoNombre,
+                    Estado = s.Estado,
+                    ComentariosRevision = s.ComentariosRevision,
+                    MotivoRechazo = s.MotivoRechazo,  
+                    ComentariosSolicitud = s.ComentariosSolicitud,
+                    FechaCreacion = s.FechaCreacion,
+                    FechaRevision = s.FechaRevision
+                });
+            }
 
             return new ResponseSolicitudesAdminDto
             {
                 Exitoso = true,
                 Mensaje = "Solicitudes obtenidas correctamente",
-                Solicitudes = solicitudesDto
+                Solicitudes = solicitudesDto.OrderByDescending(s => s.FechaCreacion).ToList()
             };
         }
         catch (Exception ex)
@@ -982,6 +993,54 @@ public class ObrasAcademicasService : IObrasAcademicasService
         {
             _logger.LogError(ex, "Error al obtener archivo de solicitud {SolicitudId}", solicitudId);
             return null;
+        }
+    }
+
+    public async Task<ResponseObrasAcademicasDto> GetTodasSolicitudesDocenteAsync(string cedula)
+    {
+        try
+        {
+            var todasSolicitudes = await _solicitudRepository.GetAllAsync();
+            var solicitudes = todasSolicitudes.Where(s => s.DocenteCedula == cedula);
+            var solicitudesDto = solicitudes.Select(s => new ObraAcademicaDetalleDto
+            {
+                Id = (int)s.Id.GetHashCode(), // Usar hash del ID para convertir a int
+                Titulo = s.Titulo,
+                TipoObra = s.TipoObra,
+                FechaPublicacion = s.FechaPublicacion,
+                Editorial = s.Editorial,
+                Revista = s.Revista,
+                ISBN_ISSN = s.ISBN_ISSN,
+                DOI = s.DOI,
+                EsIndexada = s.EsIndexada,
+                IndiceIndexacion = s.IndiceIndexacion,
+                Autores = s.Autores,
+                Descripcion = s.Descripcion,
+                ArchivoNombre = s.ArchivoNombre,
+                TieneArchivo = !string.IsNullOrEmpty(s.ArchivoNombre),
+                FechaCreacion = s.FechaCreacion,
+                FechaActualizacion = s.FechaModificacion,
+                Estado = s.Estado,
+                ComentariosRevision = s.ComentariosRevision,
+                MotivoRechazo = s.MotivoRechazo
+            }).OrderByDescending(s => s.FechaCreacion).ToList();
+
+            return new ResponseObrasAcademicasDto
+            {
+                Exitoso = true,
+                Mensaje = "Solicitudes obtenidas correctamente",
+                Obras = solicitudesDto,
+                TotalObras = solicitudesDto.Count
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener todas las solicitudes para cédula {Cedula}", cedula);
+            return new ResponseObrasAcademicasDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al obtener solicitudes: {ex.Message}"
+            };
         }
     }
 }

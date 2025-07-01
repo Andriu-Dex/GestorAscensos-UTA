@@ -10,6 +10,7 @@ public interface IExternalDataService
     Task<DTOs.ExternalData.DatosDACDto?> ImportarDatosDACAsync(string cedula);
     Task<DTOs.ExternalData.DatosDITICDto?> ImportarDatosDITICAsync(string cedula);
     Task<DTOs.ExternalData.DatosDirInvDto?> ImportarDatosDirInvAsync(string cedula);
+    Task<List<DTOs.ExternalData.ObraAcademicaConPdfDto>> ObtenerObrasAcademicasConPdfAsync(string cedula);
 }
 
 public interface IValidacionAscensoService

@@ -72,6 +72,9 @@ public class ObraAcademicaDetalleDto
     public bool TieneArchivo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaActualizacion { get; set; }
+    public string? Estado { get; set; }
+    public string? ComentariosRevision { get; set; }
+    public string? MotivoRechazo { get; set; }
 }
 
 public class ResponseObrasAcademicasDto
@@ -86,7 +89,9 @@ public class ResponseObrasAcademicasDto
 public class SolicitudObraAcademicaAdminDto
 {
     public Guid Id { get; set; }
+    public Guid SolicitudGrupoId { get; set; }
     public string DocenteCedula { get; set; } = string.Empty;
+    public string DocenteNombre { get; set; } = string.Empty;
     public string Titulo { get; set; } = string.Empty;
     public string TipoObra { get; set; } = string.Empty;
     public DateTime FechaPublicacion { get; set; }

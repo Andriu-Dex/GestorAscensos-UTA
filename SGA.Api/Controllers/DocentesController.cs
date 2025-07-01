@@ -162,7 +162,7 @@ public class DocentesController : ControllerBase
             if (docente == null)
                 return NotFound("Docente no encontrado");
 
-            var response = await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+            var response = await _docenteService.ImportarObrasAcademicasAsync(docente.Cedula);
             return Ok(response);
         }
         catch (Exception ex)

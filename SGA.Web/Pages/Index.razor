@@ -505,7 +505,7 @@
                     mensaje = "Datos de tiempo en rol importados correctamente desde TTHH";
                     break;
                 case 2: // Obras
-                    endpoint = "api/docente/importar-obras";
+                    endpoint = "api/docentes/importar-obras";
                     mensaje = "Obras académicas importadas correctamente";
                     break;
                 case 3: // Evaluación
@@ -530,16 +530,36 @@
                 {
                     await JSRuntime.InvokeVoidAsync("showToast", mensaje);
                     
-                    // Para importación de tiempo en rol, actualizar userInfo y recalcular
+                    // Para importación de tiempo en rol, actualizar userInfo y recalcular todo
                     if (tipo == 1)
                     {
                         userInfo = await AuthService.RefreshUserInfo();
                         CalcularTiempoDetallado();
+                        await LoadIndicadores();
+                        await LoadRequisitos();
                         StateHasChanged(); // Forzar actualización de la UI
                     }
-                    
-                    await LoadIndicadores();
-                    await LoadRequisitos();
+                    else if (tipo == 2) // Solo obras académicas
+                    {
+                        // Para obras académicas, solo actualizar ese indicador específico
+                        // sin tocar el tiempo en rol actual
+                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
+                        if (indicadoresResponse.IsSuccessStatusCode)
+                        {
+                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
+                            if (nuevosIndicadores != null && indicadores != null)
+                            {
+                                // Solo actualizar el número de obras, mantener el resto igual
+                                indicadores.NumeroObras = nuevosIndicadores.NumeroObras;
+                                StateHasChanged();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Para otros tipos de importación, actualizar indicadores completos
+                        await LoadIndicadores();
+                    }
                 }
             }
         }

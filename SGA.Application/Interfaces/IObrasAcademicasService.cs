@@ -9,6 +9,7 @@ public interface IObrasAcademicasService
     Task<ResponseObrasAcademicasDto> GetObrasDocenteAsync(string cedula);
     Task<ResponseObrasAcademicasDto> SolicitarNuevasObrasAsync(string cedula, SolicitudObrasAcademicasDto solicitud);
     Task<ResponseObrasAcademicasDto> GetSolicitudesPendientesAsync(string cedula);
+    Task<ResponseObrasAcademicasDto> GetTodasSolicitudesDocenteAsync(string cedula);
     Task<ResponseObrasAcademicasDto> AprobarSolicitudAsync(Guid solicitudId, string comentarios);
     Task<ResponseObrasAcademicasDto> RechazarSolicitudAsync(Guid solicitudId, string motivo);
     Task<ResponseObrasAcademicasDto> GetSolicitudesPorRevisarAsync();
