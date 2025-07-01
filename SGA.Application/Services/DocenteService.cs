@@ -550,4 +550,81 @@ public class DocenteService : IDocenteService
             _ => throw new ArgumentException($"Nivel no válido: {nivel}")
         };
     }
+
+    public async Task<ImportarDatosResponse> ImportarTiempoRolTTHHAsync(string cedula)
+    {
+        try
+        {
+            var datosTTHH = await _externalDataService.ImportarDatosTTHHAsync(cedula);
+            
+            if (datosTTHH != null)
+            {
+                var docente = await _docenteRepository.GetByCedulaAsync(cedula);
+                if (docente != null)
+                {
+                    // Actualizar la fecha de nombramiento y la fecha de inicio del nivel actual
+                    if (datosTTHH.FechaNombramiento.HasValue)
+                    {
+                        docente.FechaNombramiento = datosTTHH.FechaNombramiento.Value;
+                    }
+                    
+                    // Usar la fecha de ingreso al nivel actual desde TTHH
+                    if (datosTTHH.FechaIngresoNivelActual.HasValue)
+                    {
+                        docente.FechaInicioNivelActual = datosTTHH.FechaIngresoNivelActual.Value;
+                    }
+                    else if (datosTTHH.FechaInicioCargoActual.HasValue)
+                    {
+                        // Si no hay fecha específica del nivel, usar la fecha de inicio del cargo actual
+                        docente.FechaInicioNivelActual = datosTTHH.FechaInicioCargoActual.Value;
+                    }
+                    else if (datosTTHH.FechaNombramiento.HasValue)
+                    {
+                        // Como último recurso, usar la fecha de nombramiento
+                        docente.FechaInicioNivelActual = datosTTHH.FechaNombramiento.Value;
+                    }
+                    
+                    docente.FechaUltimaImportacion = DateTime.UtcNow;
+                    await _docenteRepository.UpdateAsync(docente);
+                    
+                    // Calcular el tiempo transcurrido en el rol actual
+                    var tiempoTranscurrido = DateTime.Now - docente.FechaInicioNivelActual;
+                    var mesesTranscurridos = (int)(tiempoTranscurrido.TotalDays / 30.44);
+                    
+                    await _auditoriaService.RegistrarAccionAsync("IMPORTAR_TIEMPO_ROL_TTHH", 
+                        docente.Id.ToString(), docente.Email, "Docente", null, 
+                        $"Fecha inicio rol actual: {docente.FechaInicioNivelActual} - Tiempo transcurrido: {mesesTranscurridos} meses", null);
+                }
+                
+                return new ImportarDatosResponse
+                {
+                    Exitoso = true,
+                    Mensaje = "Tiempo en rol actual importado exitosamente desde TTHH",
+                    DatosImportados = new Dictionary<string, object?>
+                    {
+                        ["FechaInicioRolActual"] = docente?.FechaInicioNivelActual,
+                        ["FechaNombramiento"] = datosTTHH.FechaNombramiento,
+                        ["TiempoTranscurridoMeses"] = docente != null ? (int)((DateTime.Now - docente.FechaInicioNivelActual).TotalDays / 30.44) : 0,
+                        ["CargoActual"] = datosTTHH.CargoActual,
+                        ["Facultad"] = datosTTHH.Facultad,
+                        ["Departamento"] = datosTTHH.Departamento
+                    }
+                };
+            }
+            
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = "No se encontraron datos de tiempo en rol en TTHH para la cédula proporcionada"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ImportarDatosResponse
+            {
+                Exitoso = false,
+                Mensaje = $"Error al importar tiempo en rol desde TTHH: {ex.Message}"
+            };
+        }
+    }
 }

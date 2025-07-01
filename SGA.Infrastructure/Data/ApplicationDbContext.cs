@@ -143,33 +143,63 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     private void SeedData(ModelBuilder modelBuilder)
     {
-        // Usuario administrador por defecto
-        var adminId = Guid.NewGuid();
-        var adminDocenteId = Guid.NewGuid();
+        // IDs fijos para facilitar las relaciones
+        var adminId = Guid.Parse("c24cd969-b99a-4354-b49f-0cae93b0b7ad");
+        var adminDocenteId = Guid.Parse("8ef569a9-342c-4e85-a8e1-29b5e697f2b6");
+        var stevenId = Guid.Parse("f47ac10b-58cc-4372-a567-0e02b2c3d479");
+        var stevenDocenteId = Guid.Parse("6ba7b810-9dad-11d1-80b4-00c04fd430c8");
 
+        // Usuarios
         modelBuilder.Entity<Usuario>().HasData(
             new Usuario
             {
                 Id = adminId,
                 Email = "admin@uta.edu.ec",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin12345"),
                 Rol = Domain.Enums.RolUsuario.Administrador,
                 EstaActivo = true,
+                IntentosLogin = 0,
+                UltimoLogin = DateTime.UtcNow.AddYears(-5),
+                FechaCreacion = DateTime.UtcNow
+            },
+            new Usuario
+            {
+                Id = stevenId,
+                Email = "sparedes@uta.edu.ec",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                Rol = Domain.Enums.RolUsuario.Docente,
+                EstaActivo = true,
+                IntentosLogin = 0,
+                UltimoLogin = DateTime.UtcNow.AddDays(-30),
                 FechaCreacion = DateTime.UtcNow
             }
         );
 
+        // Docentes
         modelBuilder.Entity<Docente>().HasData(
             new Docente
             {
                 Id = adminDocenteId,
-                Cedula = "1800000000",
-                Nombres = "Administrador",
-                Apellidos = "Sistema",
+                Cedula = "999999999",
+                Nombres = "Admin",
+                Apellidos = "Global",
                 Email = "admin@uta.edu.ec",
                 NivelActual = Domain.Enums.NivelTitular.Titular5,
                 FechaInicioNivelActual = DateTime.UtcNow.AddYears(-5),
                 UsuarioId = adminId,
+                EstaActivo = true,
+                FechaCreacion = DateTime.UtcNow
+            },
+            new Docente
+            {
+                Id = stevenDocenteId,
+                Cedula = "1801000000",
+                Nombres = "Steven",
+                Apellidos = "Paredes",
+                Email = "sparedes@uta.edu.ec",
+                NivelActual = Domain.Enums.NivelTitular.Titular1,
+                FechaInicioNivelActual = DateTime.UtcNow.AddYears(-2),
+                UsuarioId = stevenId,
                 EstaActivo = true,
                 FechaCreacion = DateTime.UtcNow
             }

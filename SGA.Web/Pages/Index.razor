@@ -197,6 +197,9 @@
                                         <span>Meta: 4 años (48 meses)</span>
                                         <span>@GetTiempoPercentage()%</span>
                                     </div>
+                                    <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(1)">
+                                        <i class="bi bi-arrow-repeat"></i> Importar
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -497,11 +500,9 @@
             
             switch (tipo)
             {
-                case 1: // Tiempo en rol
-                    // Para el tiempo en rol, solo recalculamos localmente
-                    CalcularTiempoDetallado();
-                    await JSRuntime.InvokeVoidAsync("showToast", "Tiempo en rol actualizado correctamente");
-                    mensaje = "tiempo_actualizado";
+                case 1: // Tiempo en rol - Importar desde TTHH
+                    endpoint = "api/docentes/importar-tiempo-rol";
+                    mensaje = "Datos de tiempo en rol importados correctamente desde TTHH";
                     break;
                 case 2: // Obras
                     endpoint = "api/docente/importar-obras";
@@ -528,14 +529,17 @@
                 if (response.IsSuccessStatusCode)
                 {
                     await JSRuntime.InvokeVoidAsync("showToast", mensaje);
+                    
+                    // Para importación de tiempo en rol, actualizar userInfo y recalcular
+                    if (tipo == 1)
+                    {
+                        userInfo = await AuthService.GetUserInfo();
+                        CalcularTiempoDetallado();
+                    }
+                    
                     await LoadIndicadores();
                     await LoadRequisitos();
                 }
-            }
-            else if (mensaje == "tiempo_actualizado")
-            {
-                // Para el caso del tiempo en rol, solo recalculamos y refrescamos la UI
-                StateHasChanged();
             }
         }
         catch (Exception ex)

@@ -8,6 +8,7 @@ public interface IDocenteService
     Task<DocenteDto?> GetDocenteByCedulaAsync(string cedula);
     Task<DocenteDto?> GetDocenteByEmailAsync(string email);
     Task<ImportarDatosResponse> ImportarDatosTTHHAsync(string cedula);
+    Task<ImportarDatosResponse> ImportarTiempoRolTTHHAsync(string cedula);
     Task<ImportarDatosResponse> ImportarDatosDACAsync(string cedula);
     Task<ImportarDatosResponse> ImportarDatosDITICAsync(string cedula);
     Task<ImportarDatosResponse> ImportarDatosDIRINVAsync(string cedula);

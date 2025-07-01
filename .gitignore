@@ -73,6 +73,12 @@ appsettings.*.json
 # Archivos del sistema operativo
 .DS_Store
 
+# Framework de Migraciones - Archivos generados automáticamente
+Backups/
+Logs/
+Reports/
+*.bak
+
 # Archivos de NuGet
 *.nupkg
 # Los archivos de paquetes se pueden regenerar mediante NuGet

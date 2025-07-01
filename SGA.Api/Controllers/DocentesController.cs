@@ -311,6 +311,28 @@ public class DocentesController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+    [HttpPost("importar-tiempo-rol")]
+    public async Task<ActionResult<ImportarDatosResponse>> ImportarTiempoRol()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var response = await _docenteService.ImportarTiempoRolTTHHAsync(docente.Cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 }
 
 // Nuevo controlador para endpoints específicos que el frontend espera

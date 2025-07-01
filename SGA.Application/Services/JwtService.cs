@@ -18,9 +18,21 @@ public class JwtService : IJwtService
     public JwtService(IConfiguration configuration)
     {
         _configuration = configuration;
-        _secretKey = _configuration["JWT:SecretKey"] ?? "DefaultSecretKeyForDevelopment123456789012345678901234567890";
-        _issuer = _configuration["JWT:Issuer"] ?? "SGA.Api";
-        _audience = _configuration["JWT:Audience"] ?? "SGA.Client";
+        // Priorizar variables de entorno
+        _secretKey = Environment.GetEnvironmentVariable("SGA_JWT_SECRET_KEY") 
+                    ?? _configuration["JWT:SecretKey"] 
+                    ?? "DefaultSecretKeyForDevelopment123456789012345678901234567890";
+        _issuer = Environment.GetEnvironmentVariable("SGA_JWT_ISSUER")
+                 ?? _configuration["JWT:Issuer"] 
+                 ?? "SGA.Api";
+        _audience = Environment.GetEnvironmentVariable("SGA_JWT_AUDIENCE")
+                   ?? _configuration["JWT:Audience"] 
+                   ?? "SGA.Client";
+                   
+        // Debug: Mostrar longitud de la clave para verificar
+        Console.WriteLine($"[DEBUG JWT] SecretKey length: {_secretKey.Length}");
+        Console.WriteLine($"[DEBUG JWT] Using issuer: {_issuer}");
+        Console.WriteLine($"[DEBUG JWT] Using audience: {_audience}");
     }
 
     public string GenerateToken(Guid userId, string email, string role, string? cedula = null)
