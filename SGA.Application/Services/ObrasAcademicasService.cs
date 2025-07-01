@@ -126,7 +126,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
             var grupoId = Guid.NewGuid();
             var obrasSolicitadas = new List<ObraAcademicaDetalleDto>();
 
-            _logger.LogInformation($"Procesando {solicitud.Obras.Count} obras para solicitud");
+            _logger.LogInformation($"Procesando {solicitud.Obras?.Count ?? 0} obras para solicitud");
             
             // Verificar que la tabla de solicitudes existe y es accesible
             try
@@ -141,10 +141,12 @@ public class ObrasAcademicasService : IObrasAcademicasService
             }
 
             // Procesar cada obra individualmente con manejo de errores robusto
-            for (int i = 0; i < solicitud.Obras.Count; i++)
+            if (solicitud.Obras != null)
             {
-                var obra = solicitud.Obras[i];
-                _logger.LogInformation($"Procesando obra {i + 1}/{solicitud.Obras.Count}: {obra.Titulo}");
+                for (int i = 0; i < solicitud.Obras.Count; i++)
+                {
+                    var obra = solicitud.Obras[i];
+                    _logger.LogInformation($"Procesando obra {i + 1}/{solicitud.Obras.Count}: {obra.Titulo}");
                 
                 try
                 {
@@ -439,29 +441,30 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     throw new Exception($"Error al procesar obra '{obra.Titulo}': {obraEx.Message}", obraEx);
                 }
             }
+            }
 
             // Registrar auditoría
-            _logger.LogInformation($"Registrando auditoría para solicitud de {solicitud.Obras.Count} obras");
+            _logger.LogInformation($"Registrando auditoría para solicitud de {solicitud.Obras?.Count ?? 0} obras");
             await _auditoriaService.RegistrarAccionAsync(
                 "SOLICITAR_NUEVAS_OBRAS",
                 docente.Id.ToString(),
                 docente.Email,
                 "SolicitudObraAcademica",
                 null,
-                $"Solicitadas {solicitud.Obras.Count} nuevas obras académicas",
+                $"Solicitadas {solicitud.Obras?.Count ?? 0} nuevas obras académicas",
                 grupoId.ToString()
             );
 
             // Enviar notificación a administradores
             _logger.LogInformation("Enviando notificación a administradores");
-            await _notificationService.NotificarNuevaSolicitudObrasAsync(docente.NombreCompleto, solicitud.Obras.Count);
+            await _notificationService.NotificarNuevaSolicitudObrasAsync(docente.NombreCompleto, solicitud.Obras?.Count ?? 0);
 
             _logger.LogInformation($"Solicitud completada exitosamente para {docente.NombreCompleto}");
             
             return new ResponseObrasAcademicasDto
             {
                 Exitoso = true,
-                Mensaje = $"Solicitud enviada correctamente. {solicitud.Obras.Count} obras enviadas para revisión.",
+                Mensaje = $"Solicitud enviada correctamente. {solicitud.Obras?.Count ?? 0} obras enviadas para revisión.",
                 Obras = obrasSolicitadas,
                 TotalObras = obrasSolicitadas.Count
             };
@@ -978,16 +981,35 @@ public class ObrasAcademicasService : IObrasAcademicasService
     {
         try
         {
+            _logger.LogInformation("Buscando solicitud con ID: {SolicitudId}", solicitudId);
+            
             var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
-            if (solicitud == null || string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud == null)
+            {
+                _logger.LogWarning("Solicitud no encontrada con ID: {SolicitudId}", solicitudId);
                 return null;
+            }
+
+            _logger.LogInformation("Solicitud encontrada. Ruta del archivo: {ArchivoRuta}", solicitud.ArchivoRuta);
+
+            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            {
+                _logger.LogWarning("La solicitud {SolicitudId} no tiene archivo asociado", solicitudId);
+                return null;
+            }
 
             if (File.Exists(solicitud.ArchivoRuta))
             {
-                return await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
+                _logger.LogInformation("Archivo encontrado en: {ArchivoRuta}", solicitud.ArchivoRuta);
+                var bytes = await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
+                _logger.LogInformation("Archivo leído correctamente, tamaño: {Size} bytes", bytes.Length);
+                return bytes;
             }
-
-            return null;
+            else
+            {
+                _logger.LogWarning("El archivo no existe en la ruta: {ArchivoRuta}", solicitud.ArchivoRuta);
+                return null;
+            }
         }
         catch (Exception ex)
         {

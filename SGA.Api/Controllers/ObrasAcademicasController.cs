@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SGA.Application.DTOs;
 using SGA.Application.Interfaces;
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace SGA.Api.Controllers;
 
@@ -317,6 +318,79 @@ public class ObrasAcademicasController : ControllerBase
         }
         catch (Exception ex)
         {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("admin/visualizar-archivo/{solicitudId}")]
+    [AllowAnonymous] // Permitir acceso anónimo ya que validaremos el token manualmente
+    public async Task<ActionResult> VisualizarArchivoAdmin(Guid solicitudId, [FromQuery] string token)
+    {
+        try
+        {
+            _logger.LogInformation("Intentando visualizar archivo para solicitud {SolicitudId} con token", solicitudId);
+            
+            // Validar el token JWT manualmente
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("Token no proporcionado para solicitud {SolicitudId}", solicitudId);
+                return Unauthorized("Token requerido");
+            }
+
+            // Limpiar el token (remover comillas si las tiene)
+            token = token.Trim('"');
+            
+            // Validar el token JWT
+            var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            try
+            {
+                var jsonToken = tokenHandler.ReadJwtToken(token);
+                var expClaim = jsonToken.Claims.FirstOrDefault(x => x.Type == "exp");
+                
+                if (expClaim != null)
+                {
+                    var exp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim.Value));
+                    if (exp < DateTimeOffset.UtcNow)
+                    {
+                        _logger.LogWarning("Token expirado para solicitud {SolicitudId}", solicitudId);
+                        return Unauthorized("Token expirado");
+                    }
+                }
+
+                // Verificar que el usuario tiene rol de administrador
+                var roleClaim = jsonToken.Claims.FirstOrDefault(x => x.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+                if (roleClaim?.Value != "Administrador")
+                {
+                    _logger.LogWarning("Usuario sin permisos de administrador intentando acceder a solicitud {SolicitudId}", solicitudId);
+                    return Forbid("Acceso denegado");
+                }
+            }
+            catch (Exception tokenEx)
+            {
+                _logger.LogError(tokenEx, "Error al validar token para solicitud {SolicitudId}", solicitudId);
+                return Unauthorized("Token inválido");
+            }
+            
+            var archivo = await _obrasService.GetArchivoSolicitudAsync(solicitudId);
+            if (archivo == null)
+            {
+                _logger.LogWarning("Archivo no encontrado para solicitud {SolicitudId}", solicitudId);
+                return NotFound("Archivo no encontrado");
+            }
+
+            _logger.LogInformation("Archivo encontrado, tamaño: {Size} bytes", archivo.Length);
+            
+            Response.Headers["Content-Disposition"] = "inline";
+            Response.Headers["Content-Type"] = "application/pdf";
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+            
+            return File(archivo, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al visualizar archivo de solicitud {SolicitudId}", solicitudId);
             return StatusCode(500, new { message = ex.Message });
         }
     }

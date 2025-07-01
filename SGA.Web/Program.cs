@@ -29,7 +29,7 @@ builder.Services.AddScoped<AuthorizationMessageHandler>();
 // Configure HttpClient with authorization handler
 builder.Services.AddHttpClient<HttpClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7030/");
+    client.BaseAddress = new Uri("http://localhost:5115/");
 })
 .AddHttpMessageHandler<AuthorizationMessageHandler>();
 

@@ -9,6 +9,49 @@
 @inject IToastService ToastService
 @inject IJSRuntime JSRuntime
 
+<style>
+    .modal-backdrop {
+        z-index: 1040;
+    }
+    
+    .modal {
+        z-index: 1050;
+    }
+    
+    .pdf-viewer-container {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .btn-primary-custom {
+        background-color: #8a1538;
+        border-color: #8a1538;
+        color: white;
+    }
+    
+    .btn-primary-custom:hover {
+        background-color: #6d1029;
+        border-color: #6d1029;
+        color: white;
+    }
+    
+    .border-custom {
+        border-color: #8a1538 !important;
+    }
+    
+    .text-custom {
+        color: #8a1538 !important;
+    }
+    
+    .alert-sm {
+        padding: 0.375rem 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>Solicitudes de Obras Académicas</h3>
@@ -117,18 +160,17 @@
                             <div class="col-md-4 text-end">
                                 <span class="badge bg-@(GetEstadoColor(primeraObra.Estado)) fs-6">
                                     @primeraObra.Estado
-                                </span>
-                                @if (primeraObra.Estado == "Pendiente")
-                                {
-                                    <div class="btn-group ms-2" role="group">
-                                        <button class="btn btn-sm btn-success" @onclick="() => MostrarModalAprobacion(grupo.ToList())">
-                                            <i class="bi bi-check-circle"></i> Aprobar
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => MostrarModalRechazo(grupo.ToList())">
-                                            <i class="bi bi-x-circle"></i> Rechazar
-                                        </button>
-                                    </div>
-                                }
+                                </span>                                        @if (primeraObra.Estado == "Pendiente")
+                                        {
+                                            <div class="btn-group ms-2" role="group">
+                                                <button class="btn btn-sm btn-success" @onclick="() => MostrarModalAprobacion(grupo.ToList())">
+                                                    <i class="bi bi-check-circle"></i> Aprobar
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" @onclick="() => MostrarModalRechazo(grupo.ToList())">
+                                                    <i class="bi bi-x-circle"></i> Rechazar
+                                                </button>
+                                            </div>
+                                        }
                             </div>
                         </div>
                         
@@ -170,8 +212,8 @@
                                             <td>
                                                 @if (!string.IsNullOrEmpty(obra.ArchivoNombre))
                                                 {
-                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => DescargarArchivo(obra.Id)">
-                                                        <i class="bi bi-file-earmark-pdf"></i> Ver PDF
+                                                    <button class="btn btn-sm text-white me-1" style="background-color: #8a1538;" @onclick="() => VisualizarPDF(obra.Id)">
+                                                        <i class="bi bi-eye"></i> Ver PDF
                                                     </button>
                                                 }
                                                 else
@@ -419,8 +461,8 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
                                         {
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
-                                                <i class="bi bi-file-earmark-pdf"></i> @obraSeleccionada.ArchivoNombre
+                                            <button class="btn btn-sm text-white" style="background-color: #8a1538;" @onclick="() => VisualizarPDF(obraSeleccionada.Id)">
+                                                <i class="bi bi-file-earmark-pdf"></i> Ver PDF
                                             </button>
                                         }
                                         else
@@ -446,8 +488,67 @@
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModalDetalles">Cerrar</button>
                     @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
                     {
+                        <button type="button" class="btn text-white" style="background-color: #8a1538;" @onclick="() => VisualizarPDF(obraSeleccionada.Id)">
+                            <i class="bi bi-eye"></i> Ver PDF
+                        </button>
                         <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
                             <i class="bi bi-download"></i> Descargar PDF
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Visualización de PDF -->
+@if (showModalPDF && !string.IsNullOrEmpty(pdfUrl))
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        Visualizar PDF - @(pdfNombreArchivo ?? "Documento")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalPDF" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @if (isLoadingPDF)
+                    {
+                        <div class="d-flex justify-content-center align-items-center" style="height: 500px;">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                    <span class="visually-hidden">Cargando PDF...</span>
+                                </div>
+                                <p class="mt-3">Cargando documento...</p>
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(errorPDF))
+                    {
+                        <div class="alert alert-danger m-3" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Error al cargar PDF:</strong> @errorPDF
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="pdf-viewer-container">
+                            <iframe src="@pdfUrl" style="width: 100%; height: 600px; border: none;" frameborder="0"></iframe>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalPDF">
+                        <i class="bi bi-x-circle me-2"></i>Cerrar
+                    </button>
+                    @if (!string.IsNullOrEmpty(pdfUrl) && !isLoadingPDF)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(solicitudIdActual)">
+                            <i class="bi bi-download me-2"></i>Descargar PDF
                         </button>
                     }
                 </div>
@@ -502,8 +603,16 @@
     private bool showModalAprobacion = false;
     private bool showModalRechazo = false;
     private bool showModalDetalles = false;
+    private bool showModalPDF = false;
     private List<SolicitudObraAcademicaAdminDto>? solicitudesParaRevisar;
     private SolicitudObraAcademicaAdminDto? obraSeleccionada;
+    
+    // Variables para PDF
+    private string? pdfUrl;
+    private string? pdfNombreArchivo;
+    private bool isLoadingPDF = false;
+    private string? errorPDF;
+    private Guid solicitudIdActual;
     
     // Campos de formulario
     private string comentariosRevision = "";
@@ -599,6 +708,55 @@
     {
         showModalDetalles = false;
         obraSeleccionada = null;
+    }
+
+    private void CerrarModalPDF()
+    {
+        showModalPDF = false;
+        pdfUrl = null;
+        pdfNombreArchivo = null;
+        errorPDF = null;
+        isLoadingPDF = false;
+        solicitudIdActual = Guid.Empty;
+    }
+
+    private async Task VisualizarPDF(Guid solicitudId)
+    {
+        try
+        {
+            isLoadingPDF = true;
+            errorPDF = null;
+            showModalPDF = true;
+            solicitudIdActual = solicitudId;
+            
+            // Buscar la obra para obtener el nombre del archivo
+            var obra = solicitudes?.FirstOrDefault(s => s.Id == solicitudId);
+            pdfNombreArchivo = obra?.ArchivoNombre ?? "Documento";
+            
+            StateHasChanged();
+
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            if (string.IsNullOrEmpty(token))
+            {
+                errorPDF = "Token de autenticación no encontrado";
+                return;
+            }
+
+            // Crear URL para visualización del PDF usando la URL absoluta de la API
+            pdfUrl = $"http://localhost:5115/api/obraacademicas/admin/visualizar-archivo/{solicitudId}?token={token}";
+            
+            // Pequeña pausa para permitir que el iframe se configure
+            await Task.Delay(500);
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error al cargar PDF: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPDF = false;
+            StateHasChanged();
+        }
     }
 
     private async Task AprobarSolicitudes()
