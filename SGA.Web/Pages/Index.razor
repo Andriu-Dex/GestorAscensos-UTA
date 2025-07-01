@@ -533,8 +533,9 @@
                     // Para importación de tiempo en rol, actualizar userInfo y recalcular
                     if (tipo == 1)
                     {
-                        userInfo = await AuthService.GetUserInfo();
+                        userInfo = await AuthService.RefreshUserInfo();
                         CalcularTiempoDetallado();
+                        StateHasChanged(); // Forzar actualización de la UI
                     }
                     
                     await LoadIndicadores();

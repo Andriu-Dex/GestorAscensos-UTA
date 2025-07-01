@@ -395,29 +395,4 @@ public class DocenteController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
-
-    [HttpGet("perfil")]
-    public async Task<ActionResult<DocenteDto>> GetPerfil()
-    {
-        try
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(email))
-                return Unauthorized();
-
-            var docente = await _docenteService.GetDocenteByEmailAsync(email);
-            if (docente == null)
-                return NotFound("Docente no encontrado");
-
-            return Ok(docente);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = ex.Message });
-        }
-    }
 }

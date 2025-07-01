@@ -102,7 +102,7 @@ namespace SGA.Web.Services
                         var error = JsonSerializer.Deserialize<ErrorResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         errorMessage = error?.Message ?? errorMessage;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         errorMessage = "Error al procesar la respuesta del servidor";
                     }
@@ -170,8 +170,84 @@ namespace SGA.Web.Services
                     return null;
                 }
                 
-                // Si hay token pero no información del usuario, 
-                // intentamos extraerla del token JWT
+                // Configurar header de autorización
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                
+                // Intentar obtener datos reales del docente desde la API
+                try
+                {
+                    Console.WriteLine("[AUTH DEBUG] Intentando obtener perfil del docente desde API...");
+                    var response = await _httpClient.GetAsync("api/docentes/perfil");
+                    Console.WriteLine($"[AUTH DEBUG] Response status: {response.StatusCode}");
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"[AUTH DEBUG] Response content length: {content?.Length ?? 0}");
+                        
+                        var docenteDto = await response.Content.ReadFromJsonAsync<DocentePerfilDto>();
+                        if (docenteDto != null)
+                        {
+                            Console.WriteLine($"[AUTH DEBUG] Datos del docente obtenidos: {docenteDto.Nombres} {docenteDto.Apellidos}");
+                            Console.WriteLine($"[AUTH DEBUG] Fecha inicio nivel actual: {docenteDto.FechaInicioNivelActual}");
+                            
+                            // Convertir NivelActual de string a int
+                            int nivelActual = 1; // valor por defecto
+                            if (!string.IsNullOrEmpty(docenteDto.NivelActual))
+                            {
+                                // Extraer el número del nivel (ej: "Titular Auxiliar 1" -> 1)
+                                var parts = docenteDto.NivelActual.Split(' ');
+                                if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out int nivel))
+                                {
+                                    nivelActual = nivel;
+                                }
+                            }
+                            
+                            _currentUser = new UserInfoModel
+                            {
+                                Id = docenteDto.Id,
+                                Username = docenteDto.Email,
+                                Email = docenteDto.Email,
+                                Nombres = docenteDto.Nombres,
+                                Apellidos = docenteDto.Apellidos,
+                                Cedula = docenteDto.Cedula,
+                                Facultad = docenteDto.Facultad?.Nombre ?? "",
+                                Departamento = docenteDto.Departamento ?? "",
+                                NivelActual = nivelActual,
+                                FechaIngresoNivelActual = docenteDto.FechaInicioNivelActual,
+                                FacultadInfo = docenteDto.Facultad,
+                                EsAdmin = false // Se determinará por el token/rol
+                            };
+                            
+                            // Obtener rol del token para determinar si es admin
+                            var claims = ((ApiAuthenticationStateProvider)_authStateProvider).ParseClaimsFromJwt(token);
+                            if (claims != null && claims.Any())
+                            {
+                                var role = claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "";
+                                _currentUser.EsAdmin = role == "Admin";
+                            }
+                            
+                            Console.WriteLine($"[AUTH DEBUG] Usuario actualizado con fecha: {_currentUser.FechaIngresoNivelActual}");
+                            return _currentUser;
+                        }
+                        else
+                        {
+                            Console.WriteLine("[AUTH DEBUG] DocenteDto es null después de deserializar");
+                        }
+                    }
+                    else
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"[AUTH DEBUG] Error en API perfil: {errorContent}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AUTH DEBUG] Excepción al obtener perfil: {ex.Message}");
+                }
+                
+                // Si falla la llamada a la API, usar datos básicos del token JWT como fallback
+                Console.WriteLine("[AUTH DEBUG] Usando fallback del token JWT...");
                 try
                 {
                     var claims = ((ApiAuthenticationStateProvider)_authStateProvider).ParseClaimsFromJwt(token);
@@ -179,6 +255,9 @@ namespace SGA.Web.Services
                     {
                         var email = claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value ?? "";
                         var role = claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "";
+                        
+                        Console.WriteLine($"[AUTH DEBUG] Fallback - Email: {email}, Role: {role}");
+                        Console.WriteLine($"[AUTH DEBUG] Fallback - Usando fecha actual: {DateTime.Now}");
                         
                         _currentUser = new UserInfoModel
                         {
@@ -191,21 +270,21 @@ namespace SGA.Web.Services
                             Facultad = "",
                             Departamento = "",
                             NivelActual = 1,
-                            FechaIngresoNivelActual = DateTime.Now,
+                            FechaIngresoNivelActual = DateTime.Now, // Solo como último recurso
                             EsAdmin = role == "Admin"
                         };
                         
                         return _currentUser;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Error parsing JWT claims
                 }
 
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Error in GetUserInfo
                 return null;
@@ -325,6 +404,23 @@ namespace SGA.Web.Services
             {
                 _httpClient.DefaultRequestHeaders.Authorization = null;
             }
+        }
+
+        /// <summary>
+        /// Limpia el caché del usuario actual para forzar que se vuelva a cargar desde la API
+        /// </summary>
+        public void ClearUserCache()
+        {
+            _currentUser = null;
+        }
+
+        /// <summary>
+        /// Refresca los datos del usuario desde la API
+        /// </summary>
+        public async Task<UserInfoModel?> RefreshUserInfo()
+        {
+            ClearUserCache();
+            return await GetUserInfo();
         }
     }
 
