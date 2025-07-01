@@ -130,6 +130,8 @@ public class ExternalDataService : IExternalDataService
     public async Task<DTOs.ExternalData.DatosDACDto?> ImportarDatosDACAsync(string cedula)
     {
         var connectionString = _configuration.GetConnectionString("DACConnection");
+        Console.WriteLine($"[DAC DEBUG] Importando datos para cédula: {cedula}");
+        Console.WriteLine($"[DAC DEBUG] Connection string: {connectionString}");
         
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
@@ -139,6 +141,8 @@ public class ExternalDataService : IExternalDataService
             SELECT COUNT(*) 
             FROM Evaluaciones 
             WHERE Cedula = @Cedula", new { Cedula = cedula });
+
+        Console.WriteLine($"[DAC DEBUG] Evaluaciones encontradas para cédula {cedula}: {docenteExiste}");
 
         if (docenteExiste == 0)
             return null;
@@ -155,6 +159,8 @@ public class ExternalDataService : IExternalDataService
             // Si no se puede obtener de TTHH, usar fecha por defecto (5 años atrás)
             fechaInicioNivel = DateTime.Now.AddYears(-5);
         }
+
+        Console.WriteLine($"[DAC DEBUG] Fecha inicio nivel actual: {fechaInicioNivel:yyyy-MM-dd}");
 
         // Consultar evaluaciones desde la fecha de inicio en el nivel actual
         var evaluaciones = await connection.QueryAsync<dynamic>(@"
@@ -176,6 +182,8 @@ public class ExternalDataService : IExternalDataService
                 FechaInicio = fechaInicioNivel 
             });
 
+        Console.WriteLine($"[DAC DEBUG] Evaluaciones filtradas por fecha: {evaluaciones.Count()}");
+
         if (!evaluaciones.Any())
         {
             // Si no hay evaluaciones desde la fecha de nivel actual, tomar las últimas 4
@@ -192,19 +200,29 @@ public class ExternalDataService : IExternalDataService
                 INNER JOIN Periodos p ON e.PeriodoId = p.Id
                 WHERE e.Cedula = @Cedula 
                 ORDER BY e.FechaEvaluacion DESC", new { Cedula = cedula });
+            
+            Console.WriteLine($"[DAC DEBUG] Evaluaciones últimas 4: {evaluaciones.Count()}");
         }
 
         if (!evaluaciones.Any())
+        {
+            Console.WriteLine($"[DAC DEBUG] No se encontraron evaluaciones para la cédula {cedula}");
             return null;
+        }
 
         var promedioEvaluacion = evaluaciones.Average(e => (decimal)e.Porcentaje);
         var totalPeriodos = evaluaciones.Count();
         var primeraEvaluacion = evaluaciones.Last();
         var ultimaEvaluacion = evaluaciones.First();
         
+        Console.WriteLine($"[DAC DEBUG] Promedio calculado: {promedioEvaluacion:F2}%");
+        Console.WriteLine($"[DAC DEBUG] Total períodos: {totalPeriodos}");
+        
         // Determinar si cumple el requisito (75% mínimo)
         var cumpleRequisito = promedioEvaluacion >= 75.0m;
         var requisitoMinimo = 75.0m;
+
+        Console.WriteLine($"[DAC DEBUG] Cumple requisito: {cumpleRequisito}");
 
         return new DTOs.ExternalData.DatosDACDto
         {

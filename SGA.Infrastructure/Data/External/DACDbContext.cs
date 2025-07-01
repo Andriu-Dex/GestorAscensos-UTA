@@ -19,6 +19,7 @@ public class DACDbContext : DbContext
 
         modelBuilder.Entity<EvaluacionDocenteDAC>(entity =>
         {
+            entity.ToTable("Evaluaciones"); // Nombre explícito de tabla
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Cedula).IsRequired().HasMaxLength(10);
             entity.Property(e => e.PuntajeTotal).HasColumnType("decimal(5,2)");
@@ -33,12 +34,14 @@ public class DACDbContext : DbContext
 
         modelBuilder.Entity<PeriodoAcademicoDAC>(entity =>
         {
+            entity.ToTable("Periodos"); // Nombre explícito de tabla
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
         });
 
         modelBuilder.Entity<CriterioEvaluacionDAC>(entity =>
         {
+            entity.ToTable("Criterios"); // Nombre explícito de tabla
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nombre).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Descripcion).HasMaxLength(500);

@@ -231,18 +231,45 @@
                         <div class="col-md-4 mb-4">
                             <div class="indicator-card">
                                 <div class="card-header-mini">
-                                    <i class="bi bi-star indicator-icon"></i>
+                                    <i class="bi bi-award indicator-icon"></i>
                                 </div>
                                 <div class="card-body">
                                     <h6 class="indicator-title">Evaluación docente</h6>
-                                    <div class="indicator-value">@(indicadores?.PuntajeEvaluacion ?? 0)%</div>
-                                    <div class="text-muted">promedio</div>
+                                    <div class="indicator-value">
+                                        <div class="evaluation-score">@(indicadores?.PuntajeEvaluacion ?? 0)%</div>
+                                        @if (indicadores?.PeriodosEvaluados > 0)
+                                        {
+                                            <div class="evaluation-detail text-muted">
+                                                <small>Promedio de @(indicadores.PeriodosEvaluados) evaluaciones</small>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (indicadores?.CumpleRequisitoEvaluacion == true)
+                                    {
+                                        <div class="evaluation-status text-success">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            <small>Cumple requisito (≥75%)</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="evaluation-status text-warning">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                            <small>No cumple requisito (≥75%)</small>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(indicadores?.PeriodoEvaluado))
+                                    {
+                                        <div class="evaluation-period text-muted mt-1">
+                                            <small><i class="bi bi-calendar-range me-1"></i>@indicadores.PeriodoEvaluado</small>
+                                        </div>
+                                    }
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar @GetEvaluationColorClass(indicadores?.PuntajeEvaluacion ?? 0)" 
                                              style="width: @(indicadores?.PuntajeEvaluacion ?? 0)%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 80%</span>
+                                        <span>Meta: 75%</span>
                                         <span>@(indicadores?.PuntajeEvaluacion ?? 0)%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(3)">
@@ -509,15 +536,15 @@
                     mensaje = "Obras académicas importadas correctamente";
                     break;
                 case 3: // Evaluación
-                    endpoint = "api/docente/importar-evaluacion";
-                    mensaje = "Evaluación docente importada correctamente";
+                    endpoint = "api/docentes/importar-evaluacion";
+                    mensaje = "Evaluación docente importada correctamente desde DAC";
                     break;
                 case 4: // Capacitación
-                    endpoint = "api/docente/importar-capacitacion";
+                    endpoint = "api/docentes/importar-capacitacion";
                     mensaje = "Horas de capacitación importadas correctamente";
                     break;
                 case 5: // Investigación
-                    endpoint = "api/docente/importar-investigacion";
+                    endpoint = "api/docentes/importar-investigacion";
                     mensaje = "Tiempo de investigación importado correctamente";
                     break;
             }
@@ -555,10 +582,53 @@
                             }
                         }
                     }
-                    else
+                    else if (tipo == 3) // Evaluación docente
                     {
-                        // Para otros tipos de importación, actualizar indicadores completos
-                        await LoadIndicadores();
+                        // Para evaluación docente, solo actualizar los campos relacionados con evaluación
+                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
+                        if (indicadoresResponse.IsSuccessStatusCode)
+                        {
+                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
+                            if (nuevosIndicadores != null && indicadores != null)
+                            {
+                                // Solo actualizar los campos de evaluación, mantener el resto igual
+                                indicadores.PuntajeEvaluacion = nuevosIndicadores.PuntajeEvaluacion;
+                                indicadores.PeriodosEvaluados = nuevosIndicadores.PeriodosEvaluados;
+                                indicadores.CumpleRequisitoEvaluacion = nuevosIndicadores.CumpleRequisitoEvaluacion;
+                                indicadores.PeriodoEvaluado = nuevosIndicadores.PeriodoEvaluado;
+                                StateHasChanged();
+                            }
+                        }
+                    }
+                    else if (tipo == 4) // Capacitación
+                    {
+                        // Para capacitación, solo actualizar ese indicador específico
+                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
+                        if (indicadoresResponse.IsSuccessStatusCode)
+                        {
+                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
+                            if (nuevosIndicadores != null && indicadores != null)
+                            {
+                                // Solo actualizar las horas de capacitación, mantener el resto igual
+                                indicadores.HorasCapacitacion = nuevosIndicadores.HorasCapacitacion;
+                                StateHasChanged();
+                            }
+                        }
+                    }
+                    else if (tipo == 5) // Investigación
+                    {
+                        // Para investigación, solo actualizar ese indicador específico
+                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
+                        if (indicadoresResponse.IsSuccessStatusCode)
+                        {
+                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
+                            if (nuevosIndicadores != null && indicadores != null)
+                            {
+                                // Solo actualizar el tiempo de investigación, mantener el resto igual
+                                indicadores.TiempoInvestigacion = nuevosIndicadores.TiempoInvestigacion;
+                                StateHasChanged();
+                            }
+                        }
                     }
                 }
             }
@@ -593,7 +663,7 @@
     {
         if (puntaje >= 90)
             return "bg-success";
-        else if (puntaje >= 80)
+        else if (puntaje >= 75) // Cambio: 75% es el requisito mínimo
             return "bg-primary";
         else if (puntaje >= 70)
             return "bg-warning";

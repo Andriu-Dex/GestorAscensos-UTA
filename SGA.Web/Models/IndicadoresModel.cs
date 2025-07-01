@@ -15,5 +15,11 @@ namespace SGA.Web.Models
         public string TiempoTranscurridoTexto { get; set; } = string.Empty;
         public string TiempoRestanteTexto { get; set; } = string.Empty;
         public bool CumpleTiempoMinimo { get; set; } = false;
+        
+        // Propiedades adicionales para evaluaciones docentes
+        public int PeriodosEvaluados { get; set; } = 0;
+        public DateTime? FechaUltimaEvaluacion { get; set; }
+        public string PeriodoEvaluado { get; set; } = string.Empty;
+        public bool CumpleRequisitoEvaluacion { get; set; } = false;
     }
 }

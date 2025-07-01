@@ -501,13 +501,31 @@ public class DocenteService : IDocenteService
         // Calcular tiempo en rol actual en meses
         var tiempoRol = (int)Math.Floor((DateTime.UtcNow - docente.FechaInicioNivelActual).TotalDays / 30.44);
 
+        // Obtener información adicional de evaluaciones desde DAC de forma segura
+        DTOs.ExternalData.DatosDACDto? datosDAC = null;
+        try
+        {
+            datosDAC = await _externalDataService.ImportarDatosDACAsync(cedula);
+        }
+        catch (Exception)
+        {
+            // Si falla la conexión a DAC, usar datos existentes del docente
+            datosDAC = null;
+        }
+        
         return new IndicadoresDocenteDto
         {
             TiempoRol = tiempoRol,
             NumeroObras = docente.NumeroObrasAcademicas ?? 0,
             PuntajeEvaluacion = docente.PromedioEvaluaciones ?? 0,
             HorasCapacitacion = docente.HorasCapacitacion ?? 0,
-            TiempoInvestigacion = docente.MesesInvestigacion ?? 0
+            TiempoInvestigacion = docente.MesesInvestigacion ?? 0,
+            
+            // Información adicional de evaluaciones (usando datos DAC si están disponibles)
+            PeriodosEvaluados = datosDAC?.PeriodosEvaluados ?? 0,
+            FechaUltimaEvaluacion = datosDAC?.FechaUltimaEvaluacion,
+            PeriodoEvaluado = datosDAC?.PeriodoEvaluado ?? string.Empty,
+            CumpleRequisitoEvaluacion = datosDAC?.CumpleRequisito ?? (docente.PromedioEvaluaciones >= 75m)
         };
     }
 
