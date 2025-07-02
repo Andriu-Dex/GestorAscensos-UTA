@@ -319,8 +319,23 @@
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            var url = $"api/documento/{documentoId}/download?token={token}";
-            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            Http.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetAsync($"api/documento/{documentoId}/download");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? 
+                              $"documento-{documentoId}.pdf";
+                
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+            }
+            else
+            {
+                // Error al descargar documento
+            }
         }
         catch (Exception)
         {

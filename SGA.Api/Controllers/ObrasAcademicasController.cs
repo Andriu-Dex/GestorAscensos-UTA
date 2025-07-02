@@ -306,15 +306,15 @@ public class ObrasAcademicasController : ControllerBase
 
     [HttpGet("admin/descargar-archivo/{solicitudId}")]
     [Authorize(Roles = "Administrador")]
-    public async Task<ActionResult> DescargarArchivoAdmin(Guid solicitudId, [FromQuery] string token)
+    public async Task<ActionResult> DescargarArchivoAdmin(Guid solicitudId)
     {
         try
         {
             var archivo = await _obrasService.GetArchivoSolicitudAsync(solicitudId);
             if (archivo == null)
-                return NotFound();
+                return NotFound("Archivo no encontrado");
 
-            return File(archivo, "application/pdf", $"obra-admin-{solicitudId}.pdf");
+            return File(archivo, "application/pdf", $"obra-{solicitudId}.pdf");
         }
         catch (Exception ex)
         {

@@ -85,10 +85,10 @@ public class DocumentVisualizationService
             if (response.IsSuccessStatusCode)
             {
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "documento.pdf";
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"obra-{solicitudId}.pdf";
                 
-                var base64 = Convert.ToBase64String(fileBytes);
-                await _jsRuntime.InvokeVoidAsync("downloadFile", base64, fileName, "application/pdf");
+                // Usar directamente los bytes sin conversión a base64
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
                 
                 _toastService.ShowSuccess("Archivo descargado correctamente");
                 return true;
@@ -161,10 +161,10 @@ public class DocumentVisualizationService
             if (response.IsSuccessStatusCode)
             {
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "certificado.pdf";
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"certificado-{certificadoId}.pdf";
                 
-                var base64 = Convert.ToBase64String(fileBytes);
-                await _jsRuntime.InvokeVoidAsync("downloadFile", base64, fileName, "application/pdf");
+                // Usar directamente los bytes sin conversión a base64
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
                 
                 _toastService.ShowSuccess("Certificado descargado correctamente");
                 return true;

@@ -227,8 +227,25 @@ namespace SGA.Web.Services
             try
             {
                 var token = await _localStorage.GetItemAsync<string>("authToken");
-                var url = $"api/documento/{documento.Id}/download?token={token}";
-                await _jsRuntime.InvokeVoidAsync("open", url, "_blank");
+                _http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                var response = await _http.GetAsync($"api/documento/{documento.Id}/download");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                    var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? 
+                                  documento.Nombre ?? $"documento-{documento.Id}.pdf";
+                    
+                    // Usar downloadFileFromStream que maneja mejor los bytes
+                    await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                    _toastService.ShowSuccess("Documento descargado correctamente");
+                }
+                else
+                {
+                    _toastService.ShowError("No se pudo descargar el documento");
+                }
             }
             catch (Exception ex)
             {

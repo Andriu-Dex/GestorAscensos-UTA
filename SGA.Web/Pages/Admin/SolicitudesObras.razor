@@ -461,9 +461,9 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
                                         {
-                                            <button class="btn btn-sm text-white" style="background-color: #8a1538;" @onclick="() => VisualizarPDF(obraSeleccionada.Id)">
-                                                <i class="bi bi-file-earmark-pdf"></i> Ver PDF
-                                            </button>
+                                            <span class="text-success">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>@obraSeleccionada.ArchivoNombre
+                                            </span>
                                         }
                                         else
                                         {
@@ -488,9 +488,6 @@
                     <button type="button" class="btn btn-secondary" @onclick="CerrarModalDetalles">Cerrar</button>
                     @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
                     {
-                        <button type="button" class="btn text-white" style="background-color: #8a1538;" @onclick="() => VisualizarPDF(obraSeleccionada.Id)">
-                            <i class="bi bi-eye"></i> Ver PDF
-                        </button>
                         <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
                             <i class="bi bi-download"></i> Descargar PDF
                         </button>
@@ -891,8 +888,23 @@
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            var url = $"api/obraacademicas/admin/descargar-archivo/{solicitudId}?token={token}";
-            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetAsync($"api/obraacademicas/admin/descargar-archivo/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? 
+                              $"obra-academica-{solicitudId}.pdf";
+                
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                ToastService.ShowSuccess("Archivo descargado correctamente");
+            }
+            else
+            {
+                ToastService.ShowError("No se pudo descargar el archivo");
+            }
         }
         catch (Exception ex)
         {
