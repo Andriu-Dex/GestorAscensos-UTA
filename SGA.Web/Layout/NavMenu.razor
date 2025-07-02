@@ -25,23 +25,35 @@
         
         <AuthorizeView>
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="solicitudes">
-                        <span class="bi bi-clipboard-fill-nav-menu" aria-hidden="true"></span> Mis Solicitudes
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="documentos">
-                        <span class="bi bi-file-earmark-fill-nav-menu" aria-hidden="true"></span> Mis Documentos
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="perfil">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Mi Perfil
-                    </NavLink>
-                </div>
-                  <AuthorizeView Roles="Administrador">
-                    <Authorized Context="adminAuth">
+                <!-- Opciones específicas para docentes (no administradores) -->
+                <AuthorizeView Roles="Docente" Context="docenteAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="solicitudes">
+                                <span class="bi bi-clipboard-fill-nav-menu" aria-hidden="true"></span> Mis Solicitudes
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="documentos">
+                                <span class="bi bi-file-earmark-fill-nav-menu" aria-hidden="true"></span> Mis Documentos
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="perfil">
+                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Mi Perfil
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="reportes">
+                                <span class="bi bi-file-earmark-pdf-fill-nav-menu" aria-hidden="true"></span> Mis Reportes
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- Opciones específicas para administradores -->
+                <AuthorizeView Roles="Administrador" Context="adminAuth">
+                    <Authorized>
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/docentes">
                                 <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Gestión de Docentes
@@ -62,9 +74,15 @@
                                 <span class="bi bi-award-fill-nav-menu" aria-hidden="true"></span> Gestión de Certificados
                             </NavLink>
                         </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/reportes">
+                                <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Reportes y Estadísticas
+                            </NavLink>
+                        </div>
                     </Authorized>
                 </AuthorizeView>
                 
+                <!-- Cerrar Sesión (común para todos los usuarios) -->
                 <div class="nav-item px-3">
                     <a class="nav-link" href="javascript:void(0)" @onclick="Logout">
                         <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Cerrar Sesión

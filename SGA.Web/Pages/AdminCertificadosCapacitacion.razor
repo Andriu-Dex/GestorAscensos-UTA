@@ -5,11 +5,13 @@
 @using Microsoft.JSInterop
 @using Blazored.Toast.Services
 @using System.Net.Http.Json
+@using SGA.Web.Services
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
 @inject IJSRuntime JSRuntime
 @inject ILogger<AdminCertificadosCapacitacion> Logger
+@inject IApiUrlService ApiUrlService
 
 <style>
     .modal-backdrop {
@@ -121,40 +123,40 @@
                             }
                             <div class="mb-2">
                                 <small class="text-muted">
-                                    <i class="bi bi-calendar-event"></i> Solicitado: @solicitud.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                    <i class="bi bi-clock"></i> Solicitado: @solicitud.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
                                 </small>
                             </div>
+                            @if (!string.IsNullOrEmpty(solicitud.ComentariosSolicitud))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Comentarios del docente:</label>
+                                    <p class="small bg-light p-2 rounded">@solicitud.ComentariosSolicitud</p>
+                                </div>
+                            }
                         </div>
-                        <div class="card-footer">
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-info btn-sm flex-fill" 
-                                        @onclick="() => VerDetalle(solicitud)">
-                                    <i class="bi bi-eye"></i> Ver
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                @if (solicitud.Estado == "Pendiente")
+                                {
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-success btn-sm" @onclick="() => AprobarSolicitud(solicitud)">
+                                            <i class="bi bi-check-lg"></i> Aprobar
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" @onclick="() => RechazarSolicitud(solicitud)">
+                                            <i class="bi bi-x-lg"></i> Rechazar
+                                        </button>
+                                    </div>
+                                }
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => VerDetalle(solicitud)">
+                                    <i class="bi bi-eye"></i> Ver Detalle
                                 </button>
                                 @if (!string.IsNullOrEmpty(solicitud.ArchivoNombre))
                                 {
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" 
-                                            @onclick="() => DescargarArchivo(solicitud)"
-                                            title="Descargar certificado">
-                                        <i class="bi bi-download"></i>
+                                    <button class="btn btn-outline-info btn-sm" @onclick="() => DescargarArchivo(solicitud)">
+                                        <i class="bi bi-download"></i> Descargar Archivo
                                     </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" 
-                                            @onclick="() => VisualizarArchivo(solicitud)"
-                                            title="Visualizar certificado">
-                                        <i class="bi bi-file-earmark-pdf"></i>
-                                    </button>
-                                }
-                                @if (solicitud.Estado == "Pendiente")
-                                {
-                                    <button type="button" class="btn btn-success btn-sm" 
-                                            @onclick="() => AprobarSolicitud(solicitud)"
-                                            title="Aprobar">
-                                        <i class="bi bi-check"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm" 
-                                            @onclick="() => RechazarSolicitud(solicitud)"
-                                            title="Rechazar">
-                                        <i class="bi bi-x"></i>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => VisualizarArchivo(solicitud)">
+                                        <i class="bi bi-file-earmark-pdf"></i> Visualizar PDF
                                     </button>
                                 }
                             </div>
@@ -258,29 +260,16 @@
                     }
                     @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosSolicitud))
                     {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Comentarios de la Solicitud:</strong>
-                                <p class="bg-light p-2 rounded">@solicitudSeleccionada.ComentariosSolicitud</p>
-                            </div>
+                        <div class="mb-3">
+                            <strong>Comentarios del Docente:</strong>
+                            <div class="bg-light p-3 rounded">@solicitudSeleccionada.ComentariosSolicitud</div>
                         </div>
                     }
-                    @if (solicitudSeleccionada.Estado == "Rechazada" && !string.IsNullOrEmpty(solicitudSeleccionada.MotivoRechazo))
+                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosRevision))
                     {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Motivo de Rechazo:</strong>
-                                <p class="bg-danger bg-opacity-10 p-2 rounded border border-danger">@solicitudSeleccionada.MotivoRechazo</p>
-                            </div>
-                        </div>
-                    }
-                    @if (solicitudSeleccionada.Estado == "Aprobada" && !string.IsNullOrEmpty(solicitudSeleccionada.ComentariosRevision))
-                    {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Comentarios de Aprobación:</strong>
-                                <p class="bg-success bg-opacity-10 p-2 rounded border border-success">@solicitudSeleccionada.ComentariosRevision</p>
-                            </div>
+                        <div class="mb-3">
+                            <strong>Comentarios de Revisión:</strong>
+                            <div class="bg-warning bg-opacity-10 p-3 rounded">@solicitudSeleccionada.ComentariosRevision</div>
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(solicitudSeleccionada.ArchivoNombre))
@@ -308,16 +297,16 @@
                     }
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalleModal">Cerrar</button>
                     @if (solicitudSeleccionada.Estado == "Pendiente")
                     {
                         <button type="button" class="btn btn-success" @onclick="() => AprobarSolicitud(solicitudSeleccionada)">
-                            <i class="bi bi-check-circle"></i> Aprobar
+                            <i class="bi bi-check-lg"></i> Aprobar
                         </button>
                         <button type="button" class="btn btn-danger" @onclick="() => RechazarSolicitud(solicitudSeleccionada)">
-                            <i class="bi bi-x-circle"></i> Rechazar
+                            <i class="bi bi-x-lg"></i> Rechazar
                         </button>
                     }
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalleModal">Cerrar</button>
                 </div>
             </div>
         </div>
@@ -332,28 +321,36 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title text-danger">
-                        <i class="bi bi-x-circle"></i> Rechazar Certificado
-                    </h5>
-                    <button type="button" class="btn-close" @onclick="CerrarRechazoModal"></button>
+                    <h5 class="modal-title">Rechazar Solicitud</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarRechazoModal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Certificado:</strong> @solicitudSeleccionada.NombreCurso</p>
-                    <p><strong>Docente:</strong> @solicitudSeleccionada.DocenteCedula</p>
                     <div class="mb-3">
-                        <label for="motivoRechazo" class="form-label">
-                            <strong>Motivo del rechazo:</strong> <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" id="motivoRechazo" rows="4" 
-                                  @bind="motivoRechazo" 
-                                  placeholder="Ingrese el motivo por el cual rechaza esta solicitud de certificado..."></textarea>
+                        <label class="form-label fw-bold">Motivo del Rechazo *</label>
+                        <textarea class="form-control" rows="4" @bind="motivoRechazo" 
+                                  placeholder="Explique por qué se rechaza la solicitud..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comentarios Adicionales</label>
+                        <textarea class="form-control" rows="3" @bind="comentariosRevision" 
+                                  placeholder="Comentarios adicionales para el docente..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmarRechazo" disabled="@string.IsNullOrWhiteSpace(motivoRechazo)">
-                        <i class="bi bi-x-circle"></i> Confirmar Rechazo
-                    </button>
                     <button type="button" class="btn btn-secondary" @onclick="CerrarRechazoModal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarRechazo" 
+                            disabled="@(string.IsNullOrWhiteSpace(motivoRechazo) || isProcessing)">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <span> Procesando...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-lg"></i>
+                            <span> Confirmar Rechazo</span>
+                        }
+                    </button>
                 </div>
             </div>
         </div>
@@ -434,6 +431,8 @@
     private SolicitudCertificadoCapacitacionAdminDto? solicitudSeleccionada;
     private SolicitudCertificadoCapacitacionAdminDto? solicitudParaPDF;
     private string motivoRechazo = string.Empty;
+    private string comentariosRevision = string.Empty;
+    private bool isProcessing = false;
     
     // Variables para modal de PDF
     private bool isLoadingPDF = false;
@@ -582,6 +581,7 @@
     {
         solicitudSeleccionada = solicitud;
         motivoRechazo = string.Empty;
+        comentariosRevision = string.Empty;
         showRechazoModal = true;
         CerrarDetalleModal();
     }
@@ -591,20 +591,27 @@
         showRechazoModal = false;
         solicitudSeleccionada = null;
         motivoRechazo = string.Empty;
+        comentariosRevision = string.Empty;
+        isProcessing = false;
     }
 
     private async Task ConfirmarRechazo()
     {
-        if (string.IsNullOrWhiteSpace(motivoRechazo) || solicitudSeleccionada == null)
+        if (string.IsNullOrWhiteSpace(motivoRechazo) || solicitudSeleccionada == null || isProcessing)
             return;
 
         try
         {
+            isProcessing = true;
+            StateHasChanged();
+
             var request = new RevisionSolicitudCertificadoDto
             {
                 SolicitudId = solicitudSeleccionada.Id,
                 Accion = "Rechazar",
-                Comentarios = motivoRechazo.Trim()
+                Comentarios = !string.IsNullOrWhiteSpace(comentariosRevision) 
+                    ? $"{motivoRechazo.Trim()}\n\nComentarios adicionales: {comentariosRevision.Trim()}"
+                    : motivoRechazo.Trim()
             };
 
             var response = await Http.PostAsJsonAsync($"api/certificados-capacitacion/admin/revisar/{solicitudSeleccionada.Id}", request);
@@ -631,6 +638,11 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Error al rechazar certificado: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
         }
     }
 
@@ -675,8 +687,11 @@
             
             StateHasChanged();
 
-            // Crear URL para visualización del PDF
-            pdfUrl = $"api/certificados-capacitacion/admin/ver/{solicitud.Id}";
+            // Crear URL completa para visualización del PDF con autenticación
+            var endpoint = $"api/certificados-capacitacion/admin/ver/{solicitud.Id}";
+            pdfUrl = await ApiUrlService.BuildAuthorizedApiUrlAsync(endpoint);
+            
+            Logger.LogInformation("URL del PDF generada: {PdfUrl}", pdfUrl);
             
             // Pequeña pausa para permitir que el iframe se configure
             await Task.Delay(500);

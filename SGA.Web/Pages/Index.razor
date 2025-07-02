@@ -374,6 +374,13 @@
                 return;
             }
             
+            // Si el usuario es administrador, redirigir al panel de administración
+            if (userInfo.EsAdmin || (await AuthService.GetUserRole()) == "Administrador")
+            {
+                NavigationManager.NavigateTo("/admin", true);
+                return;
+            }
+            
             await LoadIndicadores();
             await LoadRequisitos();
             await VerificarSolicitudActiva();

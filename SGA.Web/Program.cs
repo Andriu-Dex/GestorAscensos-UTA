@@ -24,12 +24,13 @@ builder.Services.AddBlazoredToast();
 
 // Add custom services
 builder.Services.AddScoped<SGA.Web.Services.ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<IApiUrlService, ApiUrlService>();
 builder.Services.AddScoped<AuthorizationMessageHandler>();
 
 // Configure HttpClient with authorization handler
 builder.Services.AddHttpClient<HttpClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5115/");
+    client.BaseAddress = new Uri("https://localhost:7030/");
 })
 .AddHttpMessageHandler<AuthorizationMessageHandler>();
 

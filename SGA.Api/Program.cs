@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using SGA.Application;
 using SGA.Infrastructure;
 using SGA.Api.Configuration;
+using SGA.Api.Middleware;
 using System.Text;
 using DotNetEnv;
 
@@ -134,9 +135,13 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Comentado temporalmente para evitar problemas de CORS con mixed HTTP/HTTPS
-// app.UseHttpsRedirection();
+// Configurar HTTPS redirection para producción y desarrollo
+app.UseHttpsRedirection();
 app.UseCors("AllowBlazorApp");
+
+// Middleware personalizado para autenticación por query string
+app.UseMiddleware<QueryStringAuthenticationMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

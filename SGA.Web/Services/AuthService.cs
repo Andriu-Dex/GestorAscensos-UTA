@@ -69,7 +69,7 @@ namespace SGA.Web.Services
                             Departamento = "",
                             NivelActual = 1, // Por defecto
                             FechaIngresoNivelActual = apiResponse.Usuario?.Docente?.FechaInicioNivelActual ?? DateTime.Now,
-                            EsAdmin = apiResponse.Usuario?.Rol == "Admin"
+                            EsAdmin = apiResponse.Usuario?.Rol == "Administrador"
                         };
                         
                         // Guardar la información del usuario en memoria
@@ -224,7 +224,7 @@ namespace SGA.Web.Services
                             if (claims != null && claims.Any())
                             {
                                 var role = claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "";
-                                _currentUser.EsAdmin = role == "Admin";
+                                _currentUser.EsAdmin = role == "Administrador";
                             }
                             
                             Console.WriteLine($"[AUTH DEBUG] Usuario actualizado con fecha: {_currentUser.FechaIngresoNivelActual}");
@@ -271,7 +271,7 @@ namespace SGA.Web.Services
                             Departamento = "",
                             NivelActual = 1,
                             FechaIngresoNivelActual = DateTime.Now, // Solo como último recurso
-                            EsAdmin = role == "Admin"
+                            EsAdmin = role == "Administrador"
                         };
                         
                         return _currentUser;
@@ -421,6 +421,20 @@ namespace SGA.Web.Services
         {
             ClearUserCache();
             return await GetUserInfo();
+        }
+        
+        /// <summary>
+        /// Obtiene el rol del usuario actual desde las claims
+        /// </summary>
+        public async Task<string> GetUserRole()
+        {
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (user.Identity?.IsAuthenticated != true)
+                return string.Empty;
+                
+            return user.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
         }
     }
 
