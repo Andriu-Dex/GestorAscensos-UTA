@@ -679,13 +679,16 @@
     {
         try
         {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
             var response = await Http.GetAsync($"api/certificados-capacitacion/admin/descargar/{solicitud.Id}");
             if (response.IsSuccessStatusCode)
             {
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
                 var fileName = solicitud.ArchivoNombre ?? $"certificado_{solicitud.NombreCurso.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf";
                 
-                await JSRuntime.InvokeVoidAsync("downloadFile", Convert.ToBase64String(fileBytes), fileName, "application/pdf");
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
                 ToastService.ShowSuccess("Archivo descargado correctamente");
             }
             else
