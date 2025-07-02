@@ -1,0 +1,193 @@
+@using SGA.Web.Models
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="card mb-4">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #8a1538;">
+        <h5 class="mb-0">Certificados de Capacitación</h5>
+        <button class="btn btn-light" @onclick="() => ShowCertificadosModal()">
+            <i class="bi bi-plus-circle"></i> Agregar Certificados
+        </button>
+    </div>
+    <div class="card-body">
+        @if (isLoadingCertificados)
+        {
+            <div class="d-flex justify-content-center my-3">
+                <div class="spinner-border" style="color: #8a1538;" role="status">
+                    <span class="visually-hidden">Cargando certificados...</span>
+                </div>
+            </div>
+        }
+        else if (solicitudesCertificados == null || !solicitudesCertificados.Any())
+        {
+            <div class="alert alert-info" role="alert">
+                No tiene certificados de capacitación registrados. Utilice el botón "Agregar Certificados" para solicitar la inclusión de nuevos certificados.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Curso</th>
+                            <th>Institución</th>
+                            <th>Tipo</th>
+                            <th>Fechas</th>
+                            <th>Horas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var certificado in solicitudesCertificados)
+                        {
+                            <tr>
+                                <td>@certificado.NombreCurso</td>
+                                <td>@certificado.InstitucionOfertante</td>
+                                <td>@certificado.TipoCapacitacion</td>
+                                <td>
+                                    <small>
+                                        @certificado.FechaInicio.ToString("dd/MM/yyyy") - 
+                                        @certificado.FechaFin.ToString("dd/MM/yyyy")
+                                    </small>
+                                </td>
+                                <td>@certificado.HorasDuracion h</td>
+                                <td>
+                                    @if (certificado.Estado == "Pendiente")
+                                    {
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    }
+                                    else if (certificado.Estado == "Aprobada")
+                                    {
+                                        <span class="badge bg-success">Aprobada</span>
+                                    }
+                                    else if (certificado.Estado == "Rechazada")
+                                    {
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    }
+                                    else if (certificado.Estado == "En Proceso")
+                                    {
+                                        <span class="badge bg-info">En Proceso</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if (PuedeVisualizarCertificado(certificado.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => VisualizarCertificado(certificado.Id)"
+                                                    title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (certificado.Estado == "Aprobada")
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => DescargarCertificado(certificado.Id)"
+                                                    title="Descargar">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEditarCertificado(certificado.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-warning" 
+                                                    @onclick="() => EditarCertificado(certificado)"
+                                                    title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeReemplazarArchivoCertificado(certificado.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    @onclick="() => ReemplazarArchivoCertificado(certificado)"
+                                                    title="Reemplazar Archivo">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (certificado.Estado == "Rechazada" && !string.IsNullOrEmpty(certificado.MotivoRechazo))
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => VerMotivoRechazoCertificado(certificado)"
+                                                    title="Ver Motivo de Rechazo">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEliminarCertificado(certificado.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => EliminarCertificado(certificado.Id)"
+                                                    title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<CertificadoCapacitacionDetalleDto> solicitudesCertificados { get; set; } = new();
+    [Parameter] public bool isLoadingCertificados { get; set; }
+    [Parameter] public EventCallback OnShowCertificadosModal { get; set; }
+    [Parameter] public EventCallback<Guid> OnVisualizarCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnDescargarCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnEditarCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnReemplazarArchivoCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnVerMotivoRechazoCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarCertificado { get; set; }
+
+    private void ShowCertificadosModal()
+    {
+        OnShowCertificadosModal.InvokeAsync();
+    }
+
+    private void VisualizarCertificado(Guid certificadoId)
+    {
+        OnVisualizarCertificado.InvokeAsync(certificadoId);
+    }
+
+    private void DescargarCertificado(Guid certificadoId)
+    {
+        OnDescargarCertificado.InvokeAsync(certificadoId);
+    }
+
+    private void EditarCertificado(CertificadoCapacitacionDetalleDto certificado)
+    {
+        OnEditarCertificado.InvokeAsync(certificado);
+    }
+
+    private void ReemplazarArchivoCertificado(CertificadoCapacitacionDetalleDto certificado)
+    {
+        OnReemplazarArchivoCertificado.InvokeAsync(certificado);
+    }
+
+    private void VerMotivoRechazoCertificado(CertificadoCapacitacionDetalleDto certificado)
+    {
+        OnVerMotivoRechazoCertificado.InvokeAsync(certificado);
+    }
+
+    private void EliminarCertificado(Guid certificadoId)
+    {
+        OnEliminarCertificado.InvokeAsync(certificadoId);
+    }
+
+    // Métodos de verificación de permisos
+    private bool PuedeVisualizarCertificado(string estado) => !string.IsNullOrEmpty(estado);
+    private bool PuedeEditarCertificado(string estado) => estado == "Pendiente" || estado == "En Proceso" || estado == "Rechazada";
+    private bool PuedeReemplazarArchivoCertificado(string estado) => estado == "Pendiente" || estado == "Rechazada";
+    private bool PuedeEliminarCertificado(string estado) => estado == "Pendiente" || estado == "Rechazada";
+}

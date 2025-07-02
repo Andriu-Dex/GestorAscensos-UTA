@@ -23,3 +23,42 @@ window.downloadFileFromStream = (fileName, contentBytes) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+// Función para descargar archivos usando base64
+window.downloadFile = (base64String, fileName, contentType) => {
+  // Decodificar base64 a bytes
+  const byteCharacters = atob(base64String);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+
+  // Crear blob
+  const blob = new Blob([byteArray], { type: contentType });
+
+  // Crear URL y descargar
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// Función para abrir PDF en nueva pestaña
+window.openPdfInNewTab = (dataUrl) => {
+  window.open(dataUrl, "_blank");
+};
+
+// Función para abrir PDF en modal (usando un evento personalizado)
+window.openPdfModal = (dataUrl) => {
+  // Disparar un evento personalizado que será capturado por Blazor
+  window.dispatchEvent(
+    new CustomEvent("openPdfModal", {
+      detail: { pdfUrl: dataUrl },
+    })
+  );
+};

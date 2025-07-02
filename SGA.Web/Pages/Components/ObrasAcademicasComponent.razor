@@ -1,0 +1,269 @@
+@using SGA.Web.Models
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="card mb-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Obras Académicas</h5>
+        <button class="btn btn-light" @onclick="() => ShowObrasModal()">
+            <i class="bi bi-plus-circle"></i> Agregar Obras
+        </button>
+    </div>
+    <div class="card-body">
+        @if (isLoadingObras)
+        {
+            <div class="d-flex justify-content-center my-3">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Cargando obras...</span>
+                </div>
+            </div>
+        }
+        else if (obrasAcademicas == null || !obrasAcademicas.Any())
+        {
+            <div class="alert alert-info" role="alert">
+                No tiene obras académicas registradas. Utilice el botón "Agregar Obras" para solicitar la inclusión de nuevas obras.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Tipo</th>
+                            <th>Fecha Publicación</th>
+                            <th>Revista/Editorial</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var obra in obrasAcademicas)
+                        {
+                            <tr>
+                                <td>@obra.Titulo</td>
+                                <td>@obra.TipoObra</td>
+                                <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                <td>@(obra.Revista ?? obra.Editorial ?? "N/A")</td>
+                                <td>
+                                    <span class="badge bg-success">Aprobada</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        
+        @if (solicitudesPendientes != null && solicitudesPendientes.Any())
+        {
+            <hr />
+            <h6>Mis Solicitudes de Obras</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Tipo</th>
+                            <th>Fecha Solicitud</th>
+                            <th>Estado</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var solicitud in solicitudesPendientes)
+                        {
+                            <tr>
+                                <td>@solicitud.Titulo</td>
+                                <td>@solicitud.TipoObra</td>
+                                <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    @if (solicitud.Estado == "Pendiente")
+                                    {
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    }
+                                    else if (solicitud.Estado == "Aprobada")
+                                    {
+                                        <span class="badge bg-success">Aprobada</span>
+                                    }
+                                    else if (solicitud.Estado == "Rechazada")
+                                    {
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    }
+                                    else if (solicitud.Estado == "En Proceso")
+                                    {
+                                        <span class="badge bg-info">En Proceso</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(solicitud.MotivoRechazo))
+                                    {
+                                        <small class="text-danger">@solicitud.MotivoRechazo</small>
+                                    }
+                                    else if (!string.IsNullOrEmpty(solicitud.ComentariosRevision))
+                                    {
+                                        <small class="text-muted">@solicitud.ComentariosRevision</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">Sin observaciones</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if (PuedeVisualizar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => VisualizarDocumento(solicitud.SolicitudId.Value)"
+                                                    title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeDescargar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => DescargarDocumento(solicitud.SolicitudId.Value)"
+                                                    title="Descargar">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEditarMetadatos(solicitud.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-warning" 
+                                                    @onclick="() => MostrarEditarMetadatos(solicitud)"
+                                                    title="Editar Metadatos">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeReemplazarArchivo(solicitud.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    @onclick="() => MostrarReemplazarArchivo(solicitud)"
+                                                    title="Reemplazar Archivo">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (solicitud.Estado == "Rechazada" && !string.IsNullOrEmpty(solicitud.MotivoRechazo))
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => MostrarMotivoRechazo(solicitud)"
+                                                    title="Ver Motivo de Rechazo">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeAgregarComentario(solicitud.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    @onclick="() => MostrarAgregarComentario(solicitud)"
+                                                    title="Agregar Comentario">
+                                                <i class="bi bi-chat-dots"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeReenviar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => ReenviarSolicitud(solicitud.SolicitudId.Value)"
+                                                    title="Reenviar para Revisión">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEliminar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => EliminarSolicitud(solicitud.SolicitudId.Value)"
+                                                    title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ObraAcademicaDetalleDto>? obrasAcademicas { get; set; }
+    [Parameter] public List<ObraAcademicaDetalleDto>? solicitudesPendientes { get; set; }
+    [Parameter] public bool isLoadingObras { get; set; }
+    [Parameter] public EventCallback OnShowObrasModal { get; set; }
+    [Parameter] public EventCallback<Guid> OnVisualizarDocumento { get; set; }
+    [Parameter] public EventCallback<Guid> OnDescargarDocumento { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnEditarMetadatos { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnReemplazarArchivo { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnMostrarMotivoRechazo { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnAgregarComentario { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarSolicitud { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarSolicitud { get; set; }
+
+    private void ShowObrasModal()
+    {
+        OnShowObrasModal.InvokeAsync();
+    }
+
+    private void VisualizarDocumento(Guid solicitudId)
+    {
+        OnVisualizarDocumento.InvokeAsync(solicitudId);
+    }
+
+    private void DescargarDocumento(Guid solicitudId)
+    {
+        OnDescargarDocumento.InvokeAsync(solicitudId);
+    }
+
+    private void MostrarEditarMetadatos(ObraAcademicaDetalleDto solicitud)
+    {
+        OnEditarMetadatos.InvokeAsync(solicitud);
+    }
+
+    private void MostrarReemplazarArchivo(ObraAcademicaDetalleDto solicitud)
+    {
+        OnReemplazarArchivo.InvokeAsync(solicitud);
+    }
+
+    private void MostrarMotivoRechazo(ObraAcademicaDetalleDto solicitud)
+    {
+        OnMostrarMotivoRechazo.InvokeAsync(solicitud);
+    }
+
+    private void MostrarAgregarComentario(ObraAcademicaDetalleDto solicitud)
+    {
+        OnAgregarComentario.InvokeAsync(solicitud);
+    }
+
+    private void ReenviarSolicitud(Guid solicitudId)
+    {
+        OnReenviarSolicitud.InvokeAsync(solicitudId);
+    }
+
+    private void EliminarSolicitud(Guid solicitudId)
+    {
+        OnEliminarSolicitud.InvokeAsync(solicitudId);
+    }
+
+    // Métodos para verificar permisos según estado
+    private bool PuedeVisualizar(string? estado) => !string.IsNullOrEmpty(estado);
+    private bool PuedeDescargar(string? estado) => estado == "Aprobada";
+    private bool PuedeEditarMetadatos(string? estado) => 
+        estado == "Pendiente" || estado == "En Proceso" || estado == "Rechazada";
+    private bool PuedeReemplazarArchivo(string? estado) => 
+        estado == "Pendiente" || estado == "Rechazada";
+    private bool PuedeAgregarComentario(string? estado) => estado == "En Proceso";
+    private bool PuedeReenviar(string? estado) => estado == "Rechazada";
+    private bool PuedeEliminar(string? estado) => 
+        estado == "Pendiente" || estado == "Rechazada";
+}

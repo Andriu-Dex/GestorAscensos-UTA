@@ -1,0 +1,101 @@
+@using SGA.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IToastService ToastService
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Subir Documento</h5>
+                    <button type="button" class="btn-close" @onclick="OnClose"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del documento</label>
+                        <input type="text" class="form-control" @bind="newDocumento.Nombre" placeholder="Nombre del documento" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de documento</label>
+                        <select class="form-select" @bind="newDocumento.TipoDocumentoId">
+                            <option value="0">Seleccione un tipo</option>
+                            @if (TiposDocumento != null)
+                            {
+                                @foreach (var tipo in TiposDocumento)
+                                {
+                                    <option value="@tipo.Id">@tipo.Nombre</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción (opcional)</label>
+                        <textarea class="form-control" @bind="newDocumento.Descripcion" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo</label>
+                        <InputFile OnChange="OnInputFileChange" class="form-control" />
+                        @if (isFileSelected)
+                        {
+                            <small class="text-success">Archivo seleccionado: @selectedFile?.Name</small>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnClose">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="UploadDocument" disabled="@IsUploading">
+                        @if (IsUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Subir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsUploading { get; set; }
+    [Parameter] public List<TipoDocumentoDto>? TiposDocumento { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnUploadDocument { get; set; }
+    
+    private DocumentoDto newDocumento = new DocumentoDto();
+    private IBrowserFile? selectedFile;
+    private bool isFileSelected = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            newDocumento = new DocumentoDto();
+            selectedFile = null;
+            isFileSelected = false;
+        }
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        isFileSelected = true;
+    }
+
+    private async Task UploadDocument()
+    {
+        if (selectedFile == null || newDocumento.TipoDocumentoId <= 0 || string.IsNullOrWhiteSpace(newDocumento.Nombre))
+        {
+            ToastService.ShowWarning("Por favor complete todos los campos obligatorios.");
+            return;
+        }
+
+        await OnUploadDocument.InvokeAsync();
+    }
+
+    public DocumentoDto GetDocumento() => newDocumento;
+    public IBrowserFile? GetSelectedFile() => selectedFile;
+}

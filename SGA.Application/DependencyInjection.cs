@@ -25,6 +25,9 @@ public static class DependencyInjection
         services.AddScoped<IObrasAcademicasService, ObrasAcademicasService>();
         services.AddScoped<INotificationService, NotificationService>();
         
+        // Servicios para certificados de capacitación
+        services.AddScoped<ICertificadosCapacitacionService, CertificadosCapacitacionService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         

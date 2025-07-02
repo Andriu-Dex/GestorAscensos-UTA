@@ -12,6 +12,7 @@ public class NotificationService : INotificationService
         _logger = logger;
     }
 
+    // Notificaciones para obras académicas
     public async Task NotificarNuevaSolicitudObrasAsync(string nombreDocente, int cantidadObras)
     {
         try
@@ -61,6 +62,56 @@ public class NotificationService : INotificationService
         }
     }
 
+    // Notificaciones para certificados de capacitación
+    public async Task NotificarNuevaSolicitudCertificadosAsync(string nombreDocente, int cantidadCertificados)
+    {
+        try
+        {
+            _logger.LogInformation("Nueva solicitud de certificados de capacitación de {NombreDocente}: {CantidadCertificados} certificados", 
+                nombreDocente, cantidadCertificados);
+            
+            // TODO: Enviar notificación a administradores sobre nueva solicitud de certificados
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar nueva solicitud de certificados");
+        }
+    }
+
+    public async Task NotificarAprobacionCertificadoAsync(string emailDocente, string nombreCurso, string comentarios)
+    {
+        try
+        {
+            _logger.LogInformation("Certificado aprobado para {EmailDocente}: {NombreCurso}", 
+                emailDocente, nombreCurso);
+            
+            // TODO: Enviar email al docente notificando la aprobación del certificado
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar aprobación de certificado");
+        }
+    }
+
+    public async Task NotificarRechazoCertificadoAsync(string emailDocente, string nombreCurso, string motivo)
+    {
+        try
+        {
+            _logger.LogInformation("Certificado rechazado para {EmailDocente}: {NombreCurso}, Motivo: {Motivo}", 
+                emailDocente, nombreCurso, motivo);
+            
+            // TODO: Enviar email al docente notificando el rechazo del certificado
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar rechazo de certificado");
+        }
+    }
+
+    // Notificaciones generales
     public async Task NotificarCambioEstadoSolicitudAsync(string emailDocente, string tipoSolicitud, string nuevoEstado)
     {
         try

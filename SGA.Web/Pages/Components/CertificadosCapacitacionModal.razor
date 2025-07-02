@@ -1,0 +1,270 @@
+@using SGA.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+@inject IToastService ToastService
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Solicitar Certificados de Capacitación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnClose"></button>
+                </div>
+                <div class="modal-body">
+                    @if (nuevosCertificados != null && nuevosCertificados.Count > 0)
+                    {
+                        @for (int i = 0; i < nuevosCertificados.Count; i++)
+                        {
+                            var index = i; // Capturar el índice para el lambda
+                            var certificado = nuevosCertificados[index];
+                            
+                            <div class="card mb-3 @(index > 0 ? "border-secondary" : "")">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: @(index == 0 ? "#8a1538" : "#6c757d"); color: white;">
+                                    <h6 class="mb-0">Certificado @(index + 1)</h6>
+                                    @if (nuevosCertificados.Count > 1)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-light" @onclick="() => RemoverCertificado(index)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Nombre del Curso *</label>
+                                                <input type="text" class="form-control" @bind="certificado.NombreCurso" 
+                                                       placeholder="Ingrese el nombre del curso" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Institución Oferente *</label>
+                                                <input type="text" class="form-control" @bind="certificado.InstitucionOfertante" 
+                                                       placeholder="Institución que ofrece el curso" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Tipo de Capacitación *</label>
+                                                <select class="form-select" @bind="certificado.TipoCapacitacion">
+                                                    <option value="">Seleccione...</option>
+                                                    <option value="Curso">Curso</option>
+                                                    <option value="Diplomado">Diplomado</option>
+                                                    <option value="Seminario">Seminario</option>
+                                                    <option value="Taller">Taller</option>
+                                                    <option value="Conferencia">Conferencia</option>
+                                                    <option value="Especialización">Especialización</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Modalidad *</label>
+                                                <select class="form-select" @bind="certificado.Modalidad">
+                                                    <option value="">Seleccione...</option>
+                                                    <option value="Presencial">Presencial</option>
+                                                    <option value="Virtual">Virtual</option>
+                                                    <option value="Híbrida">Híbrida</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Horas de Duración *</label>
+                                                <input type="number" class="form-control" @bind="certificado.HorasDuracion" 
+                                                       min="1" placeholder="Horas del curso" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Fecha de Inicio *</label>
+                                                <input type="date" class="form-control" @bind="certificado.FechaInicio" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Fecha de Fin *</label>
+                                                <input type="date" class="form-control" @bind="certificado.FechaFin" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Número de Registro</label>
+                                                <input type="text" class="form-control" @bind="certificado.NumeroRegistro" 
+                                                       placeholder="Número de certificado/registro" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Área Temática</label>
+                                                <input type="text" class="form-control" @bind="certificado.AreaTematica" 
+                                                       placeholder="Área temática del curso" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Descripción</label>
+                                        <textarea class="form-control" rows="3" @bind="certificado.Descripcion" 
+                                                  placeholder="Descripción del curso y contenidos relevantes"></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Archivo del Certificado (PDF, máximo 10MB) *</label>
+                                        <InputFile class="form-control" OnChange="(e) => OnFileSelectedCertificado(e, index)" accept=".pdf" />
+                                        @if (!string.IsNullOrEmpty(certificado.ArchivoNombre))
+                                        {
+                                            <small class="text-success">
+                                                <i class="bi bi-check-circle"></i> Archivo: @certificado.ArchivoNombre
+                                            </small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="text-center mb-3">
+                            <button type="button" class="btn btn-outline-primary" @onclick="AgregarOtroCertificado">
+                                <i class="bi bi-plus-circle"></i> Agregar Otro Certificado
+                            </button>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnClose">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="EnviarCertificados" disabled="@(IsEnviando || !PuedeEnviarCertificados())">
+                        @if (IsEnviando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Enviar Solicitud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsEnviando { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnEnviarSolicitud { get; set; }
+    
+    private List<CrearCertificadoCapacitacionDto> nuevosCertificados = new();
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && nuevosCertificados.Count == 0)
+        {
+            nuevosCertificados = new List<CrearCertificadoCapacitacionDto>
+            {
+                new CrearCertificadoCapacitacionDto
+                {
+                    FechaInicio = DateTime.Today,
+                    FechaFin = DateTime.Today.AddDays(1)
+                }
+            };
+        }
+    }
+
+    private void AgregarOtroCertificado()
+    {
+        nuevosCertificados.Add(new CrearCertificadoCapacitacionDto
+        {
+            FechaInicio = DateTime.Today,
+            FechaFin = DateTime.Today.AddDays(1)
+        });
+    }
+
+    private void RemoverCertificado(int index)
+    {
+        if (nuevosCertificados.Count > 1)
+        {
+            nuevosCertificados.RemoveAt(index);
+        }
+    }
+
+    private async Task OnFileSelectedCertificado(InputFileChangeEventArgs e, int index)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            if (file.Size <= 10 * 1024 * 1024) // 10MB max
+            {
+                try
+                {
+                    nuevosCertificados[index].ArchivoNombre = file.Name;
+                    nuevosCertificados[index].ArchivoTipo = file.ContentType;
+                    
+                    using var stream = file.OpenReadStream(10 * 1024 * 1024);
+                    using var memoryStream = new MemoryStream();
+                    await stream.CopyToAsync(memoryStream);
+                    nuevosCertificados[index].ArchivoContenido = Convert.ToBase64String(memoryStream.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    ToastService.ShowError($"Error al leer el archivo: {ex.Message}");
+                    nuevosCertificados[index].ArchivoNombre = null;
+                    nuevosCertificados[index].ArchivoContenido = null;
+                }
+            }
+            else
+            {
+                ToastService.ShowError("El archivo debe ser menor a 10MB");
+            }
+        }
+    }
+
+    private bool PuedeEnviarCertificados()
+    {
+        return nuevosCertificados.Any() && nuevosCertificados.All(c => 
+            !string.IsNullOrWhiteSpace(c.NombreCurso) && 
+            !string.IsNullOrWhiteSpace(c.InstitucionOfertante) &&
+            !string.IsNullOrWhiteSpace(c.TipoCapacitacion) &&
+            !string.IsNullOrWhiteSpace(c.Modalidad) &&
+            c.HorasDuracion > 0 &&
+            c.FechaInicio != default &&
+            c.FechaFin != default &&
+            c.FechaFin >= c.FechaInicio &&
+            !string.IsNullOrEmpty(c.ArchivoContenido));
+    }
+
+    private async Task EnviarCertificados()
+    {
+        if (!PuedeEnviarCertificados()) return;
+        
+        await OnEnviarSolicitud.InvokeAsync();
+    }
+
+    public List<CrearCertificadoCapacitacionDto> GetNuevosCertificados()
+    {
+        return nuevosCertificados;
+    }
+
+    public void LimpiarFormulario()
+    {
+        nuevosCertificados = new List<CrearCertificadoCapacitacionDto>
+        {
+            new CrearCertificadoCapacitacionDto
+            {
+                FechaInicio = DateTime.Today,
+                FechaFin = DateTime.Today.AddDays(1)
+            }
+        };
+    }
+}

@@ -25,6 +25,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<LogAuditoria> LogsAuditoria { get; set; }
     public DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
     public DbSet<ObraAcademica> ObrasAcademicas { get; set; }
+    public DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -166,6 +167,46 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.HasIndex(e => e.DocenteId);
             entity.HasIndex(e => new { e.DocenteId, e.FechaPublicacion });
             entity.HasIndex(e => new { e.Titulo, e.DocenteId }).IsUnique();
+        });
+
+        // Configuración SolicitudCertificadoCapacitacion
+        modelBuilder.Entity<SolicitudCertificadoCapacitacion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DocenteCedula).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.NombreCurso).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.InstitucionOfertante).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.TipoCapacitacion).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FechaInicio).IsRequired();
+            entity.Property(e => e.FechaFin).IsRequired();
+            entity.Property(e => e.HorasDuracion).IsRequired();
+            entity.Property(e => e.Modalidad).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.NumeroRegistro).HasMaxLength(100);
+            entity.Property(e => e.AreaTematica).HasMaxLength(200);
+            entity.Property(e => e.Descripcion).HasMaxLength(2000);
+            entity.Property(e => e.ArchivoNombre).HasMaxLength(255);
+            entity.Property(e => e.ArchivoRuta).HasMaxLength(500);
+            entity.Property(e => e.ArchivoTipo).HasMaxLength(100);
+            entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ComentariosRevision).HasMaxLength(1000);
+            entity.Property(e => e.MotivoRechazo).HasMaxLength(1000);
+            entity.Property(e => e.ComentariosSolicitud).HasMaxLength(1000);
+            
+            entity.HasIndex(e => e.DocenteCedula);
+            entity.HasIndex(e => e.SolicitudGrupoId);
+            entity.HasIndex(e => e.Estado);
+            entity.HasIndex(e => e.FechaInicio);
+            entity.HasIndex(e => e.FechaFin);
+            
+            entity.HasOne(e => e.Docente)
+                  .WithMany()
+                  .HasForeignKey(e => e.DocenteId)
+                  .OnDelete(DeleteBehavior.Restrict);
+                  
+            entity.HasOne(e => e.RevisadoPor)
+                  .WithMany()
+                  .HasForeignKey(e => e.RevisadoPorId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Datos semilla
