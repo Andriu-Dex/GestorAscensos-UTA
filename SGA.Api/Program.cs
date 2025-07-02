@@ -79,7 +79,7 @@ builder.Services.AddSwaggerGen(options =>
 // Configurar CORS con orígenes desde configuración
 var corsOrigins = builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>() 
                  ?? Environment.GetEnvironmentVariable("SGA_CORS_ORIGINS")?.Split(',')
-                 ?? new[] { "https://localhost:7149", "http://localhost:5039" };
+                 ?? new[] { "https://localhost:7149", "http://localhost:5039", "http://localhost:7149" };
 
 builder.Services.AddCors(options =>
 {
@@ -88,7 +88,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials()
+              .SetIsOriginAllowed(origin => true); // Permitir redirects en preflight requests
     });
 });
 
@@ -136,8 +137,8 @@ if (app.Environment.IsDevelopment())
 }
 
 // Configurar HTTPS redirection para producción y desarrollo
-app.UseHttpsRedirection();
 app.UseCors("AllowBlazorApp");
+app.UseHttpsRedirection();
 
 // Middleware personalizado para autenticación por query string
 app.UseMiddleware<QueryStringAuthenticationMiddleware>();

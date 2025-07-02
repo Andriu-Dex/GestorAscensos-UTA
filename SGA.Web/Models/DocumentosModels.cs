@@ -186,4 +186,103 @@ namespace SGA.Web.Models
         public string Mensaje { get; set; } = string.Empty;
         public object? Datos { get; set; }
     }
+
+    // DTOs para evidencias de investigación
+    public class EvidenciaInvestigacionViewModel
+    {
+        public Guid Id { get; set; }
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string TipoEvidencia { get; set; } = string.Empty;
+        public string TituloProyecto { get; set; } = string.Empty;
+        public string InstitucionFinanciadora { get; set; } = string.Empty;
+        public string RolInvestigador { get; set; } = string.Empty;
+        public DateTime FechaInicio { get; set; }
+        public DateTime? FechaFin { get; set; }
+        public int MesesDuracion { get; set; }
+        public string? CodigoProyecto { get; set; }
+        public string? AreaTematica { get; set; }
+        public string? Descripcion { get; set; }
+        public string ArchivoNombre { get; set; } = string.Empty;
+        public bool TieneArchivo { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public string? MotivoRechazo { get; set; }
+        public string? ComentariosRevision { get; set; }
+        public string? ComentariosSolicitud { get; set; }
+        public DateTime? FechaRevision { get; set; }
+    }
+
+    public class CrearEvidenciaInvestigacionDto
+    {
+        public string TipoEvidencia { get; set; } = string.Empty;
+        public string TituloProyecto { get; set; } = string.Empty;
+        public string InstitucionFinanciadora { get; set; } = string.Empty;
+        public string RolInvestigador { get; set; } = string.Empty;
+        public DateTime FechaInicio { get; set; } = DateTime.Now;
+        public DateTime? FechaFin { get; set; }
+        public int MesesDuracion { get; set; }
+        public string? CodigoProyecto { get; set; }
+        public string? AreaTematica { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ComentariosSolicitud { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public string? ArchivoContenido { get; set; }
+        public string ArchivoTipo { get; set; } = "application/pdf";
+    }
+
+    public class SolicitarEvidenciasInvestigacionDto
+    {
+        public List<CrearEvidenciaInvestigacionDto> Evidencias { get; set; } = new();
+    }
+
+    public class ResponseEvidenciasInvestigacionDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public List<EvidenciaInvestigacionViewModel> Evidencias { get; set; } = new();
+        public int TotalEvidencias { get; set; }
+    }
+
+    public class EditarMetadatosEvidenciaDto
+    {
+        public string? TipoEvidencia { get; set; }
+        public string? TituloProyecto { get; set; }
+        public string? InstitucionFinanciadora { get; set; }
+        public string? RolInvestigador { get; set; }
+        public DateTime? FechaInicio { get; set; }
+        public DateTime? FechaFin { get; set; }
+        public int? MesesDuracion { get; set; }
+        public string? CodigoProyecto { get; set; }
+        public string? AreaTematica { get; set; }
+        public string? Descripcion { get; set; }
+    }
+
+    public class ReemplazarArchivoEvidenciaDto
+    {
+        public string ArchivoNombre { get; set; } = string.Empty;
+        public string ArchivoContenido { get; set; } = string.Empty;
+        public string ArchivoTipo { get; set; } = "application/pdf";
+    }
+
+    public class ResponseGenericoEvidenciaDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public object? Datos { get; set; }
+    }
+
+    public class ResponseSolicitudesEvidenciasAdminDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
+        public List<EvidenciaInvestigacionViewModel> Evidencias { get; set; } = new();
+        public int TotalEvidencias { get; set; }
+    }
+
+    public class RevisionSolicitudEvidenciaDto
+    {
+        public Guid SolicitudId { get; set; }
+        public string Accion { get; set; } = string.Empty; // "Aprobar" o "Rechazar"
+        public string? Comentarios { get; set; }
+    }
 }

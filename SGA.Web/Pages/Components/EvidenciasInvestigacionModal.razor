@@ -1,0 +1,386 @@
+@using SGA.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+@using System.Text.Json
+@inject Blazored.Toast.Services.IToastService ToastService
+@inject HttpClient HttpClient
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Solicitar Evidencias de Investigación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnClose"></button>
+                </div>
+                <div class="modal-body">
+                    @if (nuevasEvidencias != null && nuevasEvidencias.Count > 0)
+                    {
+                        @for (int i = 0; i < nuevasEvidencias.Count; i++)
+                        {
+                            var index = i; // Capturar el índice para el lambda
+                            var evidencia = nuevasEvidencias[index];
+                            
+                            <div class="card mb-3 @(index > 0 ? "border-secondary" : "")">
+                                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: @(index == 0 ? "#8a1538" : "#6c757d"); color: white;">
+                                    <h6 class="mb-0">Evidencia @(index + 1)</h6>
+                                    @if (nuevasEvidencias.Count > 1)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-light" @onclick="() => RemoverEvidencia(index)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Tipo de Evidencia *</label>
+                                                <select class="form-select" @bind="evidencia.TipoEvidencia" required>
+                                                    <option value="">Seleccione un tipo</option>
+                                                    <option value="Proyecto">Proyecto</option>
+                                                    <option value="Publicación">Publicación</option>
+                                                    <option value="Participación">Participación</option>
+                                                    <option value="Dirección">Dirección</option>
+                                                    <option value="Colaboración">Colaboración</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Título del Proyecto *</label>
+                                                <input type="text" class="form-control" @bind="evidencia.TituloProyecto" 
+                                                       placeholder="Ingrese el título del proyecto" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Institución Financiadora</label>
+                                                <input type="text" class="form-control" @bind="evidencia.InstitucionFinanciadora" 
+                                                       placeholder="Institución que financia el proyecto" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Rol del Investigador *</label>
+                                                <select class="form-select" @bind="evidencia.RolInvestigador" required>
+                                                    <option value="">Seleccione un rol</option>
+                                                    <option value="Director">Director</option>
+                                                    <option value="Investigador Principal">Investigador Principal</option>
+                                                    <option value="Co-investigador">Co-investigador</option>
+                                                    <option value="Colaborador">Colaborador</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Fecha de Inicio *</label>
+                                                <input type="date" class="form-control" @bind="evidencia.FechaInicio" 
+                                                       @oninput="() => CalcularDuracion(evidencia)" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Fecha de Fin</label>
+                                                <input type="date" class="form-control" @bind="evidencia.FechaFin" 
+                                                       @oninput="() => CalcularDuracion(evidencia)" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">Duración (meses) *</label>
+                                                <input type="number" class="form-control" @bind="evidencia.MesesDuracion" 
+                                                       min="1" max="120" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Código del Proyecto</label>
+                                                <input type="text" class="form-control" @bind="evidencia.CodigoProyecto" 
+                                                       placeholder="Código o referencia del proyecto" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Área Temática</label>
+                                                <input type="text" class="form-control" @bind="evidencia.AreaTematica" 
+                                                       placeholder="Área de conocimiento o temática" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Descripción</label>
+                                        <textarea class="form-control" @bind="evidencia.Descripcion" rows="3"
+                                                  placeholder="Descripción detallada del proyecto o actividad de investigación"></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Archivo PDF *</label>
+                                        <InputFile class="form-control" OnChange="(e) => OnFileChange(e, index)" accept=".pdf" />
+                                        <div class="form-text">
+                                            Solo se permiten archivos PDF (máximo 10 MB). Debe ser una evidencia que respalde la participación en investigación.
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(evidencia.ArchivoNombre))
+                                        {
+                                            <div class="mt-2">
+                                                <small class="text-success">
+                                                    <i class="bi bi-check-circle"></i> Archivo seleccionado: @evidencia.ArchivoNombre
+                                                </small>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <button type="button" class="btn btn-outline-primary" @onclick="AgregarEvidencia">
+                                <i class="bi bi-plus-circle"></i> Agregar Otra Evidencia
+                            </button>
+                            <small class="text-muted">Puede agregar múltiples evidencias a la vez</small>
+                        </div>
+                    }
+
+                    @if (errorMessage != null)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @errorMessage
+                        </div>
+                    }
+
+                    @if (successMessage != null)
+                    {
+                        <div class="alert alert-success" role="alert">
+                            @successMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnClose">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="GuardarEvidencias" 
+                            style="background-color: #8a1538; border-color: #8a1538;" 
+                            disabled="@(!PuedeGuardar() || isLoading)">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Enviar Evidencias
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnEvidenciasCreated { get; set; }
+
+    private List<CrearEvidenciaInvestigacionDto> nuevasEvidencias = new();
+    private string? errorMessage = null;
+    private string? successMessage = null;
+    private bool isLoading = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && nuevasEvidencias.Count == 0)
+        {
+            InicializarEvidencias();
+        }
+        else if (!IsVisible)
+        {
+            LimpiarFormulario();
+        }
+    }
+
+    private void InicializarEvidencias()
+    {
+        nuevasEvidencias = new List<CrearEvidenciaInvestigacionDto>
+        {
+            new CrearEvidenciaInvestigacionDto
+            {
+                FechaInicio = DateTime.Today,
+                MesesDuracion = 1
+            }
+        };
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private void AgregarEvidencia()
+    {
+        nuevasEvidencias.Add(new CrearEvidenciaInvestigacionDto
+        {
+            FechaInicio = DateTime.Today,
+            MesesDuracion = 1
+        });
+        StateHasChanged();
+    }
+
+    private void RemoverEvidencia(int index)
+    {
+        if (nuevasEvidencias.Count > 1 && index < nuevasEvidencias.Count)
+        {
+            nuevasEvidencias.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void CalcularDuracion(CrearEvidenciaInvestigacionDto evidencia)
+    {
+        if (evidencia.FechaFin.HasValue && evidencia.FechaInicio < evidencia.FechaFin.Value)
+        {
+            var diferencia = evidencia.FechaFin.Value - evidencia.FechaInicio;
+            evidencia.MesesDuracion = Math.Max(1, (int)Math.Round(diferencia.TotalDays / 30.44));
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnFileChange(InputFileChangeEventArgs e, int index)
+    {
+        if (index < 0 || index >= nuevasEvidencias.Count) return;
+
+        var file = e.File;
+        var evidencia = nuevasEvidencias[index];
+
+        if (file != null)
+        {
+            if (file.ContentType != "application/pdf")
+            {
+                errorMessage = "Solo se permiten archivos PDF.";
+                return;
+            }
+
+            if (file.Size > 10 * 1024 * 1024) // 10 MB
+            {
+                errorMessage = "El archivo no puede ser mayor a 10 MB.";
+                return;
+            }
+
+            try
+            {
+                using var stream = file.OpenReadStream(10 * 1024 * 1024);
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                var fileBytes = memoryStream.ToArray();
+
+                evidencia.ArchivoNombre = file.Name;
+                evidencia.ArchivoContenido = Convert.ToBase64String(fileBytes);
+                evidencia.ArchivoTipo = file.ContentType;
+
+                errorMessage = null;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al procesar el archivo: {ex.Message}";
+            }
+        }
+    }
+
+    private bool PuedeGuardar()
+    {
+        return nuevasEvidencias.Any() && 
+               nuevasEvidencias.All(e => 
+                   !string.IsNullOrWhiteSpace(e.TipoEvidencia) &&
+                   !string.IsNullOrWhiteSpace(e.TituloProyecto) &&
+                   !string.IsNullOrWhiteSpace(e.RolInvestigador) &&
+                   e.MesesDuracion > 0 &&
+                   !string.IsNullOrWhiteSpace(e.ArchivoContenido)
+               );
+    }
+
+    private async Task GuardarEvidencias()
+    {
+        if (!PuedeGuardar()) return;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            successMessage = null;
+            StateHasChanged();
+
+            var solicitud = new SolicitarEvidenciasInvestigacionDto
+            {
+                Evidencias = nuevasEvidencias
+            };
+
+            // Configurar token de autenticación
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (string.IsNullOrEmpty(token))
+            {
+                errorMessage = "Sesión expirada. Por favor, inicie sesión nuevamente.";
+                return;
+            }
+
+            HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Enviar solicitud a la API
+            var response = await HttpClient.PostAsJsonAsync("api/evidencias-investigacion/solicitar", solicitud);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseData = JsonSerializer.Deserialize<ResponseEvidenciasInvestigacionDto>(
+                    responseContent, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                if (responseData?.Exitoso == true)
+                {
+                    await OnEvidenciasCreated.InvokeAsync();
+                    successMessage = "Evidencias de investigación solicitadas exitosamente.";
+                    
+                    // Esperar un momento para mostrar el mensaje y luego cerrar
+                    await Task.Delay(1500);
+                    await OnClose.InvokeAsync();
+                }
+                else
+                {
+                    errorMessage = responseData?.Mensaje ?? "Error al procesar la solicitud.";
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Sesión expirada. Por favor, inicie sesión nuevamente.";
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Error del servidor: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar las evidencias: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void LimpiarFormulario()
+    {
+        nuevasEvidencias.Clear();
+        errorMessage = null;
+        successMessage = null;
+        isLoading = false;
+    }
+}

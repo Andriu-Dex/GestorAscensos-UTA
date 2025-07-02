@@ -1,0 +1,390 @@
+/* Estilos específicos para evidencias de investigación */
+
+/* Badges de tipo de evidencia */
+.evidencia-badge {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+}
+
+.evidencia-badge.proyecto {
+  background-color: #007bff;
+  color: white;
+}
+
+.evidencia-badge.publicacion {
+  background-color: #28a745;
+  color: white;
+}
+
+.evidencia-badge.participacion {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.evidencia-badge.direccion {
+  background-color: #8a1538;
+  color: white;
+}
+
+.evidencia-badge.colaboracion {
+  background-color: #6f42c1;
+  color: white;
+}
+
+/* Estados de evidencias */
+.estado-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.estado-pendiente {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.estado-aprobada {
+  background-color: #d1edff;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.estado-rechazada {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Cards de evidencias */
+.evidencia-card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.evidencia-card:hover {
+  border-color: #8a1538;
+  box-shadow: 0 0.5rem 1rem rgba(138, 21, 56, 0.15);
+  transform: translateY(-2px);
+}
+
+.evidencia-card .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+}
+
+.evidencia-card .card-header.primary {
+  background-color: #8a1538;
+  color: white;
+}
+
+/* Controles de filtros */
+.filtros-container {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.filtros-container .form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.filtros-container .form-select,
+.filtros-container .form-control {
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.filtros-container .form-select:focus,
+.filtros-container .form-control:focus {
+  border-color: #8a1538;
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+/* Botones de estado */
+.btn-estado {
+  border-radius: 2rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-estado:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-estado.active {
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.25);
+}
+
+/* Tabla de evidencias */
+.tabla-evidencias {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.tabla-evidencias .table-header {
+  background-color: #8a1538;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+}
+
+.tabla-evidencias tbody tr {
+  transition: background-color 0.15s ease-in-out;
+}
+
+.tabla-evidencias tbody tr:hover {
+  background-color: rgba(138, 21, 56, 0.05);
+}
+
+/* Botones de acciones */
+.btn-acciones {
+  padding: 0.25rem 0.5rem;
+  margin: 0.125rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+.btn-acciones i {
+  font-size: 0.875rem;
+}
+
+/* Modal de revisión */
+.modal-revision .modal-header {
+  background: linear-gradient(135deg, #8a1538 0%, #a91e4a 100%);
+  color: white;
+  border-bottom: none;
+}
+
+.modal-revision .modal-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.modal-revision .modal-body {
+  padding: 2rem;
+}
+
+.modal-revision .card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  box-shadow: none;
+}
+
+.modal-revision .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Visualizador de PDF */
+.pdf-viewer-container {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  background-color: #f8f9fa;
+}
+
+.pdf-viewer-container iframe {
+  width: 100%;
+  height: 400px;
+  border: none;
+  background-color: white;
+}
+
+/* Radio buttons personalizados */
+.form-check-input:checked[type="radio"] {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.form-check-input[type="radio"]:focus {
+  border-color: #8a1538;
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+/* Spinners de carga */
+.spinner-evidencias {
+  color: #8a1538;
+  width: 2rem;
+  height: 2rem;
+}
+
+.spinner-evidencias.sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Alerts personalizadas */
+.alert-evidencia {
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+}
+
+.alert-evidencia.alert-info {
+  background-color: #e7f3ff;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-evidencia.alert-warning {
+  background-color: #fff8e1;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-evidencia.alert-success {
+  background-color: #e8f5e8;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-evidencia.alert-danger {
+  background-color: #ffeaa7;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+/* Animaciones */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-in-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+  .filtros-container {
+    padding: 1rem;
+  }
+
+  .btn-estado {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tabla-evidencias {
+    font-size: 0.875rem;
+  }
+
+  .btn-acciones {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .modal-revision .modal-body {
+    padding: 1rem;
+  }
+
+  .pdf-viewer-container iframe {
+    height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .evidencia-card {
+    margin-bottom: 1rem;
+  }
+
+  .btn-grupo-acciones {
+    flex-direction: column;
+  }
+
+  .btn-grupo-acciones .btn {
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Tooltips personalizados */
+.tooltip-evidencia {
+  font-size: 0.875rem;
+}
+
+.tooltip-evidencia .tooltip-inner {
+  background-color: #8a1538;
+  color: white;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.tooltip-evidencia .tooltip-arrow::before {
+  border-top-color: #8a1538;
+}
+
+/* Feedback de validación */
+.is-invalid {
+  border-color: #dc3545;
+  background-image: none;
+}
+
+.invalid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  color: #dc3545;
+}
+
+.is-valid {
+  border-color: #28a745;
+}
+
+.valid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  color: #28a745;
+}

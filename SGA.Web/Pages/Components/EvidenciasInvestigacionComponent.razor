@@ -1,0 +1,386 @@
+@using SGA.Web.Models
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="card mb-4">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #8a1538;">
+        <h5 class="mb-0">Evidencias de Investigación</h5>
+        <button class="btn btn-light" @onclick="() => ShowEvidenciasModal()">
+            <i class="bi bi-plus-circle"></i> Agregar Evidencias
+        </button>
+    </div>
+    <div class="card-body">
+        <!-- Filtros por Estado -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Filtrar por Estado:</label>
+                <select class="form-select" @onchange="OnEstadoFilterChanged">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Aprobada">Aprobada</option>
+                    <option value="Rechazada">Rechazada</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Filtrar por Tipo:</label>
+                <select class="form-select" @onchange="OnTipoFilterChanged">
+                    <option value="">Todos los tipos</option>
+                    <option value="Proyecto">Proyecto</option>
+                    <option value="Publicación">Publicación</option>
+                    <option value="Participación">Participación</option>
+                    <option value="Dirección">Dirección</option>
+                    <option value="Colaboración">Colaboración</option>
+                </select>
+            </div>
+            @if (!string.IsNullOrEmpty(selectedEstado) || !string.IsNullOrEmpty(selectedTipo))
+            {
+                <div class="col-md-12 mt-2">
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Limpiar Filtros
+                    </button>
+                </div>
+            }
+        </div>
+
+        @if (isLoadingEvidencias)
+        {
+            <div class="d-flex justify-content-center my-3">
+                <div class="spinner-border" style="color: #8a1538;" role="status">
+                    <span class="visually-hidden">Cargando evidencias...</span>
+                </div>
+            </div>
+        }
+        else if (evidenciasFiltradas == null || !evidenciasFiltradas.Any())
+        {
+            @if (string.IsNullOrEmpty(selectedEstado) && string.IsNullOrEmpty(selectedTipo))
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene evidencias de investigación registradas. Utilice el botón "Agregar Evidencias" para solicitar la inclusión de nuevas evidencias.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning" role="alert">
+                    No hay evidencias que coincidan con los filtros seleccionados.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tipo de Evidencia</th>
+                            <th>Título del Proyecto</th>
+                            <th>Institución</th>
+                            <th>Rol</th>
+                            <th>Período</th>
+                            <th>Duración</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var evidencia in evidenciasFiltradas)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge" style="background-color: @GetTipoColor(evidencia.TipoEvidencia)">
+                                        @evidencia.TipoEvidencia
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>@evidencia.TituloProyecto</strong>
+                                    @if (!string.IsNullOrEmpty(evidencia.CodigoProyecto))
+                                    {
+                                        <br><small class="text-muted">Código: @evidencia.CodigoProyecto</small>
+                                    }
+                                </td>
+                                <td>@evidencia.InstitucionFinanciadora</td>
+                                <td>@evidencia.RolInvestigador</td>
+                                <td>
+                                    <small>
+                                        @evidencia.FechaInicio.ToString("dd/MM/yyyy") - 
+                                        @(evidencia.FechaFin?.ToString("dd/MM/yyyy") ?? "En curso")
+                                    </small>
+                                </td>
+                                <td>@evidencia.MesesDuracion meses</td>
+                                <td>
+                                    @if (evidencia.Estado == "Pendiente")
+                                    {
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    }
+                                    else if (evidencia.Estado == "Aprobada")
+                                    {
+                                        <span class="badge bg-success">Aprobada</span>
+                                    }
+                                    else if (evidencia.Estado == "Rechazada")
+                                    {
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if (PuedeVisualizarEvidencia(evidencia.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => VisualizarEvidencia(evidencia.Id)"
+                                                    title="Visualizar">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (evidencia.Estado == "Aprobada")
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => DescargarEvidencia(evidencia.Id)"
+                                                    title="Descargar">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEditarEvidencia(evidencia.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-warning" 
+                                                    @onclick="() => EditarEvidencia(evidencia)"
+                                                    title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeReemplazarArchivoEvidencia(evidencia.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    @onclick="() => ReemplazarArchivoEvidencia(evidencia)"
+                                                    title="Reemplazar Archivo">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (evidencia.Estado == "Rechazada" && !string.IsNullOrEmpty(evidencia.MotivoRechazo))
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => VerMotivoRechazoEvidencia(evidencia)"
+                                                    title="Ver Motivo de Rechazo">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (PuedeEliminarEvidencia(evidencia.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => EliminarEvidencia(evidencia)"
+                                                    title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal para agregar evidencias -->
+<EvidenciasInvestigacionModal IsVisible="showEvidenciasModal" 
+                              OnClose="CloseEvidenciasModal"
+                              OnEvidenciasCreated="OnEvidenciasCreated" />
+
+<!-- Modal para editar metadatos -->
+@if (evidenciaToEdit != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Editar Evidencia de Investigación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelEdit"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="evidenciaToEdit" OnValidSubmit="SaveEditedEvidencia">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tipo de Evidencia *</label>
+                                    <select class="form-select" @bind="evidenciaToEdit.TipoEvidencia">
+                                        <option value="Proyecto">Proyecto</option>
+                                        <option value="Publicación">Publicación</option>
+                                        <option value="Participación">Participación</option>
+                                        <option value="Dirección">Dirección</option>
+                                        <option value="Colaboración">Colaboración</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Título del Proyecto *</label>
+                                    <input type="text" class="form-control" @bind="evidenciaToEdit.TituloProyecto" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Institución Financiadora</label>
+                                    <input type="text" class="form-control" @bind="evidenciaToEdit.InstitucionFinanciadora" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Rol del Investigador *</label>
+                                    <select class="form-select" @bind="evidenciaToEdit.RolInvestigador">
+                                        <option value="Director">Director</option>
+                                        <option value="Investigador Principal">Investigador Principal</option>
+                                        <option value="Co-investigador">Co-investigador</option>
+                                        <option value="Colaborador">Colaborador</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha de Inicio *</label>
+                                    <input type="date" class="form-control" @bind="evidenciaToEdit.FechaInicio" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha de Fin</label>
+                                    <input type="date" class="form-control" @bind="evidenciaToEdit.FechaFin" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Duración (meses) *</label>
+                                    <input type="number" class="form-control" @bind="evidenciaToEdit.MesesDuracion" min="1" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Código del Proyecto</label>
+                                    <input type="text" class="form-control" @bind="evidenciaToEdit.CodigoProyecto" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Área Temática</label>
+                                    <input type="text" class="form-control" @bind="evidenciaToEdit.AreaTematica" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" @bind="evidenciaToEdit.Descripcion" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" style="background-color: #8a1538; border-color: #8a1538;">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal para reemplazar archivo -->
+@if (evidenciaToReplaceFile != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Reemplazar Archivo</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelReplaceFile"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Reemplazar archivo para: <strong>@evidenciaToReplaceFile.TituloProyecto</strong></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nuevo archivo PDF *</label>
+                        <InputFile class="form-control" OnChange="OnReplaceFileSelected" accept=".pdf" />
+                        <div class="form-text">Solo se permiten archivos PDF (máximo 10 MB)</div>
+                    </div>
+                    
+                    @if (replaceFileError != null)
+                    {
+                        <div class="alert alert-danger">@replaceFileError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelReplaceFile">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveReplacedFile" 
+                            style="background-color: #8a1538; border-color: #8a1538;" 
+                            disabled="@(newFile == null || isReplacingFile)">
+                        @if (isReplacingFile)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Reemplazar Archivo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal para mostrar motivo de rechazo -->
+@if (evidenciaRechazada != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Evidencia Rechazada</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarMotivoRechazo"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>@evidenciaRechazada.TituloProyecto</h6>
+                    <hr />
+                    <p><strong>Motivo del rechazo:</strong></p>
+                    <div class="alert alert-danger">
+                        @evidenciaRechazada.MotivoRechazo
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(evidenciaRechazada.ComentariosRevision))
+                    {
+                        <p><strong>Comentarios adicionales:</strong></p>
+                        <div class="alert alert-info">
+                            @evidenciaRechazada.ComentariosRevision
+                        </div>
+                    }
+                    
+                    @if (evidenciaRechazada.FechaRevision.HasValue)
+                    {
+                        <small class="text-muted">
+                            Fecha de revisión: @evidenciaRechazada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                        </small>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarMotivoRechazo">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}

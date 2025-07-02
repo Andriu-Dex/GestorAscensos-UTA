@@ -37,6 +37,11 @@
         OnReemplazarArchivoCertificado="ReemplazarArchivoCertificado"
         OnVerMotivoRechazoCertificado="VerMotivoRechazoCertificado"
         OnEliminarCertificado="EliminarCertificado" />
+
+    <!-- Componente de Evidencias de Investigación -->
+    <EvidenciasInvestigacionComponent 
+        ShowComponent="true"
+        OnEvidenciasChanged="@(async () => await InvokeAsync(StateHasChanged))" />
 </div>
 
 <!-- Modales -->

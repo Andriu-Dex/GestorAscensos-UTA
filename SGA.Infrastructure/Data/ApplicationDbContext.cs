@@ -26,6 +26,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
     public DbSet<ObraAcademica> ObrasAcademicas { get; set; }
     public DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
+    public DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,6 +208,41 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                   .WithMany()
                   .HasForeignKey(e => e.RevisadoPorId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuración SolicitudEvidenciaInvestigacion
+        modelBuilder.Entity<SolicitudEvidenciaInvestigacion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DocenteCedula).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.TipoEvidencia).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.TituloProyecto).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.InstitucionFinanciadora).HasMaxLength(255);
+            entity.Property(e => e.CodigoProyecto).HasMaxLength(100);
+            entity.Property(e => e.RolInvestigador).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FechaInicio).IsRequired();
+            entity.Property(e => e.FechaFin);
+            entity.Property(e => e.MesesDuracion).IsRequired();
+            entity.Property(e => e.AreaTematica).HasMaxLength(200);
+            entity.Property(e => e.Descripcion).HasMaxLength(2000);
+            entity.Property(e => e.ArchivoNombre).HasMaxLength(255);
+            entity.Property(e => e.ArchivoRuta).HasMaxLength(500);
+            entity.Property(e => e.ArchivoTipo).HasMaxLength(100);
+            entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ComentariosRevision).HasMaxLength(1000);
+            entity.Property(e => e.MotivoRechazo).HasMaxLength(1000);
+            entity.Property(e => e.ComentariosSolicitud).HasMaxLength(1000);
+            
+            entity.HasIndex(e => e.DocenteCedula);
+            entity.HasIndex(e => e.Estado);
+            entity.HasIndex(e => e.FechaInicio);
+            entity.HasIndex(e => e.FechaFin);
+            entity.HasIndex(e => e.TipoEvidencia);
+            
+            entity.HasOne(e => e.Docente)
+                  .WithMany()
+                  .HasForeignKey(e => e.DocenteId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Datos semilla
