@@ -392,7 +392,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     {
                         _logger.LogDebug($"Llamando a _solicitudRepository.AddAsync para obra: {nuevaSolicitud.Titulo}");
                         var resultado = await _solicitudRepository.AddAsync(nuevaSolicitud);
-                        _logger.LogInformation($"Obra {i + 1} guardada exitosamente con ID: {resultado.Id}");
+                        _logger.LogInformation($"Obra {i + 1} guardada exitosamente with ID: {resultado.Id}");
                     }
                     catch (Exception dbEx)
                     {
@@ -492,23 +492,13 @@ public class ObrasAcademicasService : IObrasAcademicasService
     {
         try
         {
-            var docente = await _docenteRepository.GetByCedulaAsync(cedula);
-            if (docente == null)
-            {
-                return new ResponseObrasAcademicasDto
-                {
-                    Exitoso = false,
-                    Mensaje = "Docente no encontrado"
-                };
-            }
-
-            var solicitudes = await _solicitudRepository.GetAllAsync();
-            var solicitudesPendientes = solicitudes
-                .Where(s => s.DocenteId == docente.Id && s.Estado == "Pendiente")
+            var solicitudesAll = await _solicitudRepository.GetAllAsync();
+            var solicitudesPendientes = solicitudesAll
+                .Where(s => s.DocenteCedula == cedula && s.Estado == "Pendiente")
                 .OrderByDescending(s => s.FechaCreacion)
                 .Select(s => new ObraAcademicaDetalleDto
                 {
-                    Id = 0, // Es una solicitud pendiente
+                    Id = 0,
                     Titulo = s.Titulo,
                     TipoObra = s.TipoObra,
                     FechaPublicacion = s.FechaPublicacion,
@@ -523,7 +513,9 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     ArchivoNombre = s.ArchivoNombre,
                     TieneArchivo = !string.IsNullOrEmpty(s.ArchivoRuta),
                     FechaCreacion = s.FechaCreacion,
-                    FechaActualizacion = s.FechaModificacion
+                    Estado = s.Estado,
+                    ComentariosRevision = s.ComentariosRevision,
+                    MotivoRechazo = s.MotivoRechazo
                 })
                 .ToList();
 
@@ -537,11 +529,63 @@ public class ObrasAcademicasService : IObrasAcademicasService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener solicitudes pendientes para cédula {Cedula}", cedula);
+            _logger.LogError(ex, "Error al obtener solicitudes pendientes para docente {Cedula}", cedula);
             return new ResponseObrasAcademicasDto
             {
                 Exitoso = false,
-                Mensaje = $"Error al obtener solicitudes pendientes: {ex.Message}"
+                Mensaje = $"Error al obtener solicitudes: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<ResponseObrasAcademicasDto> GetTodasSolicitudesDocenteAsync(string cedula)
+    {
+        try
+        {
+            var solicitudesAll = await _solicitudRepository.GetAllAsync();
+            var todasSolicitudes = solicitudesAll
+                .Where(s => s.DocenteCedula == cedula)
+                .OrderByDescending(s => s.FechaCreacion)
+                .Select(s => new ObraAcademicaDetalleDto
+                {
+                    Id = (int)s.Id.GetHashCode(),
+                    SolicitudId = s.Id,
+                    Titulo = s.Titulo,
+                    TipoObra = s.TipoObra,
+                    FechaPublicacion = s.FechaPublicacion,
+                    Editorial = s.Editorial,
+                    Revista = s.Revista,
+                    ISBN_ISSN = s.ISBN_ISSN,
+                    DOI = s.DOI,
+                    EsIndexada = s.EsIndexada,
+                    IndiceIndexacion = s.IndiceIndexacion,
+                    Autores = s.Autores,
+                    Descripcion = s.Descripcion,
+                    ArchivoNombre = s.ArchivoNombre,
+                    TieneArchivo = !string.IsNullOrEmpty(s.ArchivoRuta),
+                    FechaCreacion = s.FechaCreacion,
+                    Estado = s.Estado,
+                    ComentariosRevision = s.ComentariosRevision,
+                    MotivoRechazo = s.MotivoRechazo,
+                    FechaRevision = s.FechaRevision
+                })
+                .ToList();
+
+            return new ResponseObrasAcademicasDto
+            {
+                Exitoso = true,
+                Mensaje = "Todas las solicitudes obtenidas correctamente",
+                Obras = todasSolicitudes,
+                TotalObras = todasSolicitudes.Count
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener todas las solicitudes para docente {Cedula}", cedula);
+            return new ResponseObrasAcademicasDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al obtener solicitudes: {ex.Message}"
             };
         }
     }
@@ -1017,52 +1061,511 @@ public class ObrasAcademicasService : IObrasAcademicasService
             return null;
         }
     }
-
-    public async Task<ResponseObrasAcademicasDto> GetTodasSolicitudesDocenteAsync(string cedula)
+    
+    // Métodos para gestión de documentos del usuario
+    public async Task<ResponseGenericoDto> EliminarSolicitudAsync(Guid solicitudId, string cedula)
     {
         try
         {
-            var todasSolicitudes = await _solicitudRepository.GetAllAsync();
-            var solicitudes = todasSolicitudes.Where(s => s.DocenteCedula == cedula);
-            var solicitudesDto = solicitudes.Select(s => new ObraAcademicaDetalleDto
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
             {
-                Id = (int)s.Id.GetHashCode(), // Usar hash del ID para convertir a int
-                Titulo = s.Titulo,
-                TipoObra = s.TipoObra,
-                FechaPublicacion = s.FechaPublicacion,
-                Editorial = s.Editorial,
-                Revista = s.Revista,
-                ISBN_ISSN = s.ISBN_ISSN,
-                DOI = s.DOI,
-                EsIndexada = s.EsIndexada,
-                IndiceIndexacion = s.IndiceIndexacion,
-                Autores = s.Autores,
-                Descripcion = s.Descripcion,
-                ArchivoNombre = s.ArchivoNombre,
-                TieneArchivo = !string.IsNullOrEmpty(s.ArchivoNombre),
-                FechaCreacion = s.FechaCreacion,
-                FechaActualizacion = s.FechaModificacion,
-                Estado = s.Estado,
-                ComentariosRevision = s.ComentariosRevision,
-                MotivoRechazo = s.MotivoRechazo
-            }).OrderByDescending(s => s.FechaCreacion).ToList();
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solicitud no encontrada"
+                };
+            }
 
-            return new ResponseObrasAcademicasDto
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para eliminar esta solicitud"
+                };
+            }
+
+            // Solo permitir eliminar si está pendiente o rechazada
+            if (solicitud.Estado != "Pendiente" && solicitud.Estado != "Rechazada")
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solo se pueden eliminar solicitudes pendientes o rechazadas"
+                };
+            }
+
+            await _solicitudRepository.DeleteAsync(solicitud.Id);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "EliminarSolicitudObra",
+                cedula,
+                "SolicitudObraAcademica",
+                solicitud.Id.ToString(),
+                $"Título: {solicitud.Titulo}",
+                $"Solicitud eliminada por el usuario. Estado: {solicitud.Estado}",
+                "Usuario"
+            );
+
+            return new ResponseGenericoDto
             {
                 Exitoso = true,
-                Mensaje = "Solicitudes obtenidas correctamente",
-                Obras = solicitudesDto,
-                TotalObras = solicitudesDto.Count
+                Mensaje = "Solicitud eliminada correctamente"
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al obtener todas las solicitudes para cédula {Cedula}", cedula);
-            return new ResponseObrasAcademicasDto
+            _logger.LogError(ex, "Error al eliminar solicitud {SolicitudId}", solicitudId);
+            return new ResponseGenericoDto
             {
                 Exitoso = false,
-                Mensaje = $"Error al obtener solicitudes: {ex.Message}"
+                Mensaje = $"Error al eliminar solicitud: {ex.Message}"
             };
+        }
+    }
+
+    public async Task<ResponseGenericoDto> EditarMetadatosSolicitudAsync(Guid solicitudId, string cedula, EditarMetadatosSolicitudDto metadatos)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solicitud no encontrada"
+                };
+            }
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para editar esta solicitud"
+                };
+            }
+
+            // Determinar qué se puede editar según el estado
+            var cambiosPermitidos = new List<string>();
+            var estadoAnterior = $"Título: {solicitud.Titulo}, Descripción: {solicitud.Descripcion}";
+
+            switch (solicitud.Estado)
+            {
+                case "Pendiente":
+                    // Permitir editar todos los metadatos
+                    if (!string.IsNullOrEmpty(metadatos.Titulo)) { solicitud.Titulo = metadatos.Titulo; cambiosPermitidos.Add("Título"); }
+                    if (!string.IsNullOrEmpty(metadatos.Descripcion)) { solicitud.Descripcion = metadatos.Descripcion; cambiosPermitidos.Add("Descripción"); }
+                    if (!string.IsNullOrEmpty(metadatos.TipoObra)) { solicitud.TipoObra = metadatos.TipoObra; cambiosPermitidos.Add("Tipo de obra"); }
+                    if (metadatos.FechaPublicacion.HasValue) { solicitud.FechaPublicacion = metadatos.FechaPublicacion.Value; cambiosPermitidos.Add("Fecha de publicación"); }
+                    if (metadatos.Editorial != null) { solicitud.Editorial = metadatos.Editorial; cambiosPermitidos.Add("Editorial"); }
+                    if (metadatos.Revista != null) { solicitud.Revista = metadatos.Revista; cambiosPermitidos.Add("Revista"); }
+                    if (metadatos.ISBN_ISSN != null) { solicitud.ISBN_ISSN = metadatos.ISBN_ISSN; cambiosPermitidos.Add("ISBN/ISSN"); }
+                    if (metadatos.DOI != null) { solicitud.DOI = metadatos.DOI; cambiosPermitidos.Add("DOI"); }
+                    if (metadatos.EsIndexada.HasValue) { solicitud.EsIndexada = metadatos.EsIndexada.Value; cambiosPermitidos.Add("Es indexada"); }
+                    if (metadatos.IndiceIndexacion != null) { solicitud.IndiceIndexacion = metadatos.IndiceIndexacion; cambiosPermitidos.Add("Índice de indexación"); }
+                    if (metadatos.Autores != null) { solicitud.Autores = metadatos.Autores; cambiosPermitidos.Add("Autores"); }
+                    break;
+
+                case "En Proceso":
+                    // Solo permitir correcciones menores en título y descripción
+                    if (!string.IsNullOrEmpty(metadatos.Titulo)) { solicitud.Titulo = metadatos.Titulo; cambiosPermitidos.Add("Título (corrección menor)"); }
+                    if (!string.IsNullOrEmpty(metadatos.Descripcion)) { solicitud.Descripcion = metadatos.Descripcion; cambiosPermitidos.Add("Descripción (corrección menor)"); }
+                    break;
+
+                case "Rechazada":
+                    // Permitir editar metadatos para reenvío
+                    if (!string.IsNullOrEmpty(metadatos.Titulo)) { solicitud.Titulo = metadatos.Titulo; cambiosPermitidos.Add("Título"); }
+                    if (!string.IsNullOrEmpty(metadatos.Descripcion)) { solicitud.Descripcion = metadatos.Descripcion; cambiosPermitidos.Add("Descripción"); }
+                    if (!string.IsNullOrEmpty(metadatos.TipoObra)) { solicitud.TipoObra = metadatos.TipoObra; cambiosPermitidos.Add("Tipo de obra"); }
+                    if (metadatos.FechaPublicacion.HasValue) { solicitud.FechaPublicacion = metadatos.FechaPublicacion.Value; cambiosPermitidos.Add("Fecha de publicación"); }
+                    if (metadatos.Editorial != null) { solicitud.Editorial = metadatos.Editorial; cambiosPermitidos.Add("Editorial"); }
+                    if (metadatos.Revista != null) { solicitud.Revista = metadatos.Revista; cambiosPermitidos.Add("Revista"); }
+                    if (metadatos.ISBN_ISSN != null) { solicitud.ISBN_ISSN = metadatos.ISBN_ISSN; cambiosPermitidos.Add("ISBN/ISSN"); }
+                    if (metadatos.DOI != null) { solicitud.DOI = metadatos.DOI; cambiosPermitidos.Add("DOI"); }
+                    if (metadatos.EsIndexada.HasValue) { solicitud.EsIndexada = metadatos.EsIndexada.Value; cambiosPermitidos.Add("Es indexada"); }
+                    if (metadatos.IndiceIndexacion != null) { solicitud.IndiceIndexacion = metadatos.IndiceIndexacion; cambiosPermitidos.Add("Índice de indexación"); }
+                    if (metadatos.Autores != null) { solicitud.Autores = metadatos.Autores; cambiosPermitidos.Add("Autores"); }
+                    break;
+
+                case "Aprobada":
+                    return new ResponseGenericoDto
+                    {
+                        Exitoso = false,
+                        Mensaje = "No se pueden editar metadatos de documentos aprobados para mantener la integridad del proceso"
+                    };
+
+                default:
+                    return new ResponseGenericoDto
+                    {
+                        Exitoso = false,
+                        Mensaje = "Estado de solicitud no válido"
+                    };
+            }
+
+            if (!cambiosPermitidos.Any())
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No se especificaron cambios válidos"
+                };
+            }
+
+            solicitud.FechaModificacion = DateTime.UtcNow;
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Registrar auditoría
+            var estadoNuevo = $"Título: {solicitud.Titulo}, Descripción: {solicitud.Descripcion}";
+            await _auditoriaService.RegistrarAccionAsync(
+                "EditarMetadatosSolicitudObra",
+                cedula,
+                "SolicitudObraAcademica",
+                solicitud.Id.ToString(),
+                estadoAnterior,
+                $"{estadoNuevo}. Campos editados: {string.Join(", ", cambiosPermitidos)}",
+                "Usuario"
+            );
+
+            return new ResponseGenericoDto
+            {
+                Exitoso = true,
+                Mensaje = $"Metadatos actualizados correctamente. Campos modificados: {string.Join(", ", cambiosPermitidos)}"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al editar metadatos de solicitud {SolicitudId}", solicitudId);
+            return new ResponseGenericoDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al editar metadatos: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<ResponseGenericoDto> ReemplazarArchivoSolicitudAsync(Guid solicitudId, string cedula, ReemplazarArchivoDto archivo)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solicitud no encontrada"
+                };
+            }
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para modificar esta solicitud"
+                };
+            }
+
+            // Solo permitir reemplazar archivo si está pendiente o rechazada
+            if (solicitud.Estado != "Pendiente" && solicitud.Estado != "Rechazada")
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solo se puede reemplazar el archivo de solicitudes pendientes o rechazadas"
+                };
+            }
+
+            // Validar archivo PDF
+            byte[] contenidoArchivo;
+            try
+            {
+                contenidoArchivo = Convert.FromBase64String(archivo.ArchivoContenido);
+            }
+            catch
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "El contenido del archivo no es válido"
+                };
+            }
+
+            // Validar que sea PDF
+            if (contenidoArchivo.Length < 4 || 
+                contenidoArchivo[0] != 0x25 || contenidoArchivo[1] != 0x50 || 
+                contenidoArchivo[2] != 0x44 || contenidoArchivo[3] != 0x46)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "El archivo debe ser un PDF válido"
+                };
+            }
+
+            // Validar tamaño (10MB máximo)
+            if (contenidoArchivo.Length > 10 * 1024 * 1024)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "El archivo no puede exceder 10MB"
+                };
+            }
+
+            // Actualizar archivo
+            var nombreAnterior = solicitud.ArchivoNombre;
+            solicitud.ArchivoNombre = archivo.ArchivoNombre;
+            solicitud.ArchivoRuta = $"uploads/obras/{solicitud.Id}_{archivo.ArchivoNombre}";
+            solicitud.ArchivoTipo = archivo.ArchivoTipo;
+            solicitud.ArchivoTamano = contenidoArchivo.Length;
+            solicitud.FechaModificacion = DateTime.UtcNow;
+
+            // Guardar archivo en el sistema de archivos
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "obras");
+            Directory.CreateDirectory(uploadsPath);
+            var filePath = Path.Combine(uploadsPath, $"{solicitud.Id}_{archivo.ArchivoNombre}");
+            await System.IO.File.WriteAllBytesAsync(filePath, contenidoArchivo);
+
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Si la solicitud estaba rechazada, cambiar a pendiente para nueva revisión
+            if (solicitud.Estado == "Rechazada")
+            {
+                solicitud.Estado = "Pendiente";
+                solicitud.MotivoRechazo = null;
+                solicitud.ComentariosRevision = null;
+                solicitud.FechaRevision = null;
+                await _solicitudRepository.UpdateAsync(solicitud);
+            }
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "ReemplazarArchivoSolicitudObra",
+                cedula,
+                "SolicitudObraAcademica",
+                solicitud.Id.ToString(),
+                $"Archivo anterior: {nombreAnterior}",
+                $"Nuevo archivo: {archivo.ArchivoNombre}, Tamaño: {contenidoArchivo.Length} bytes",
+                "Usuario"
+            );
+
+            var mensaje = solicitud.Estado == "Pendiente" && nombreAnterior != null
+                ? "Archivo reemplazado correctamente. La solicitud ha sido reenviada para revisión."
+                : "Archivo reemplazado correctamente.";
+
+            return new ResponseGenericoDto
+            {
+                Exitoso = true,
+                Mensaje = mensaje
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reemplazar archivo de solicitud {SolicitudId}", solicitudId);
+            return new ResponseGenericoDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al reemplazar archivo: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<ResponseGenericoDto> AgregarComentarioSolicitudAsync(Guid solicitudId, string cedula, string comentario)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solicitud no encontrada"
+                };
+            }
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para modificar esta solicitud"
+                };
+            }
+
+            // Solo permitir agregar comentarios si está en proceso
+            if (solicitud.Estado != "En Proceso")
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solo se pueden agregar comentarios a solicitudes en proceso de revisión"
+                };
+            }
+
+            // Agregar comentario al campo existente
+            var comentarioAnterior = solicitud.ComentariosSolicitud ?? "";
+            var fechaComentario = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            var nuevoComentario = $"[{fechaComentario}] Docente: {comentario}";
+            
+            if (!string.IsNullOrEmpty(comentarioAnterior))
+            {
+                solicitud.ComentariosSolicitud = $"{comentarioAnterior}\n{nuevoComentario}";
+            }
+            else
+            {
+                solicitud.ComentariosSolicitud = nuevoComentario;
+            }
+
+            solicitud.FechaModificacion = DateTime.UtcNow;
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "AgregarComentarioSolicitudObra",
+                cedula,
+                "SolicitudObraAcademica",
+                solicitud.Id.ToString(),
+                comentarioAnterior,
+                comentario,
+                "Usuario"
+            );
+
+            return new ResponseGenericoDto
+            {
+                Exitoso = true,
+                Mensaje = "Comentario agregado correctamente"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al agregar comentario a solicitud {SolicitudId}", solicitudId);
+            return new ResponseGenericoDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al agregar comentario: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<ResponseGenericoDto> ReenviarSolicitudAsync(Guid solicitudId, string cedula)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solicitud no encontrada"
+                };
+            }
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para reenviar esta solicitud"
+                };
+            }
+
+            // Solo permitir reenviar si está rechazada
+            if (solicitud.Estado != "Rechazada")
+            {
+                return new ResponseGenericoDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solo se pueden reenviar solicitudes rechazadas"
+                };
+            }
+
+            // Cambiar estado a pendiente y limpiar datos de revisión
+            solicitud.Estado = "Pendiente";
+            solicitud.MotivoRechazo = null;
+            solicitud.ComentariosRevision = null;
+            solicitud.FechaRevision = null;
+            solicitud.RevisadoPorId = null;
+            solicitud.FechaModificacion = DateTime.UtcNow;
+
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "ReenviarSolicitudObra",
+                cedula,
+                "SolicitudObraAcademica",
+                solicitud.Id.ToString(),
+                "Estado: Rechazada",
+                "Estado: Pendiente - Solicitud reenviada para revisión",
+                "Usuario"
+            );
+
+            return new ResponseGenericoDto
+            {
+                Exitoso = true,
+                Mensaje = "Solicitud reenviada para revisión correctamente"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reenviar solicitud {SolicitudId}", solicitudId);
+            return new ResponseGenericoDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al reenviar solicitud: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<byte[]?> VisualizarArchivoSolicitudAsync(Guid solicitudId, string cedula)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+            {
+                _logger.LogWarning("Solicitud {SolicitudId} no encontrada para visualización", solicitudId);
+                return null;
+            }
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteCedula != cedula)
+            {
+                _logger.LogWarning("Usuario {Cedula} no tiene permisos para visualizar solicitud {SolicitudId}", cedula, solicitudId);
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            {
+                _logger.LogWarning("Solicitud {SolicitudId} no tiene archivo asociado", solicitudId);
+                return null;
+            }
+
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
+            if (!System.IO.File.Exists(filePath))
+            {
+                _logger.LogWarning("Archivo físico no encontrado para solicitud {SolicitudId}: {FilePath}", solicitudId, filePath);
+                return null;
+            }
+
+            return await System.IO.File.ReadAllBytesAsync(filePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al visualizar archivo de solicitud {SolicitudId}", solicitudId);
+            return null;
         }
     }
 }

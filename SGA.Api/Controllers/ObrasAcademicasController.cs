@@ -394,4 +394,215 @@ public class ObrasAcademicasController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+    [HttpDelete("eliminar/{solicitudId}")]
+    public async Task<ActionResult<ResponseGenericoDto>> EliminarSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var response = await _obrasService.EliminarSolicitudAsync(solicitudId, cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("editar-metadatos/{solicitudId}")]
+    public async Task<ActionResult<ResponseGenericoDto>> EditarMetadatos(Guid solicitudId, [FromBody] EditarMetadatosSolicitudDto metadatos)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var response = await _obrasService.EditarMetadatosSolicitudAsync(solicitudId, cedula, metadatos);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("reemplazar-archivo/{solicitudId}")]
+    public async Task<ActionResult<ResponseGenericoDto>> ReemplazarArchivo(Guid solicitudId, [FromBody] ReemplazarArchivoDto archivo)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var response = await _obrasService.ReemplazarArchivoSolicitudAsync(solicitudId, cedula, archivo);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("agregar-comentario/{solicitudId}")]
+    public async Task<ActionResult<ResponseGenericoDto>> AgregarComentario(Guid solicitudId, [FromBody] string comentario)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            if (string.IsNullOrWhiteSpace(comentario))
+                return BadRequest("El comentario no puede estar vacío");
+
+            var response = await _obrasService.AgregarComentarioSolicitudAsync(solicitudId, cedula, comentario);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("reenviar/{solicitudId}")]
+    public async Task<ActionResult<ResponseGenericoDto>> ReenviarSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var response = await _obrasService.ReenviarSolicitudAsync(solicitudId, cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("visualizar-archivo/{solicitudId}")]
+    public async Task<ActionResult> VisualizarArchivo(Guid solicitudId)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var archivo = await _obrasService.VisualizarArchivoSolicitudAsync(solicitudId, cedula);
+            if (archivo == null)
+                return NotFound("Archivo no encontrado");
+
+            Response.Headers["Content-Disposition"] = "inline";
+            Response.Headers["Content-Type"] = "application/pdf";
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            return File(archivo, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("descargar-archivo/{solicitudId}")]
+    public async Task<ActionResult> DescargarArchivo(Guid solicitudId)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var cedula = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrEmpty(cedula))
+            {
+                var docenteService = HttpContext.RequestServices.GetRequiredService<Application.Interfaces.IDocenteService>();
+                var docente = await docenteService.GetDocenteByEmailAsync(email);
+                if (docente == null)
+                    return BadRequest("No se pudo encontrar el docente asociado con este usuario");
+                cedula = docente.Cedula;
+            }
+
+            var archivo = await _obrasService.VisualizarArchivoSolicitudAsync(solicitudId, cedula);
+            if (archivo == null)
+                return NotFound("Archivo no encontrado");
+
+            return File(archivo, "application/pdf", $"documento-{solicitudId}.pdf");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 }

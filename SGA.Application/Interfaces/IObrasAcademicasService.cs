@@ -16,6 +16,14 @@ public interface IObrasAcademicasService
     Task<byte[]?> DescargarArchivoObraAsync(Guid solicitudId);
     Task<ImportarDatosResponse> ImportarObrasDesdeExternoAsync(string cedula);
     
+    // Métodos para gestión de documentos del usuario
+    Task<ResponseGenericoDto> EliminarSolicitudAsync(Guid solicitudId, string cedula);
+    Task<ResponseGenericoDto> EditarMetadatosSolicitudAsync(Guid solicitudId, string cedula, EditarMetadatosSolicitudDto metadatos);
+    Task<ResponseGenericoDto> ReemplazarArchivoSolicitudAsync(Guid solicitudId, string cedula, ReemplazarArchivoDto archivo);
+    Task<ResponseGenericoDto> AgregarComentarioSolicitudAsync(Guid solicitudId, string cedula, string comentario);
+    Task<ResponseGenericoDto> ReenviarSolicitudAsync(Guid solicitudId, string cedula);
+    Task<byte[]?> VisualizarArchivoSolicitudAsync(Guid solicitudId, string cedula);
+    
     // Métodos para administradores
     Task<ResponseSolicitudesAdminDto> GetTodasSolicitudesAsync();
     Task<ResponseGenericoDto> RevisarSolicitudAsync(RevisionSolicitudDto revision, string adminEmail);

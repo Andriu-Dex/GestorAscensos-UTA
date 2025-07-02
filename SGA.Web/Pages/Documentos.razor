@@ -75,6 +75,7 @@
                                 <th>Fecha Solicitud</th>
                                 <th>Estado</th>
                                 <th>Observaciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -113,11 +114,81 @@
                                             {
                                                 <br><small class="text-muted">@solicitud.ComentariosRevision</small>
                                             }
+                                            <br><button type="button" class="btn btn-link btn-sm p-0 text-danger" 
+                                                       @onclick="() => MostrarMotivoRechazo(solicitud)">
+                                                <i class="bi bi-info-circle"></i> Ver detalles del rechazo
+                                            </button>
                                         }
                                         else if (solicitud.Estado == "Pendiente")
                                         {
                                             <small class="text-muted">En revisión</small>
                                         }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            @if (PuedeVisualizar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                        @onclick="() => VisualizarDocumento(solicitud.SolicitudId.Value)"
+                                                        title="Ver documento">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeDescargar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-success btn-sm" 
+                                                        @onclick="() => DescargarDocumento(solicitud.SolicitudId.Value)"
+                                                        title="Descargar documento">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeEditarMetadatos(solicitud.Estado))
+                                            {
+                                                <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                        @onclick="() => MostrarEditarMetadatos(solicitud)"
+                                                        title="Editar metadatos">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeReemplazarArchivo(solicitud.Estado))
+                                            {
+                                                <button type="button" class="btn btn-outline-info btn-sm" 
+                                                        @onclick="() => MostrarReemplazarArchivo(solicitud)"
+                                                        title="Reemplazar archivo">
+                                                    <i class="bi bi-file-arrow-up"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeAgregarComentario(solicitud.Estado))
+                                            {
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                        @onclick="() => MostrarAgregarComentario(solicitud)"
+                                                        title="Agregar comentario">
+                                                    <i class="bi bi-chat-dots"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeReenviar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                        @onclick="() => ReenviarSolicitud(solicitud.SolicitudId.Value)"
+                                                        title="Reenviar para revisión">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            }
+                                            
+                                            @if (PuedeEliminar(solicitud.Estado) && solicitud.SolicitudId.HasValue)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                        @onclick="() => EliminarSolicitud(solicitud.SolicitudId.Value)"
+                                                        title="Eliminar solicitud">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -127,6 +198,276 @@
             }
         </div>
     </div>
+    
+    <!-- Modal para Ver Motivo de Rechazo -->
+    @if (showMotivoRechazoModal && solicitudSeleccionada != null)
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Motivo de Rechazo</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarMotivoRechazo"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>@solicitudSeleccionada.Titulo</h6>
+                        @if (!string.IsNullOrEmpty(solicitudSeleccionada.MotivoRechazo))
+                        {
+                            <div class="alert alert-danger">
+                                <strong>Motivo del rechazo:</strong><br>
+                                @solicitudSeleccionada.MotivoRechazo
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosRevision))
+                        {
+                            <div class="alert alert-info">
+                                <strong>Comentarios adicionales:</strong><br>
+                                @solicitudSeleccionada.ComentariosRevision
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarMotivoRechazo">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    <!-- Modal para Editar Metadatos -->
+    @if (showEditarMetadatosModal && solicitudSeleccionada != null)
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Metadatos - @solicitudSeleccionada.Titulo</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarEditarMetadatos"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Título</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.Titulo" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tipo de Obra</label>
+                                    <select class="form-select" @bind="metadatosEdicion.TipoObra">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Libro">Libro</option>
+                                        <option value="Artículo Científico">Artículo Científico</option>
+                                        <option value="Capítulo de Libro">Capítulo de Libro</option>
+                                        <option value="Ponencia">Ponencia</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Fecha de Publicación</label>
+                                    <input type="date" class="form-control" @bind="metadatosEdicion.FechaPublicacion" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Editorial</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.Editorial" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Revista</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.Revista" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">ISBN/ISSN</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.ISBN_ISSN" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">DOI</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.DOI" />
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Autores</label>
+                                    <input type="text" class="form-control" @bind="metadatosEdicion.Autores" />
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind="metadatosEdicion.EsIndexada" />
+                                        <label class="form-check-label">¿Es indexada?</label>
+                                    </div>
+                                </div>
+                                @if (metadatosEdicion.EsIndexada == true)
+                                {
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Índice de Indexación</label>
+                                        <input type="text" class="form-control" @bind="metadatosEdicion.IndiceIndexacion" />
+                                    </div>
+                                }
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">Descripción</label>
+                                    <textarea class="form-control" rows="3" @bind="metadatosEdicion.Descripcion"></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarEditarMetadatos">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="GuardarMetadatos" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span> Guardando...</span>
+                            }
+                            else
+                            {
+                                <span>Guardar Cambios</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    <!-- Modal para Reemplazar Archivo -->
+    @if (showReemplazarArchivoModal && solicitudSeleccionada != null)
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reemplazar Archivo - @solicitudSeleccionada.Titulo</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarReemplazarArchivo"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Importante:</strong> Al reemplazar el archivo, la solicitud será enviada nuevamente para revisión.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Seleccionar nuevo archivo PDF</label>
+                            <InputFile @ref="inputFileReemplazo" OnChange="OnFileChangeReemplazo" class="form-control" accept=".pdf" />
+                            @if (!string.IsNullOrEmpty(archivoReemplazoNombre))
+                            {
+                                <div class="mt-2">
+                                    <small class="text-success">Archivo seleccionado: @archivoReemplazoNombre</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarReemplazarArchivo">Cancelar</button>
+                        <button type="button" class="btn btn-warning" @onclick="ReemplazarArchivo" 
+                                disabled="@(isProcessing || string.IsNullOrEmpty(archivoReemplazoContenido))">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span> Reemplazando...</span>
+                            }
+                            else
+                            {
+                                <span>Reemplazar Archivo</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    <!-- Modal para Agregar Comentario -->
+    @if (showAgregarComentarioModal && solicitudSeleccionada != null)
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Agregar Comentario - @solicitudSeleccionada.Titulo</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarAgregarComentario"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            Este comentario será visible para el administrador que revise la solicitud.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Comentario para el evaluador</label>
+                            <textarea class="form-control" rows="4" @bind="nuevoComentario" 
+                                      placeholder="Agregue aclaraciones o información adicional sobre su obra académica..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarAgregarComentario">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="GuardarComentario" 
+                                disabled="@(isProcessing || string.IsNullOrWhiteSpace(nuevoComentario))">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span> Agregando...</span>
+                            }
+                            else
+                            {
+                                <span>Agregar Comentario</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    <!-- Modal para Visualizar PDF -->
+    @if (showVisualizarPDFModal && !string.IsNullOrEmpty(pdfUrl))
+    {
+        <div class="modal fade show" style="display: block;" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@pdfNombreArchivo</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarVisualizarPDF"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        @if (isLoadingPDF)
+                        {
+                            <div class="d-flex justify-content-center align-items-center" style="height: 500px;">
+                                <div class="text-center">
+                                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                        <span class="visually-hidden">Cargando PDF...</span>
+                                    </div>
+                                    <p class="mt-3">Cargando documento...</p>
+                                </div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(errorPDF))
+                        {
+                            <div class="alert alert-danger m-3" role="alert">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Error al cargar PDF:</strong> @errorPDF
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="pdf-viewer-container">
+                                <iframe src="@pdfUrl" style="width: 100%; height: 600px; border: none;" frameborder="0"></iframe>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarVisualizarPDF">
+                            <i class="bi bi-x-circle me-2"></i>Cerrar
+                        </button>
+                        @if (!string.IsNullOrEmpty(pdfUrl) && !isLoadingPDF && solicitudSeleccionada?.SolicitudId.HasValue == true)
+                        {
+                            <button type="button" class="btn btn-primary" @onclick="() => DescargarDocumento(solicitudSeleccionada!.SolicitudId!.Value)">
+                                <i class="bi bi-download me-2"></i>Descargar PDF
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
     
     <div class="card">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -453,6 +794,32 @@
     private bool isEnviandoObras = false;
     private List<NuevaObraAcademicaDto> nuevasObras = new();
     private string comentariosSolicitud = string.Empty;
+    
+    // Variables para gestión de documentos
+    private ObraAcademicaDetalleDto? solicitudSeleccionada;
+    private bool showMotivoRechazoModal = false;
+    private bool showEditarMetadatosModal = false;
+    private bool showReemplazarArchivoModal = false;
+    private bool showAgregarComentarioModal = false;
+    private bool showVisualizarPDFModal = false;
+    private bool isProcessing = false;
+    
+    // Variables para editar metadatos
+    private EditarMetadatosSolicitudDto metadatosEdicion = new();
+    
+    // Variables para reemplazar archivo
+    private InputFile? inputFileReemplazo;
+    private string archivoReemplazoNombre = string.Empty;
+    private string archivoReemplazoContenido = string.Empty;
+    
+    // Variables para comentarios
+    private string nuevoComentario = string.Empty;
+    
+    // Variables para visualizar PDF
+    private string? pdfUrl;
+    private string? pdfNombreArchivo;
+    private bool isLoadingPDF = false;
+    private string? errorPDF;
     
     protected override async Task OnInitializedAsync()
     {
@@ -844,6 +1211,7 @@
     public class ObraAcademicaDetalleDto
     {
         public int Id { get; set; }
+        public Guid? SolicitudId { get; set; }
         public string Titulo { get; set; } = string.Empty;
         public string TipoObra { get; set; } = string.Empty;
         public DateTime FechaPublicacion { get; set; }
@@ -859,6 +1227,7 @@
         public bool TieneArchivo { get; set; }
         public DateTime FechaCreacion { get; set; }
         public DateTime? FechaActualizacion { get; set; }
+        public DateTime? FechaRevision { get; set; }
         public string? Estado { get; set; }
         public string? ComentariosRevision { get; set; }
         public string? MotivoRechazo { get; set; }
@@ -870,5 +1239,409 @@
         public string Mensaje { get; set; } = string.Empty;
         public List<ObraAcademicaDetalleDto> Obras { get; set; } = new();
         public int TotalObras { get; set; }
+    }
+    
+    // Variables para gestión de documentos
+    
+    // Métodos para verificar permisos según estado
+    private bool PuedeVisualizar(string? estado) => !string.IsNullOrEmpty(estado);
+    
+    private bool PuedeDescargar(string? estado) => estado == "Aprobada";
+    
+    private bool PuedeEditarMetadatos(string? estado) => 
+        estado == "Pendiente" || estado == "En Proceso" || estado == "Rechazada";
+    
+    private bool PuedeReemplazarArchivo(string? estado) => 
+        estado == "Pendiente" || estado == "Rechazada";
+    
+    private bool PuedeAgregarComentario(string? estado) => estado == "En Proceso";
+    
+    private bool PuedeReenviar(string? estado) => estado == "Rechazada";
+    
+    private bool PuedeEliminar(string? estado) => 
+        estado == "Pendiente" || estado == "Rechazada";
+    
+    // Métodos para gestión de documentos
+    private async Task VisualizarDocumento(Guid solicitudId)
+    {
+        try
+        {
+            isLoadingPDF = true;
+            errorPDF = null;
+            showVisualizarPDFModal = true;
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            // Buscar la solicitud para obtener el nombre del archivo
+            var solicitud = solicitudesPendientes?.FirstOrDefault(s => s.SolicitudId == solicitudId);
+            pdfNombreArchivo = solicitud?.ArchivoNombre ?? "Documento";
+            
+            StateHasChanged();
+            
+            // Crear URL para visualización del PDF
+            pdfUrl = $"http://localhost:5115/api/obraacademicas/visualizar-archivo/{solicitudId}";
+            
+            await Task.Delay(500); // Pequeña pausa para permitir que el iframe se configure
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error al cargar PDF: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPDF = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CerrarVisualizarPDF()
+    {
+        showVisualizarPDFModal = false;
+        pdfUrl = null;
+        pdfNombreArchivo = null;
+        errorPDF = null;
+        isLoadingPDF = false;
+    }
+    
+    private async Task DescargarDocumento(Guid solicitudId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            var url = $"api/obraacademicas/descargar-archivo/{solicitudId}?token={token}";
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar archivo: {ex.Message}");
+        }
+    }
+    
+    private void MostrarEditarMetadatos(ObraAcademicaDetalleDto solicitud)
+    {
+        solicitudSeleccionada = solicitud;
+        metadatosEdicion = new EditarMetadatosSolicitudDto
+        {
+            Titulo = solicitud.Titulo,
+            Descripcion = solicitud.Descripcion,
+            TipoObra = solicitud.TipoObra,
+            FechaPublicacion = solicitud.FechaPublicacion,
+            Editorial = solicitud.Editorial,
+            Revista = solicitud.Revista,
+            ISBN_ISSN = solicitud.ISBN_ISSN,
+            DOI = solicitud.DOI,
+            EsIndexada = solicitud.EsIndexada,
+            IndiceIndexacion = solicitud.IndiceIndexacion,
+            Autores = solicitud.Autores
+        };
+        showEditarMetadatosModal = true;
+    }
+    
+    private void CerrarEditarMetadatos()
+    {
+        showEditarMetadatosModal = false;
+        solicitudSeleccionada = null;
+        metadatosEdicion = new();
+    }
+    
+    private async Task GuardarMetadatos()
+    {
+        if (solicitudSeleccionada?.SolicitudId == null) return;
+        
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsJsonAsync($"api/obraacademicas/editar-metadatos/{solicitudSeleccionada.SolicitudId}", metadatosEdicion);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseGenericoDto>();
+                if (result?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    await LoadSolicitudesPendientes();
+                    CerrarEditarMetadatos();
+                }
+                else
+                {
+                    ToastService.ShowError(result?.Mensaje ?? "Error al editar metadatos");
+                }
+            }
+            else
+            {
+                ToastService.ShowError("Error al editar metadatos");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al editar metadatos: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+    
+    private void MostrarReemplazarArchivo(ObraAcademicaDetalleDto solicitud)
+    {
+        solicitudSeleccionada = solicitud;
+        archivoReemplazoNombre = string.Empty;
+        archivoReemplazoContenido = string.Empty;
+        showReemplazarArchivoModal = true;
+    }
+    
+    private void CerrarReemplazarArchivo()
+    {
+        showReemplazarArchivoModal = false;
+        solicitudSeleccionada = null;
+        archivoReemplazoNombre = string.Empty;
+        archivoReemplazoContenido = string.Empty;
+    }
+    
+    private async Task OnFileChangeReemplazo(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null && file.Size <= 10 * 1024 * 1024) // 10MB max
+        {
+            try
+            {
+                using var stream = file.OpenReadStream(10 * 1024 * 1024);
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                
+                archivoReemplazoNombre = file.Name;
+                archivoReemplazoContenido = Convert.ToBase64String(memoryStream.ToArray());
+                
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Error al procesar archivo: {ex.Message}");
+            }
+        }
+        else
+        {
+            ToastService.ShowError("El archivo no puede exceder 10MB");
+        }
+    }
+    
+    private async Task ReemplazarArchivo()
+    {
+        if (solicitudSeleccionada?.SolicitudId == null || string.IsNullOrEmpty(archivoReemplazoContenido)) return;
+        
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var archivoDto = new ReemplazarArchivoDto
+            {
+                ArchivoNombre = archivoReemplazoNombre,
+                ArchivoContenido = archivoReemplazoContenido,
+                ArchivoTipo = "application/pdf"
+            };
+            
+            var response = await Http.PutAsJsonAsync($"api/obraacademicas/reemplazar-archivo/{solicitudSeleccionada.SolicitudId}", archivoDto);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseGenericoDto>();
+                if (result?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    await LoadSolicitudesPendientes();
+                    CerrarReemplazarArchivo();
+                }
+                else
+                {
+                    ToastService.ShowError(result?.Mensaje ?? "Error al reemplazar archivo");
+                }
+            }
+            else
+            {
+                ToastService.ShowError("Error al reemplazar archivo");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al reemplazar archivo: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+    
+    private void MostrarAgregarComentario(ObraAcademicaDetalleDto solicitud)
+    {
+        solicitudSeleccionada = solicitud;
+        nuevoComentario = string.Empty;
+        showAgregarComentarioModal = true;
+    }
+    
+    private void CerrarAgregarComentario()
+    {
+        showAgregarComentarioModal = false;
+        solicitudSeleccionada = null;
+        nuevoComentario = string.Empty;
+    }
+    
+    private async Task GuardarComentario()
+    {
+        if (solicitudSeleccionada?.SolicitudId == null || string.IsNullOrWhiteSpace(nuevoComentario)) return;
+        
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PostAsJsonAsync($"api/obraacademicas/agregar-comentario/{solicitudSeleccionada.SolicitudId}", nuevoComentario);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseGenericoDto>();
+                if (result?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    await LoadSolicitudesPendientes();
+                    CerrarAgregarComentario();
+                }
+                else
+                {
+                    ToastService.ShowError(result?.Mensaje ?? "Error al agregar comentario");
+                }
+            }
+            else
+            {
+                ToastService.ShowError("Error al agregar comentario");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al agregar comentario: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+    
+    private async Task ReenviarSolicitud(Guid solicitudId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea reenviar esta solicitud para revisión?"))
+            return;
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsync($"api/obraacademicas/reenviar/{solicitudId}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseGenericoDto>();
+                if (result?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    await LoadSolicitudesPendientes();
+                }
+                else
+                {
+                    ToastService.ShowError(result?.Mensaje ?? "Error al reenviar solicitud");
+                }
+            }
+            else
+            {
+                ToastService.ShowError("Error al reenviar solicitud");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al reenviar solicitud: {ex.Message}");
+        }
+    }
+    
+    private async Task EliminarSolicitud(Guid solicitudId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea eliminar esta solicitud? Esta acción no se puede deshacer."))
+            return;
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.DeleteAsync($"api/obraacademicas/eliminar/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ResponseGenericoDto>();
+                if (result?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(result.Mensaje);
+                    await LoadSolicitudesPendientes();
+                }
+                else
+                {
+                    ToastService.ShowError(result?.Mensaje ?? "Error al eliminar solicitud");
+                }
+            }
+            else
+            {
+                ToastService.ShowError("Error al eliminar solicitud");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al eliminar solicitud: {ex.Message}");
+        }
+    }
+    
+    private void CerrarMotivoRechazo()
+    {
+        showMotivoRechazoModal = false;
+        solicitudSeleccionada = null;
+    }
+    
+    private void MostrarMotivoRechazo(ObraAcademicaDetalleDto solicitud)
+    {
+        solicitudSeleccionada = solicitud;
+        showMotivoRechazoModal = true;
+    }
+    
+    // DTOs necesarios para gestión de documentos
+    public class EditarMetadatosSolicitudDto
+    {
+        public string? Titulo { get; set; }
+        public string? Descripcion { get; set; }
+        public string? TipoObra { get; set; }
+        public DateTime? FechaPublicacion { get; set; }
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }
+        public bool? EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+    }
+
+    public class ReemplazarArchivoDto
+    {
+        public string ArchivoNombre { get; set; } = string.Empty;
+        public string ArchivoContenido { get; set; } = string.Empty;
+        public string ArchivoTipo { get; set; } = "application/pdf";
+    }
+
+    public class ResponseGenericoDto
+    {
+        public bool Exitoso { get; set; }
+        public string Mensaje { get; set; } = string.Empty;
     }
 }

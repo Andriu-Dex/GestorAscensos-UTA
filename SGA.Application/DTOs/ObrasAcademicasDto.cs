@@ -57,6 +57,7 @@ public class SolicitudObrasAcademicasDto
 public class ObraAcademicaDetalleDto
 {
     public int Id { get; set; }
+    public Guid? SolicitudId { get; set; }
     public string Titulo { get; set; } = string.Empty;
     public string TipoObra { get; set; } = string.Empty;
     public DateTime FechaPublicacion { get; set; }
@@ -72,6 +73,7 @@ public class ObraAcademicaDetalleDto
     public bool TieneArchivo { get; set; }
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaActualizacion { get; set; }
+    public DateTime? FechaRevision { get; set; }
     public string? Estado { get; set; }
     public string? ComentariosRevision { get; set; }
     public string? MotivoRechazo { get; set; }
@@ -125,6 +127,38 @@ public class RevisionSolicitudDto
     public string Accion { get; set; } = string.Empty; // "Aprobar" o "Rechazar"
     public string? ComentariosRevision { get; set; }
     public string? MotivoRechazo { get; set; }
+}
+
+// DTOs para gestión de documentos del usuario
+public class EditarMetadatosSolicitudDto
+{
+    public string? Titulo { get; set; }
+    public string? Descripcion { get; set; }
+    public string? TipoObra { get; set; }
+    public DateTime? FechaPublicacion { get; set; }
+    public string? Editorial { get; set; }
+    public string? Revista { get; set; }
+    public string? ISBN_ISSN { get; set; }
+    public string? DOI { get; set; }
+    public bool? EsIndexada { get; set; }
+    public string? IndiceIndexacion { get; set; }
+    public string? Autores { get; set; }
+}
+
+public class ReemplazarArchivoDto
+{
+    public string ArchivoNombre { get; set; } = string.Empty;
+    public string ArchivoContenido { get; set; } = string.Empty; // Base64
+    public string ArchivoTipo { get; set; } = "application/pdf";
+}
+
+public class GestionDocumentoDto
+{
+    public Guid SolicitudId { get; set; }
+    public string Accion { get; set; } = string.Empty; // "Eliminar", "EditarMetadatos", "ReemplazarArchivo", "AgregarComentario", "Reenviar"
+    public EditarMetadatosSolicitudDto? Metadatos { get; set; }
+    public ReemplazarArchivoDto? Archivo { get; set; }
+    public string? Comentario { get; set; }
 }
 
 public class ResponseGenericoDto
