@@ -1159,9 +1159,9 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
             }
 
             // Actualizar estado de la solicitud
-            solicitud.Estado = revision.Accion == "aprobar" ? "Aprobada" : "Rechazada";
+            solicitud.Estado = revision.Accion.Equals("Aprobar", StringComparison.OrdinalIgnoreCase) ? "Aprobada" : "Rechazada";
             solicitud.ComentariosRevision = revision.Comentarios;
-            if (revision.Accion != "aprobar")
+            if (!revision.Accion.Equals("Aprobar", StringComparison.OrdinalIgnoreCase))
             {
                 solicitud.MotivoRechazo = revision.Comentarios;
             }

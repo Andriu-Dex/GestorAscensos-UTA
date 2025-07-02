@@ -6,12 +6,34 @@
 
 <div class="card mb-4">
     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Obras Académicas</h5>
+        <h5 class="mb-0">Mis Solicitudes de Obras Académicas</h5>
         <button class="btn btn-light" @onclick="() => ShowObrasModal()">
             <i class="bi bi-plus-circle"></i> Agregar Obras
         </button>
     </div>
     <div class="card-body">
+        <!-- Filtros por Estado -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Filtrar por Estado:</label>
+                <select class="form-select" @onchange="OnEstadoFilterChanged">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En Proceso">En Proceso</option>
+                    <option value="Aprobada">Aprobada</option>
+                    <option value="Rechazada">Rechazada</option>
+                </select>
+            </div>
+            @if (!string.IsNullOrEmpty(selectedEstado))
+            {
+                <div class="col-md-6 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Limpiar Filtros
+                    </button>
+                </div>
+            }
+        </div>
+
         @if (isLoadingObras)
         {
             <div class="d-flex justify-content-center my-3">
@@ -20,49 +42,25 @@
                 </div>
             </div>
         }
-        else if (obrasAcademicas == null || !obrasAcademicas.Any())
+        else if (solicitudesFiltradas == null || !solicitudesFiltradas.Any())
         {
-            <div class="alert alert-info" role="alert">
-                No tiene obras académicas registradas. Utilice el botón "Agregar Obras" para solicitar la inclusión de nuevas obras.
-            </div>
+            @if (string.IsNullOrEmpty(selectedEstado))
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene solicitudes de obras académicas. Utilice el botón "Agregar Obras" para solicitar la inclusión de nuevas obras.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning" role="alert">
+                    No hay solicitudes con estado "@selectedEstado".
+                </div>
+            }
         }
         else
         {
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Tipo</th>
-                            <th>Fecha Publicación</th>
-                            <th>Revista/Editorial</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var obra in obrasAcademicas)
-                        {
-                            <tr>
-                                <td>@obra.Titulo</td>
-                                <td>@obra.TipoObra</td>
-                                <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
-                                <td>@(obra.Revista ?? obra.Editorial ?? "N/A")</td>
-                                <td>
-                                    <span class="badge bg-success">Aprobada</span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        
-        @if (solicitudesPendientes != null && solicitudesPendientes.Any())
-        {
-            <hr />
-            <h6>Mis Solicitudes de Obras</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
                     <thead>
                         <tr>
                             <th>Título</th>
@@ -74,7 +72,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var solicitud in solicitudesPendientes)
+                        @foreach (var solicitud in solicitudesFiltradas)
                         {
                             <tr>
                                 <td>@solicitud.Titulo</td>
@@ -197,7 +195,6 @@
 </div>
 
 @code {
-    [Parameter] public List<ObraAcademicaDetalleDto>? obrasAcademicas { get; set; }
     [Parameter] public List<ObraAcademicaDetalleDto>? solicitudesPendientes { get; set; }
     [Parameter] public bool isLoadingObras { get; set; }
     [Parameter] public EventCallback OnShowObrasModal { get; set; }
@@ -209,6 +206,32 @@
     [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnAgregarComentario { get; set; }
     [Parameter] public EventCallback<Guid> OnReenviarSolicitud { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarSolicitud { get; set; }
+
+    // Variables para filtrado
+    private string selectedEstado = "";
+    private List<ObraAcademicaDetalleDto>? solicitudesFiltradas => FiltrarSolicitudes();
+
+    private List<ObraAcademicaDetalleDto>? FiltrarSolicitudes()
+    {
+        if (solicitudesPendientes == null) return null;
+        
+        if (string.IsNullOrEmpty(selectedEstado))
+            return solicitudesPendientes;
+            
+        return solicitudesPendientes.Where(s => s.Estado == selectedEstado).ToList();
+    }
+
+    private void OnEstadoFilterChanged(ChangeEventArgs e)
+    {
+        selectedEstado = e.Value?.ToString() ?? "";
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedEstado = "";
+        StateHasChanged();
+    }
 
     private void ShowObrasModal()
     {

@@ -315,16 +315,20 @@
 }
 
 <!-- Modal de Rechazo -->
-@if (showRechazoModal && solicitudSeleccionada != null)
+@if (showRechazoModal && solicitudParaRechazo != null)
 {
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Rechazar Solicitud</h5>
+                    <h5 class="modal-title">Rechazar Solicitud - @solicitudParaRechazo.NombreCurso</h5>
                     <button type="button" class="btn-close" @onclick="CerrarRechazoModal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>Docente:</strong> @solicitudParaRechazo.DocenteNombre (@solicitudParaRechazo.DocenteCedula)<br/>
+                        <strong>Solicitud ID:</strong> @solicitudParaRechazo.Id
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Motivo del Rechazo *</label>
                         <textarea class="form-control" rows="4" @bind="motivoRechazo" 
@@ -428,7 +432,8 @@
     private bool showDetalleModal = false;
     private bool showRechazoModal = false;
     private bool showPDFModal = false;
-    private SolicitudCertificadoCapacitacionAdminDto? solicitudSeleccionada;
+    private SolicitudCertificadoCapacitacionAdminDto? solicitudSeleccionada; // Para modal de detalle
+    private SolicitudCertificadoCapacitacionAdminDto? solicitudParaRechazo; // Para modal de rechazo
     private SolicitudCertificadoCapacitacionAdminDto? solicitudParaPDF;
     private string motivoRechazo = string.Empty;
     private string comentariosRevision = string.Empty;
@@ -579,25 +584,45 @@
 
     private void RechazarSolicitud(SolicitudCertificadoCapacitacionAdminDto solicitud)
     {
-        solicitudSeleccionada = solicitud;
-        motivoRechazo = string.Empty;
-        comentariosRevision = string.Empty;
-        showRechazoModal = true;
-        CerrarDetalleModal();
+        try
+        {
+            Logger.LogInformation("Iniciando rechazo de solicitud: {SolicitudId}", solicitud.Id);
+            
+            // Cerrar el modal de detalle si está abierto
+            if (showDetalleModal)
+            {
+                CerrarDetalleModal();
+            }
+            
+            // Establecer la solicitud para el modal de rechazo
+            solicitudParaRechazo = solicitud;
+            motivoRechazo = string.Empty;
+            comentariosRevision = string.Empty;
+            showRechazoModal = true;
+            
+            Logger.LogInformation("Modal de rechazo activado para solicitud: {SolicitudId}", solicitud.Id);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en RechazarSolicitud: {Mensaje}", ex.Message);
+            ToastService.ShowError($"Error al abrir modal de rechazo: {ex.Message}");
+        }
     }
 
     private void CerrarRechazoModal()
     {
         showRechazoModal = false;
-        solicitudSeleccionada = null;
+        solicitudParaRechazo = null;
         motivoRechazo = string.Empty;
         comentariosRevision = string.Empty;
         isProcessing = false;
+        StateHasChanged();
     }
 
     private async Task ConfirmarRechazo()
     {
-        if (string.IsNullOrWhiteSpace(motivoRechazo) || solicitudSeleccionada == null || isProcessing)
+        if (string.IsNullOrWhiteSpace(motivoRechazo) || solicitudParaRechazo == null || isProcessing)
             return;
 
         try
@@ -607,21 +632,22 @@
 
             var request = new RevisionSolicitudCertificadoDto
             {
-                SolicitudId = solicitudSeleccionada.Id,
+                SolicitudId = solicitudParaRechazo.Id,
                 Accion = "Rechazar",
                 Comentarios = !string.IsNullOrWhiteSpace(comentariosRevision) 
                     ? $"{motivoRechazo.Trim()}\n\nComentarios adicionales: {comentariosRevision.Trim()}"
                     : motivoRechazo.Trim()
             };
 
-            var response = await Http.PostAsJsonAsync($"api/certificados-capacitacion/admin/revisar/{solicitudSeleccionada.Id}", request);
+            var response = await Http.PostAsJsonAsync($"api/certificados-capacitacion/admin/revisar/{solicitudParaRechazo.Id}", request);
             
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<ResponseGenericoCertificadoDto>();
+                
                 if (result != null && result.Exitoso)
                 {
-                    ToastService.ShowSuccess("Certificado rechazado");
+                    ToastService.ShowSuccess("Certificado rechazado exitosamente");
                     await CargarSolicitudes();
                     CerrarRechazoModal();
                 }
@@ -632,11 +658,14 @@
             }
             else
             {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogError("Error del servidor al rechazar certificado: {StatusCode} - {Content}", response.StatusCode, errorContent);
                 ToastService.ShowError("Error al comunicarse con el servidor");
             }
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error al rechazar certificado: {Mensaje}", ex.Message);
             ToastService.ShowError($"Error al rechazar certificado: {ex.Message}");
         }
         finally

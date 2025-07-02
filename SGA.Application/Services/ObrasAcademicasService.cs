@@ -544,7 +544,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
         {
             var solicitudesAll = await _solicitudRepository.GetAllAsync();
             var todasSolicitudes = solicitudesAll
-                .Where(s => s.DocenteCedula == cedula)
+                .Where(s => s.DocenteCedula == cedula) // Incluir todas las solicitudes para poder filtrar por estado en el frontend
                 .OrderByDescending(s => s.FechaCreacion)
                 .Select(s => new ObraAcademicaDetalleDto
                 {

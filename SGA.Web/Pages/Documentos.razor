@@ -14,7 +14,6 @@
     
     <!-- Componente de Obras Académicas -->
     <ObrasAcademicasComponent 
-        obrasAcademicas="obrasAcademicas"
         solicitudesPendientes="todasSolicitudesObras"
         isLoadingObras="isLoadingObras"
         OnShowObrasModal="ShowObrasModal"
@@ -38,26 +37,9 @@
         OnReemplazarArchivoCertificado="ReemplazarArchivoCertificado"
         OnVerMotivoRechazoCertificado="VerMotivoRechazoCertificado"
         OnEliminarCertificado="EliminarCertificado" />
-
-    <!-- Componente de Documentos -->
-    <DocumentosComponent 
-        documentos="documentos"
-        isLoading="isLoading"
-        OnShowUploadModal="ShowUploadModal"
-        OnViewDocument="ViewDocument"
-        OnDownloadDocument="DownloadDocument"
-        OnDeleteDocument="DeleteDocument" />
 </div>
 
 <!-- Modales -->
-<DocumentosModal 
-    IsVisible="showUploadModal"
-    IsUploading="isUploading"
-    TiposDocumento="tiposDocumento"
-    OnClose="CloseUploadModal"
-    OnUploadDocument="UploadDocument"
-    @ref="documentosModal" />
-
 <ObrasAcademicasModal 
     IsVisible="showObrasModal"
     IsEnviando="isEnviandoObras"
@@ -514,19 +496,10 @@
 
 @code {
     // Referencias a los componentes modales
-    private DocumentosModal? documentosModal;
     private ObrasAcademicasModal? obrasModal;
     private CertificadosCapacitacionModal? certificadosModal;
 
-    // Variables existentes para documentos
-    private List<DocumentoDto>? documentos;
-    private List<TipoDocumentoDto>? tiposDocumento;
-    private bool isLoading = true;
-    private bool showUploadModal = false;
-    private bool isUploading = false;
-
-    // Variables para obras académicas
-    private List<ObraAcademicaDetalleDto>? obrasAcademicas;
+    // Variables para obras académicas (solo solicitudes)
     private List<ObraAcademicaDetalleDto>? todasSolicitudesObras;
     private bool isLoadingObras = true;
     private bool showObrasModal = false;
@@ -548,132 +521,23 @@
     private async Task LoadAllData()
     {
         await Task.WhenAll(
-            LoadDocumentos(),
-            LoadTiposDocumento(),
-            LoadObrasAcademicas(),
             LoadTodasSolicitudesObras(),
             LoadTodasSolicitudesCertificados()
         );
     }
 
-    // Métodos para Documentos
-    private async Task LoadDocumentos()
-    {
-        try
-        {
-            isLoading = true;
-            documentos = await DocumentosService.LoadDocumentosAsync();
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-    
-    private async Task LoadTiposDocumento()
-    {
-        tiposDocumento = await DocumentosService.LoadTiposDocumentoAsync();
-    }
-    
-    private void ShowUploadModal()
-    {
-        showUploadModal = true;
-    }
-    
-    private void CloseUploadModal()
-    {
-        showUploadModal = false;
-    }
-    
-    private async Task UploadDocument()
-    {
-        if (documentosModal == null) return;
-        
-        var newDocumento = documentosModal.GetDocumento();
-        var selectedFile = documentosModal.GetSelectedFile();
-        
-        if (selectedFile == null || newDocumento.TipoDocumentoId <= 0 || string.IsNullOrWhiteSpace(newDocumento.Nombre))
-        {
-            ToastService.ShowWarning("Por favor complete todos los campos obligatorios.");
-            return;
-        }
-        
-        isUploading = true;
-        
-        try
-        {
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var content = new MultipartFormDataContent();
-            content.Add(new StringContent(newDocumento.Nombre), "Nombre");
-            content.Add(new StringContent(newDocumento.TipoDocumentoId.ToString()), "TipoDocumentoId");
-            content.Add(new StringContent(newDocumento.Descripcion ?? ""), "Descripcion");
-            
-            var fileContent = new StreamContent(selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)); // 10 MB max
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedFile.ContentType);
-            content.Add(fileContent, "Archivo", selectedFile.Name);
-            
-            var response = await Http.PostAsync("api/documento", content);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                ToastService.ShowSuccess("Documento subido con éxito");
-                CloseUploadModal();
-                await LoadDocumentos();
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                ToastService.ShowError($"Error al subir documento: {error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.ShowError($"Error al subir documento: {ex.Message}");
-        }
-        finally
-        {
-            isUploading = false;
-        }
-    }
-    
-    private async Task DeleteDocument(int id)
-    {
-        var success = await DocumentosService.DeleteDocumentAsync(id);
-        if (success)
-        {
-            await LoadDocumentos();
-        }
-    }
-    
-    private async Task ViewDocument(DocumentoDto documento)
-    {
-        await DocumentosService.ViewDocumentAsync(documento);
-    }
-    
-    private async Task DownloadDocument(DocumentoDto documento)
-    {
-        await DocumentosService.DownloadDocumentAsync(documento);
-    }
-
-    // Métodos para Obras Académicas
-    private async Task LoadObrasAcademicas()
+    // Métodos para Obras Académicas (solo solicitudes)
+    private async Task LoadTodasSolicitudesObras()
     {
         try
         {
             isLoadingObras = true;
-            obrasAcademicas = await DocumentosService.LoadObrasAcademicasAsync();
+            todasSolicitudesObras = await DocumentosService.LoadTodasSolicitudesObrasAsync();
         }
         finally
         {
             isLoadingObras = false;
         }
-    }
-
-    private async Task LoadTodasSolicitudesObras()
-    {
-        todasSolicitudesObras = await DocumentosService.LoadTodasSolicitudesObrasAsync();
     }
 
     private void ShowObrasModal()
@@ -721,7 +585,6 @@
             {
                 CloseObrasModal();
                 await LoadTodasSolicitudesObras();
-                await LoadObrasAcademicas();
             }
         }
         finally

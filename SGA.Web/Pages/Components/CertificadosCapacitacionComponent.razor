@@ -12,6 +12,28 @@
         </button>
     </div>
     <div class="card-body">
+        <!-- Filtros por Estado -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Filtrar por Estado:</label>
+                <select class="form-select" @onchange="OnEstadoFilterChanged">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En Proceso">En Proceso</option>
+                    <option value="Aprobada">Aprobada</option>
+                    <option value="Rechazada">Rechazada</option>
+                </select>
+            </div>
+            @if (!string.IsNullOrEmpty(selectedEstado))
+            {
+                <div class="col-md-6 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary" @onclick="ClearFilters">
+                        <i class="bi bi-x-circle"></i> Limpiar Filtros
+                    </button>
+                </div>
+            }
+        </div>
+
         @if (isLoadingCertificados)
         {
             <div class="d-flex justify-content-center my-3">
@@ -20,11 +42,20 @@
                 </div>
             </div>
         }
-        else if (solicitudesCertificados == null || !solicitudesCertificados.Any())
+        else if (certificadosFiltrados == null || !certificadosFiltrados.Any())
         {
-            <div class="alert alert-info" role="alert">
-                No tiene certificados de capacitación registrados. Utilice el botón "Agregar Certificados" para solicitar la inclusión de nuevos certificados.
-            </div>
+            @if (string.IsNullOrEmpty(selectedEstado))
+            {
+                <div class="alert alert-info" role="alert">
+                    No tiene certificados de capacitación registrados. Utilice el botón "Agregar Certificados" para solicitar la inclusión de nuevos certificados.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning" role="alert">
+                    No hay certificados con estado "@selectedEstado".
+                </div>
+            }
         }
         else
         {
@@ -42,7 +73,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var certificado in solicitudesCertificados)
+                        @foreach (var certificado in certificadosFiltrados)
                         {
                             <tr>
                                 <td>@certificado.NombreCurso</td>
@@ -149,6 +180,32 @@
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnReemplazarArchivoCertificado { get; set; }
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnVerMotivoRechazoCertificado { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarCertificado { get; set; }
+
+    // Variables para filtrado
+    private string selectedEstado = "";
+    private List<CertificadoCapacitacionDetalleDto>? certificadosFiltrados => FiltrarCertificados();
+
+    private List<CertificadoCapacitacionDetalleDto>? FiltrarCertificados()
+    {
+        if (solicitudesCertificados == null) return null;
+        
+        if (string.IsNullOrEmpty(selectedEstado))
+            return solicitudesCertificados;
+            
+        return solicitudesCertificados.Where(s => s.Estado == selectedEstado).ToList();
+    }
+
+    private void OnEstadoFilterChanged(ChangeEventArgs e)
+    {
+        selectedEstado = e.Value?.ToString() ?? "";
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedEstado = "";
+        StateHasChanged();
+    }
 
     private void ShowCertificadosModal()
     {
