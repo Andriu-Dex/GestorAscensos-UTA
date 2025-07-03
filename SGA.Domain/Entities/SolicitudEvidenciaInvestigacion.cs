@@ -23,11 +23,13 @@ public class SolicitudEvidenciaInvestigacion : BaseEntity
     public string? AreaTematica { get; set; }
     public string? Descripcion { get; set; }
     
-    // Gestión del archivo
+    // Gestión del archivo PDF almacenado en base de datos
     public string ArchivoNombre { get; set; } = string.Empty;
-    public string ArchivoRuta { get; set; } = string.Empty;
-    public long ArchivoTamano { get; set; }
+    public byte[] ArchivoContenido { get; set; } = Array.Empty<byte>(); // PDF comprimido almacenado en BD
+    public long ArchivoTamano { get; set; } // Tamaño original antes de compresión
+    public long ArchivoTamanoComprimido { get; set; } // Tamaño después de compresión
     public string ArchivoTipo { get; set; } = "application/pdf";
+    public bool ArchivoEstaComprimido { get; set; } = true; // Indica si está comprimido
     
     // Control de flujo
     public string Estado { get; set; } = "Pendiente"; // "Pendiente", "Aprobada", "Rechazada"

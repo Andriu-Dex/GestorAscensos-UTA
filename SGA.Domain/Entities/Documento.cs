@@ -12,7 +12,11 @@ public class Documento : BaseEntity
     public byte[] ContenidoArchivo { get; set; } = Array.Empty<byte>();
     public string ContentType { get; set; } = string.Empty;
     
-    // Relación con SolicitudAscenso
-    public Guid SolicitudAscensoId { get; set; }
-    public virtual SolicitudAscenso SolicitudAscenso { get; set; } = null!;
+    // Relación opcional con SolicitudAscenso (nullable)
+    public Guid? SolicitudAscensoId { get; set; }
+    public virtual SolicitudAscenso? SolicitudAscenso { get; set; }
+    
+    // Relación opcional con Docente (nullable)
+    public Guid? DocenteId { get; set; }
+    public virtual Docente? Docente { get; set; }
 }

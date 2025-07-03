@@ -16,6 +16,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
     private readonly IDocenteRepository _docenteRepository;
     private readonly IAuditoriaService _auditoriaService;
     private readonly INotificationService _notificationService;
+    private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<EvidenciasInvestigacionService> _logger;
 
     public EvidenciasInvestigacionService(
@@ -23,12 +24,14 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         IDocenteRepository docenteRepository,
         IAuditoriaService auditoriaService,
         INotificationService notificationService,
+        IPDFCompressionService pdfCompressionService,
         ILogger<EvidenciasInvestigacionService> logger)
     {
         _solicitudEvidenciaRepository = solicitudEvidenciaRepository;
         _docenteRepository = docenteRepository;
         _auditoriaService = auditoriaService;
         _notificationService = notificationService;
+        _pdfCompressionService = pdfCompressionService;
         _logger = logger;
     }
 
@@ -129,27 +132,26 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                             throw new Exception($"El archivo {archivoNombre} excede el tamaño máximo permitido de 10MB");
                         }
 
-                        // Validar que sea PDF
-                        if (!EsPDF(contenidoBytes))
+                        // Validar que sea PDF usando el servicio de compresión
+                        if (!_pdfCompressionService.ValidarPDF(contenidoBytes))
                         {
                             throw new Exception($"El archivo {archivoNombre} no es un PDF válido");
                         }
 
-                        // Generar ruta única para el archivo
-                        var carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "evidencias-investigacion", docente.Id.ToString());
-                        Directory.CreateDirectory(carpetaDestino);
-
-                        var nombreArchivo = $"evidencia-{nuevaSolicitud.Id}-{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
-                        var rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
-
-                        // Guardar archivo
-                        await File.WriteAllBytesAsync(rutaCompleta, contenidoBytes);
+                        // Comprimir PDF antes de almacenar en BD
+                        var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoBytes);
+                        var estadisticas = _pdfCompressionService.ObtenerEstadisticasCompresion(contenidoBytes, contenidoComprimido);
 
                         // Actualizar información en la entidad
                         nuevaSolicitud.ArchivoNombre = archivoNombre;
-                        nuevaSolicitud.ArchivoRuta = Path.Combine("uploads", "evidencias-investigacion", docente.Id.ToString(), nombreArchivo);
+                        nuevaSolicitud.ArchivoContenido = contenidoComprimido;
                         nuevaSolicitud.ArchivoTamano = contenidoBytes.Length;
+                        nuevaSolicitud.ArchivoTamanoComprimido = estadisticas.tamahoComprimido;
                         nuevaSolicitud.ArchivoTipo = evidencia.ArchivoTipo ?? "application/pdf";
+                        nuevaSolicitud.ArchivoEstaComprimido = true;
+
+                        _logger.LogDebug("Archivo PDF comprimido y almacenado en BD para evidencia: {Titulo}, Compresión: {Porcentaje:F2}%", 
+                            evidencia.TituloProyecto, estadisticas.porcentajeCompresion);
                     }
                     catch (Exception ex)
                     {
@@ -402,7 +404,8 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                 };
             }
 
-            if (!EsPDF(contenidoBytes))
+            // Validar que sea PDF usando el servicio de compresión
+            if (!_pdfCompressionService.ValidarPDF(contenidoBytes))
             {
                 return new ResponseGenericoEvidenciaDto
                 {
@@ -411,42 +414,21 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                 };
             }
 
-            // Eliminar archivo anterior si existe
-            if (!string.IsNullOrEmpty(evidencia.ArchivoRuta))
-            {
-                var rutaAnterior = Path.Combine(Directory.GetCurrentDirectory(), evidencia.ArchivoRuta);
-                if (File.Exists(rutaAnterior))
-                {
-                    File.Delete(rutaAnterior);
-                }
-            }
+            // Comprimir el nuevo PDF
+            var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoBytes);
+            var estadisticas = _pdfCompressionService.ObtenerEstadisticasCompresion(contenidoBytes, contenidoComprimido);
 
-            // Generar nueva ruta
-            var docente = await _docenteRepository.GetByCedulaAsync(cedula);
-            if (docente == null)
-            {
-                return new ResponseGenericoEvidenciaDto
-                {
-                    Exitoso = false,
-                    Mensaje = "Docente no encontrado"
-                };
-            }
-            
-            var carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "evidencias-investigacion", docente.Id.ToString());
-            Directory.CreateDirectory(carpetaDestino);
-
-            var nombreArchivo = $"evidencia-{evidencia.Id}-{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
-            var rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
-
-            // Guardar nuevo archivo
-            await File.WriteAllBytesAsync(rutaCompleta, contenidoBytes);
-
-            // Actualizar información
+            // Actualizar información (el archivo anterior en BD se reemplaza automáticamente)
             evidencia.ArchivoNombre = archivo.ArchivoNombre;
-            evidencia.ArchivoRuta = Path.Combine("uploads", "evidencias-investigacion", docente.Id.ToString(), nombreArchivo);
+            evidencia.ArchivoContenido = contenidoComprimido;
             evidencia.ArchivoTamano = contenidoBytes.Length;
+            evidencia.ArchivoTamanoComprimido = estadisticas.tamahoComprimido;
             evidencia.ArchivoTipo = archivo.ArchivoTipo;
+            evidencia.ArchivoEstaComprimido = true;
             evidencia.FechaModificacion = DateTime.UtcNow;
+
+            _logger.LogDebug("Archivo PDF reemplazado y comprimido en BD para evidencia: {Titulo}, Compresión: {Porcentaje:F2}%", 
+                evidencia.TituloProyecto, estadisticas.porcentajeCompresion);
 
             // Si estaba rechazada, volver a pendiente
             if (evidencia.Estado == "Rechazada")
@@ -521,17 +503,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                 };
             }
 
-            // Eliminar archivo físico si existe
-            if (!string.IsNullOrEmpty(evidencia.ArchivoRuta))
-            {
-                var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), evidencia.ArchivoRuta);
-                if (File.Exists(rutaCompleta))
-                {
-                    File.Delete(rutaCompleta);
-                }
-            }
-
-            // Eliminar de base de datos
+            // Eliminar de base de datos (el archivo PDF almacenado en BD se elimina automáticamente)
             await _solicitudEvidenciaRepository.DeleteAsync(evidencia.Id);
 
             await _auditoriaService.RegistrarAccionAsync(
@@ -574,18 +546,14 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                 return null;
             }
 
-            if (string.IsNullOrEmpty(evidencia.ArchivoRuta))
+            if (evidencia.ArchivoContenido == null || evidencia.ArchivoContenido.Length == 0)
             {
                 return null;
             }
 
-            var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), evidencia.ArchivoRuta);
-            if (!File.Exists(rutaCompleta))
-            {
-                return null;
-            }
-
-            return await File.ReadAllBytesAsync(rutaCompleta);
+            // Descomprimir el PDF desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(evidencia.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -812,18 +780,14 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         try
         {
             var solicitud = await _solicitudEvidenciaRepository.GetByIdAsync(solicitudId);
-            if (solicitud == null || string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud == null || solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 return null;
             }
 
-            var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-            if (!File.Exists(rutaCompleta))
-            {
-                return null;
-            }
-
-            return await File.ReadAllBytesAsync(rutaCompleta);
+            // Descomprimir el PDF desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -832,17 +796,4 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         }
     }
 
-    /// <summary>
-    /// Validar que un archivo es un PDF válido
-    /// </summary>
-    private static bool EsPDF(byte[] archivo)
-    {
-        if (archivo == null || archivo.Length < 4)
-            return false;
-
-        return archivo[0] == 0x25 && // %
-               archivo[1] == 0x50 && // P
-               archivo[2] == 0x44 && // D
-               archivo[3] == 0x46;   // F
-    }
 }

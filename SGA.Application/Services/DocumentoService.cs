@@ -10,10 +10,12 @@ namespace SGA.Application.Services;
 public class DocumentoService : IDocumentoService
 {
     private readonly IDocumentoRepository _documentoRepository;
+    private readonly IPDFCompressionService _pdfCompressionService;
 
-    public DocumentoService(IDocumentoRepository documentoRepository)
+    public DocumentoService(IDocumentoRepository documentoRepository, IPDFCompressionService pdfCompressionService)
     {
         _documentoRepository = documentoRepository;
+        _pdfCompressionService = pdfCompressionService;
     }
 
     public async Task<Guid> SubirDocumentoAsync(Guid solicitudId, SubirDocumentoRequestDto documento)
@@ -21,7 +23,7 @@ public class DocumentoService : IDocumentoService
         if (!await ValidarDocumentoAsync(documento))
             throw new ArgumentException("Archivo PDF inválido");
 
-        var contenidoComprimido = await ComprimirPDFAsync(documento.Contenido);
+        var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(documento.Contenido);
 
         var doc = new Documento
         {
@@ -42,7 +44,11 @@ public class DocumentoService : IDocumentoService
     public async Task<byte[]?> DescargarDocumentoAsync(Guid documentoId)
     {
         var documento = await _documentoRepository.GetByIdAsync(documentoId);
-        return documento?.ContenidoArchivo;
+        if (documento?.ContenidoArchivo == null)
+            return null;
+
+        // Descomprimir si es necesario
+        return await _pdfCompressionService.DescomprimirPDFAsync(documento.ContenidoArchivo);
     }
 
     public async Task<bool> EliminarDocumentoAsync(Guid documentoId)
@@ -66,35 +72,8 @@ public class DocumentoService : IDocumentoService
         if (documento.Contenido.Length > 10 * 1024 * 1024)
             return false;
 
-        // Validar header PDF
-        var header = documento.Contenido.Take(4).ToArray();
-        var pdfHeader = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // %PDF
-        
-        if (!header.SequenceEqual(pdfHeader))
-            return false;
-            
-        // Validación de estructura PDF
-        try
-        {
-            using (var stream = new MemoryStream(documento.Contenido))
-            {
-                var reader = new iText.Kernel.Pdf.PdfReader(stream);
-                var document = new iText.Kernel.Pdf.PdfDocument(reader);
-                
-                // Verificar que tenga al menos una página
-                bool isValid = document.GetNumberOfPages() >= 1;
-                
-                document.Close();
-                reader.Close();
-                
-                return isValid;
-            }
-        }
-        catch
-        {
-            // Si hay alguna excepción, el PDF no es válido
-            return false;
-        }
+        // Usar el servicio de compresión para validar PDF
+        return _pdfCompressionService.ValidarPDF(documento.Contenido);
     }
 
     public async Task<byte[]> ComprimirPDFAsync(byte[] contenidoPdf)
@@ -158,5 +137,23 @@ public class DocumentoService : IDocumentoService
         }
         
         return await Task.FromResult(contenidoPdf); // Devolver original si falló la compresión
+    }
+
+    public async Task<Documento?> ObtenerDocumentoPorIdAsync(Guid documentoId)
+    {
+        return await _documentoRepository.GetByIdAsync(documentoId);
+    }
+
+    public async Task<bool> AsociarDocumentoASolicitudAsync(Guid documentoId, Guid solicitudId)
+    {
+        var documento = await _documentoRepository.GetByIdAsync(documentoId);
+        if (documento == null)
+            return false;
+
+        // Actualizar la asociación del documento con la nueva solicitud
+        documento.SolicitudAscensoId = solicitudId;
+        await _documentoRepository.UpdateAsync(documento);
+        
+        return true;
     }
 }

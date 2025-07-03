@@ -42,6 +42,11 @@ public class CrearSolicitudRequest
     public bool CumpleCapacitacion { get; set; }
     public bool CumpleInvestigacion { get; set; }
     public string Observaciones { get; set; } = string.Empty;
+    
+    // Documentos seleccionados por tipo para conversión automática
+    public Dictionary<string, List<string>> DocumentosSeleccionados { get; set; } = new();
+    
+    // Lista de IDs de documentos genéricos (legacy - mantener para compatibilidad)
     public List<Guid> DocumentosIds { get; set; } = new List<Guid>();
 }
 

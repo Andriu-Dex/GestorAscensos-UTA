@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
 using SGA.Application;
 using SGA.Infrastructure;
 using SGA.Api.Configuration;
@@ -159,9 +160,10 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.ApplicationDbContext>();
-        context.Database.EnsureCreated();
+        // Usar migraciones en lugar de EnsureCreated para manejar cambios de esquema
+        context.Database.Migrate();
         
-        // También crear las bases de datos externas
+        // También crear las bases de datos externas (estas pueden usar EnsureCreated ya que son externas)
         var tthhContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.TTHHDbContext>();
         tthhContext.Database.EnsureCreated();
         
@@ -174,7 +176,7 @@ using (var scope = app.Services.CreateScope())
         var dirInvContext = scope.ServiceProvider.GetRequiredService<SGA.Infrastructure.Data.External.DIRINVDbContext>();
         dirInvContext.Database.EnsureCreated();
         
-        Console.WriteLine("Bases de datos inicializadas correctamente");
+        Console.WriteLine("Bases de datos inicializadas correctamente usando migraciones");
     }
     catch (Exception ex)
     {

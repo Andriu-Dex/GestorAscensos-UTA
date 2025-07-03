@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SGA.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SGA.Infrastructure.Data;
 namespace SGA.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250703162542_MakeDocumentoSolicitudIdNullable")]
+    partial class MakeDocumentoSolicitudIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -99,7 +102,7 @@ namespace SGA.Infrastructure.Migrations
                     b.HasIndex("UsuarioId")
                         .IsUnique();
 
-                    b.ToTable("Docentes", (string)null);
+                    b.ToTable("Docentes");
 
                     b.HasData(
                         new
@@ -175,7 +178,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("SolicitudAscensoId");
 
-                    b.ToTable("Documentos", (string)null);
+                    b.ToTable("Documentos");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.LogAuditoria", b =>
@@ -221,7 +224,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LogsAuditoria", (string)null);
+                    b.ToTable("LogsAuditoria");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.ObraAcademica", b =>
@@ -314,7 +317,7 @@ namespace SGA.Infrastructure.Migrations
                     b.HasIndex("Titulo", "DocenteId")
                         .IsUnique();
 
-                    b.ToTable("ObrasAcademicas", (string)null);
+                    b.ToTable("ObrasAcademicas");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.SolicitudAscenso", b =>
@@ -380,7 +383,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("DocenteId");
 
-                    b.ToTable("SolicitudesAscenso", (string)null);
+                    b.ToTable("SolicitudesAscenso");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.SolicitudCertificadoCapacitacion", b =>
@@ -508,7 +511,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("SolicitudGrupoId");
 
-                    b.ToTable("SolicitudesCertificadosCapacitacion", (string)null);
+                    b.ToTable("SolicitudesCertificadosCapacitacion");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.SolicitudEvidenciaInvestigacion", b =>
@@ -631,7 +634,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("TipoEvidencia");
 
-                    b.ToTable("SolicitudesEvidenciasInvestigacion", (string)null);
+                    b.ToTable("SolicitudesEvidenciasInvestigacion");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.SolicitudObraAcademica", b =>
@@ -751,7 +754,7 @@ namespace SGA.Infrastructure.Migrations
 
                     b.HasIndex("SolicitudGrupoId");
 
-                    b.ToTable("SolicitudesObrasAcademicas", (string)null);
+                    b.ToTable("SolicitudesObrasAcademicas");
                 });
 
             modelBuilder.Entity("SGA.Domain.Entities.Usuario", b =>
@@ -796,7 +799,7 @@ namespace SGA.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Usuarios", (string)null);
+                    b.ToTable("Usuarios");
 
                     b.HasData(
                         new

@@ -16,6 +16,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
     private readonly IRepository<SolicitudCertificadoCapacitacion> _solicitudCertificadoRepository;
     private readonly INotificationService _notificationService;
     private readonly IAuditoriaService _auditoriaService;
+    private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<CertificadosCapacitacionService> _logger;
 
     public CertificadosCapacitacionService(
@@ -23,12 +24,14 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
         IRepository<SolicitudCertificadoCapacitacion> solicitudCertificadoRepository,
         INotificationService notificationService,
         IAuditoriaService auditoriaService,
+        IPDFCompressionService pdfCompressionService,
         ILogger<CertificadosCapacitacionService> logger)
     {
         _docenteRepository = docenteRepository;
         _solicitudCertificadoRepository = solicitudCertificadoRepository;
         _notificationService = notificationService;
         _auditoriaService = auditoriaService;
+        _pdfCompressionService = pdfCompressionService;
         _logger = logger;
     }
 
@@ -214,40 +217,30 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                                     throw new Exception($"El archivo {archivoNombre} excede el tamaño máximo permitido de 10MB");
                                 }
 
-                                // Validar que sea PDF
-                                if (!EsPDF(contenidoBytes))
+                                // Validar que sea PDF usando el servicio de compresión
+                                if (!_pdfCompressionService.ValidarPDF(contenidoBytes))
                                 {
                                     throw new Exception($"El archivo {archivoNombre} no es un PDF válido");
                                 }
 
-                                // Generar ruta única para el archivo
-                                var extension = Path.GetExtension(archivoNombre);
-                                var nombreSinExtension = Path.GetFileNameWithoutExtension(archivoNombre);
-                                var nombreUnico = $"{nombreSinExtension}_{Guid.NewGuid()}{extension}";
-                                var rutaArchivo = Path.Combine("uploads", "certificados", nombreUnico);
-
-                                // Crear directorio si no existe
-                                var directorioDestino = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "certificados");
-                                if (!Directory.Exists(directorioDestino))
-                                {
-                                    Directory.CreateDirectory(directorioDestino);
-                                }
-
-                                // Guardar archivo
-                                var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), rutaArchivo);
-                                await File.WriteAllBytesAsync(rutaCompleta, contenidoBytes);
+                                // Comprimir PDF antes de almacenar en BD
+                                var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoBytes);
+                                var estadisticas = _pdfCompressionService.ObtenerEstadisticasCompresion(contenidoBytes, contenidoComprimido);
 
                                 nuevaSolicitud.ArchivoNombre = archivoNombre;
-                                nuevaSolicitud.ArchivoRuta = rutaArchivo;
+                                nuevaSolicitud.ArchivoContenido = contenidoComprimido;
                                 nuevaSolicitud.ArchivoTipo = archivoTipo;
                                 nuevaSolicitud.ArchivoTamano = contenidoBytes.Length;
+                                nuevaSolicitud.ArchivoTamanoComprimido = estadisticas.tamahoComprimido;
+                                nuevaSolicitud.ArchivoEstaComprimido = true;
 
-                                _logger.LogDebug($"Archivo guardado: {rutaArchivo}");
+                                _logger.LogDebug("Archivo PDF comprimido y almacenado en BD: {Nombre}, Compresión: {Porcentaje:F2}%", 
+                                    archivoNombre, estadisticas.porcentajeCompresion);
                             }
                             catch (Exception archivoEx)
                             {
-                                _logger.LogError(archivoEx, "Error al guardar archivo para certificado: {NombreCurso}", certificado.NombreCurso);
-                                throw new Exception($"Error al guardar archivo: {archivoEx.Message}", archivoEx);
+                                _logger.LogError(archivoEx, "Error al procesar archivo para certificado: {NombreCurso}", certificado.NombreCurso);
+                                throw new Exception($"Error al procesar archivo: {archivoEx.Message}", archivoEx);
                             }
                         }
 
@@ -433,18 +426,14 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 return null;
             }
 
-            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 return null;
             }
 
-            var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-            if (File.Exists(rutaCompleta))
-            {
-                return await File.ReadAllBytesAsync(rutaCompleta);
-            }
-
-            return null;
+            // Descomprimir el PDF desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -463,18 +452,14 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 return null;
             }
 
-            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 return null;
             }
 
-            var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-            if (File.Exists(rutaCompleta))
-            {
-                return await File.ReadAllBytesAsync(rutaCompleta);
-            }
-
-            return null;
+            // Descomprimir el PDF desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -516,17 +501,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 };
             }
 
-            // Eliminar archivo físico si existe
-            if (!string.IsNullOrEmpty(solicitud.ArchivoRuta))
-            {
-                var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-                if (File.Exists(rutaCompleta))
-                {
-                    File.Delete(rutaCompleta);
-                }
-            }
-
-            // Eliminar de base de datos
+            // Eliminar de base de datos (el archivo PDF almacenado en BD se elimina automáticamente)
             await _solicitudCertificadoRepository.DeleteAsync(solicitud.Id);
 
             await _auditoriaService.RegistrarAccionAsync(
@@ -682,8 +657,8 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                     };
                 }
 
-                // Validar que sea PDF
-                if (!EsPDF(contenidoBytes))
+                // Validar que sea PDF usando el servicio de compresión
+                if (!_pdfCompressionService.ValidarPDF(contenidoBytes))
                 {
                     return new ResponseGenericoCertificadoDto
                     {
@@ -692,37 +667,21 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                     };
                 }
 
-                // Eliminar archivo anterior si existe
-                if (!string.IsNullOrEmpty(solicitud.ArchivoRuta))
-                {
-                    var rutaAnterior = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-                    if (File.Exists(rutaAnterior))
-                    {
-                        File.Delete(rutaAnterior);
-                    }
-                }
+                // Comprimir el nuevo PDF
+                var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoBytes);
+                var estadisticas = _pdfCompressionService.ObtenerEstadisticasCompresion(contenidoBytes, contenidoComprimido);
 
-                // Generar nueva ruta
-                var extension = Path.GetExtension(archivo.ArchivoNombre);
-                var nombreSinExtension = Path.GetFileNameWithoutExtension(archivo.ArchivoNombre);
-                var nombreUnico = $"{nombreSinExtension}_{Guid.NewGuid()}{extension}";
-                var rutaArchivo = Path.Combine("uploads", "certificados", nombreUnico);
-
-                var directorioDestino = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "certificados");
-                if (!Directory.Exists(directorioDestino))
-                {
-                    Directory.CreateDirectory(directorioDestino);
-                }
-
-                var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), rutaArchivo);
-                await File.WriteAllBytesAsync(rutaCompleta, contenidoBytes);
-
-                // Actualizar solicitud
+                // Actualizar solicitud (el archivo anterior en BD se reemplaza automáticamente)
                 solicitud.ArchivoNombre = archivo.ArchivoNombre;
-                solicitud.ArchivoRuta = rutaArchivo;
+                solicitud.ArchivoContenido = contenidoComprimido;
                 solicitud.ArchivoTipo = archivo.ArchivoTipo;
                 solicitud.ArchivoTamano = contenidoBytes.Length;
+                solicitud.ArchivoTamanoComprimido = estadisticas.tamahoComprimido;
+                solicitud.ArchivoEstaComprimido = true;
                 solicitud.FechaModificacion = DateTime.UtcNow;
+
+                _logger.LogDebug("Archivo PDF reemplazado y comprimido en BD: {Nombre}, Compresión: {Porcentaje:F2}%", 
+                    archivo.ArchivoNombre, estadisticas.porcentajeCompresion);
 
                 // Si estaba rechazada, cambiar a pendiente
                 if (solicitud.Estado == "Rechazada")
@@ -1248,18 +1207,14 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
         try
         {
             var solicitud = await _solicitudCertificadoRepository.GetByIdAsync(solicitudId);
-            if (solicitud == null || string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud == null || solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 return null;
             }
 
-            var rutaCompleta = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-            if (!File.Exists(rutaCompleta))
-            {
-                return null;
-            }
-
-            return await File.ReadAllBytesAsync(rutaCompleta);
+            // Descomprimir el PDF desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -1268,17 +1223,4 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
         }
     }
 
-    /// <summary>
-    /// Validar que un archivo es un PDF válido
-    /// </summary>
-    private static bool EsPDF(byte[] archivo)
-    {
-        if (archivo == null || archivo.Length < 4)
-            return false;
-
-        return archivo[0] == 0x25 && // %
-               archivo[1] == 0x50 && // P
-               archivo[2] == 0x44 && // D
-               archivo[3] == 0x46;   // F
-    }
 }

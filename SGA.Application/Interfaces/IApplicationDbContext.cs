@@ -10,6 +10,9 @@ public interface IApplicationDbContext
     DbSet<SolicitudAscenso> SolicitudesAscenso { get; set; }
     DbSet<Documento> Documentos { get; set; }
     DbSet<LogAuditoria> LogsAuditoria { get; set; }
+    DbSet<ObraAcademica> ObrasAcademicas { get; set; }
+    DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
+    DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

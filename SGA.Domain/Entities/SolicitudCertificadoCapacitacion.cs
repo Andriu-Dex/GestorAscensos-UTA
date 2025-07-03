@@ -22,11 +22,13 @@ public class SolicitudCertificadoCapacitacion : BaseEntity
     public string? AreaTematica { get; set; } // Área temática del curso
     public string? Descripcion { get; set; }
     
-    // Archivo del certificado PDF
+    // Archivo del certificado PDF almacenado en base de datos
     public string? ArchivoNombre { get; set; }
-    public string? ArchivoRuta { get; set; }
+    public byte[]? ArchivoContenido { get; set; } // PDF comprimido almacenado en BD
     public string? ArchivoTipo { get; set; }
-    public long? ArchivoTamano { get; set; }
+    public long? ArchivoTamano { get; set; } // Tamaño original antes de compresión
+    public long? ArchivoTamanoComprimido { get; set; } // Tamaño después de compresión
+    public bool? ArchivoEstaComprimido { get; set; } = true; // Indica si está comprimido
     
     // Estado de la solicitud
     public string Estado { get; set; } = "Pendiente"; // Pendiente, Aprobada, Rechazada, En Proceso

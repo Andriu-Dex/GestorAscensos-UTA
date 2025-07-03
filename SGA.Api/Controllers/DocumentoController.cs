@@ -88,7 +88,7 @@ public class DocumentoController : ControllerBase
                 TamanoArchivo = d.TamanoArchivo,
                 TipoContenido = d.ContentType,
                 FechaSubida = d.FechaCreacion,
-                SolicitudId = d.SolicitudAscensoId,
+                SolicitudId = d.SolicitudAscensoId ?? Guid.Empty, // Usar Guid.Empty si es null
                 EsValido = true,
                 Observaciones = null,
                 FechaValidacion = null,

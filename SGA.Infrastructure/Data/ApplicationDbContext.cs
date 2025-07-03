@@ -87,10 +87,18 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.RutaArchivo).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
             entity.Property(e => e.TipoDocumento).HasConversion<string>();
+            entity.Property(e => e.SolicitudAscensoId).IsRequired(false); // Permitir null
+            entity.Property(e => e.DocenteId).IsRequired(false); // Permitir null
             
             entity.HasOne(e => e.SolicitudAscenso)
                   .WithMany(s => s.Documentos)
-                  .HasForeignKey(e => e.SolicitudAscensoId);
+                  .HasForeignKey(e => e.SolicitudAscensoId)
+                  .OnDelete(DeleteBehavior.SetNull); // Cambiar a SetNull para permitir documentos sin solicitud
+                  
+            entity.HasOne(e => e.Docente)
+                  .WithMany()
+                  .HasForeignKey(e => e.DocenteId)
+                  .OnDelete(DeleteBehavior.SetNull); // Permitir documentos sin docente específico
         });
 
         // Configuración LogAuditoria
@@ -186,8 +194,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.AreaTematica).HasMaxLength(200);
             entity.Property(e => e.Descripcion).HasMaxLength(2000);
             entity.Property(e => e.ArchivoNombre).HasMaxLength(255);
-            entity.Property(e => e.ArchivoRuta).HasMaxLength(500);
+            entity.Property(e => e.ArchivoContenido); // PDF comprimido como byte array
             entity.Property(e => e.ArchivoTipo).HasMaxLength(100);
+            entity.Property(e => e.ArchivoTamano);
+            entity.Property(e => e.ArchivoTamanoComprimido);
+            entity.Property(e => e.ArchivoEstaComprimido).HasDefaultValue(true);
             entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ComentariosRevision).HasMaxLength(1000);
             entity.Property(e => e.MotivoRechazo).HasMaxLength(1000);
@@ -226,8 +237,11 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.AreaTematica).HasMaxLength(200);
             entity.Property(e => e.Descripcion).HasMaxLength(2000);
             entity.Property(e => e.ArchivoNombre).HasMaxLength(255);
-            entity.Property(e => e.ArchivoRuta).HasMaxLength(500);
+            entity.Property(e => e.ArchivoContenido); // PDF comprimido como byte array
             entity.Property(e => e.ArchivoTipo).HasMaxLength(100);
+            entity.Property(e => e.ArchivoTamano);
+            entity.Property(e => e.ArchivoTamanoComprimido);
+            entity.Property(e => e.ArchivoEstaComprimido).HasDefaultValue(true);
             entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ComentariosRevision).HasMaxLength(1000);
             entity.Property(e => e.MotivoRechazo).HasMaxLength(1000);

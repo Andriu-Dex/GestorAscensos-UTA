@@ -31,6 +31,12 @@ public static class DependencyInjection
         // Servicios para evidencias de investigación
         services.AddScoped<IEvidenciasInvestigacionService, EvidenciasInvestigacionService>();
         
+        // Servicio de compresión de PDFs
+        services.AddScoped<IPDFCompressionService, PDFCompressionService>();
+        
+        // Servicio de conversión de documentos para solicitudes de ascenso
+        services.AddScoped<DocumentoConversionService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         

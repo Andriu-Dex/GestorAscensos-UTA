@@ -457,6 +457,9 @@
                         <button type="button" class="btn btn-secondary" @onclick="DebugDetails">
                             <i class="bi bi-bug"></i> Debug
                         </button>
+                        <button type="button" class="btn btn-info" @onclick="() => DebugDocumentosSolicitud(selectedSolicitud.Id)">
+                            <i class="bi bi-search"></i> Debug Docs
+                        </button>
                     }
                 </div>
             </div>
@@ -503,7 +506,7 @@
     private bool showCancelConfirmation = false;
     
     // Estados para gestión de documentos
-    private List<DocumentoDto> currentSolicitudDocuments = new();
+    private List<SGA.Web.Models.DocumentoDto> currentSolicitudDocuments = new();
     
     // Estados para PDF viewer
     private string? currentPdfUrl;
@@ -631,8 +634,14 @@
                     if (selectedSolicitud == null)
                         throw new InvalidOperationException("No se pudieron cargar los detalles de la solicitud");
                     
-                    Console.WriteLine($"Solicitud cargada: {selectedSolicitud.Id}");
+                    Console.WriteLine($"Solicitud cargada inicialmente: {selectedSolicitud.Id} con {selectedSolicitud.Documentos?.Count ?? 0} documentos");
+                    
+                    // Siempre cargar documentos por separado para asegurar completitud
+                    await CargarDocumentosSolicitud(solicitudId);
+                    
+                    Console.WriteLine($"Solicitud después de cargar documentos: {selectedSolicitud.Id} con {selectedSolicitud.Documentos?.Count ?? 0} documentos");
                     showDetails = true;
+                    StateHasChanged(); // Forzar actualización de la UI
                 }
                 catch (Exception ex)
                 {
@@ -654,6 +663,58 @@
         }
     }
     
+    private async Task CargarDocumentosSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            Console.WriteLine($"Cargando documentos para solicitud: {solicitudId}");
+            
+            var documentosResponse = await Http.GetAsync($"api/solicitudascenso/{solicitudId}/documentos");
+            
+            if (documentosResponse.IsSuccessStatusCode)
+            {
+                var documentos = await documentosResponse.DeserializeJsonSafeAsync<List<SGA.Web.Models.DocumentoDto>>();
+                if (documentos != null && selectedSolicitud != null)
+                {
+                    selectedSolicitud.Documentos = documentos;
+                    Console.WriteLine($"Documentos cargados correctamente: {documentos.Count}");
+                    
+                    foreach (var doc in documentos)
+                    {
+                        Console.WriteLine($"  - {doc.NombreArchivo} ({doc.TipoDocumento}) - ID: {doc.Id}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No se pudieron deserializar los documentos o selectedSolicitud es null");
+                    if (selectedSolicitud != null)
+                    {
+                        selectedSolicitud.Documentos = new List<SGA.Web.Models.DocumentoDto>();
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Error al cargar documentos: {documentosResponse.StatusCode}");
+                var errorContent = await documentosResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error content: {errorContent}");
+                
+                if (selectedSolicitud != null)
+                {
+                    selectedSolicitud.Documentos = new List<SGA.Web.Models.DocumentoDto>();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Excepción al cargar documentos: {ex.Message}");
+            if (selectedSolicitud != null)
+            {
+                selectedSolicitud.Documentos = new List<SGA.Web.Models.DocumentoDto>();
+            }
+        }
+    }
+    
     private void CloseDetailsModal()
     {
         showDetails = false;
@@ -663,7 +724,7 @@
     
     private void ShowDocumentManager(SolicitudAscensoDto solicitud)
     {
-        currentSolicitudDocuments = solicitud.Documentos?.ToList() ?? new List<DocumentoDto>();
+        currentSolicitudDocuments = solicitud.Documentos?.ToList() ?? new List<SGA.Web.Models.DocumentoDto>();
         showDocumentManager = true;
         showDetails = false; // Cerrar modal de detalles si está abierto
     }
@@ -674,7 +735,7 @@
         currentSolicitudDocuments.Clear();
     }
     
-    private async Task DownloadAllSolicitudDocuments(List<DocumentoDto> documentos)
+    private async Task DownloadAllSolicitudDocuments(List<SGA.Web.Models.DocumentoDto> documentos)
     {
         if (!documentos.Any()) return;
 
@@ -1023,7 +1084,7 @@
         public int MesesInvestigacion { get; set; }
         public int TiempoEnNivelDias { get; set; }
         
-        public List<DocumentoDto> Documentos { get; set; } = new();
+        public List<SGA.Web.Models.DocumentoDto> Documentos { get; set; } = new();
     }
     
     // Clase eliminada - usando SGA.Web.Models.DocumentoDto
@@ -1072,7 +1133,7 @@
 
     #region Vista previa de documentos individuales
     
-    private async Task PreviewSingleDocument(DocumentoDto documento)
+    private async Task PreviewSingleDocument(SGA.Web.Models.DocumentoDto documento)
     {
         currentReportSolicitudId = null;
         isPdfLoading = true;
@@ -1111,4 +1172,31 @@
     }
     
     #endregion
+
+    private async Task DebugDocumentosSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetAsync($"api/solicitudascenso/{solicitudId}/debug-documentos");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[DEBUG FRONTEND] Respuesta del servidor: {content}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG FRONTEND] Error HTTP: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[DEBUG FRONTEND] Error content: {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG FRONTEND] Excepción: {ex.Message}");
+        }
+    }
 }

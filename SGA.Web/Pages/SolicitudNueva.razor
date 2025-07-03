@@ -455,43 +455,25 @@
         {
             isSubmitting = true;
             
-            // Construir lista de IDs de documentos seleccionados
-            var documentosIds = new List<Guid>();
-            
-            // Convertir IDs de string a Guid
-            if (documentosSeleccionadosPorTipo.ContainsKey("obras"))
+            // Obtener documentos seleccionados del componente DocumentosSelector
+            if (documentosSelector != null)
             {
-                foreach (var id in documentosSeleccionadosPorTipo["obras"])
-                {
-                    if (Guid.TryParse(id, out Guid obraId))
-                        documentosIds.Add(obraId);
-                }
+                solicitud.DocumentosSeleccionados = documentosSelector.GetSelectedDocuments();
+                Console.WriteLine($"[SolicitudNueva] Documentos seleccionados por tipo: {System.Text.Json.JsonSerializer.Serialize(solicitud.DocumentosSeleccionados)}");
+                
+                var totalDocs = solicitud.DocumentosSeleccionados.Values.Sum(list => list.Count);
+                Console.WriteLine($"[SolicitudNueva] Total de documentos seleccionados: {totalDocs}");
             }
-            
-            if (documentosSeleccionadosPorTipo.ContainsKey("certificados"))
+            else
             {
-                foreach (var id in documentosSeleccionadosPorTipo["certificados"])
-                {
-                    if (Guid.TryParse(id, out Guid certId))
-                        documentosIds.Add(certId);
-                }
+                Console.WriteLine($"[SolicitudNueva] DocumentosSelector es null");
+                solicitud.DocumentosSeleccionados = new Dictionary<string, List<string>>();
             }
-            
-            if (documentosSeleccionadosPorTipo.ContainsKey("evidencias"))
-            {
-                foreach (var id in documentosSeleccionadosPorTipo["evidencias"])
-                {
-                    if (Guid.TryParse(id, out Guid evId))
-                        documentosIds.Add(evId);
-                }
-            }
-            
-            solicitud.DocumentosIds = documentosIds;
             
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            Console.WriteLine($"Enviando solicitud con {documentosIds.Count} documentos: {System.Text.Json.JsonSerializer.Serialize(solicitud)}");
+            Console.WriteLine($"[SolicitudNueva] Enviando solicitud: {System.Text.Json.JsonSerializer.Serialize(solicitud)}");
             
             var response = await Http.PostAsJsonAsync("api/solicitudascenso", solicitud);
             
@@ -503,13 +485,13 @@
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error del servidor: {error}");
+                Console.WriteLine($"[SolicitudNueva] Error del servidor: {error}");
                 ToastService.ShowError($"Error al enviar la solicitud: {error}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al enviar solicitud: {ex.Message}");
+            Console.WriteLine($"[SolicitudNueva] Error al enviar solicitud: {ex.Message}");
             ToastService.ShowError($"Error inesperado: {ex.Message}");
         }
         finally
@@ -615,6 +597,11 @@
         public bool CumpleCapacitacion { get; set; }
         public bool CumpleInvestigacion { get; set; }
         public string Observaciones { get; set; } = string.Empty;
+        
+        // Documentos seleccionados por tipo para conversión automática
+        public Dictionary<string, List<string>> DocumentosSeleccionados { get; set; } = new();
+        
+        // Lista de IDs de documentos genéricos (legacy - mantener para compatibilidad)
         public List<Guid> DocumentosIds { get; set; } = new List<Guid>();
     }
 

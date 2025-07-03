@@ -115,7 +115,7 @@ public class DocumentoRepository : IDocumentoRepository
     {
         return await _context.Documentos
             .Include(d => d.SolicitudAscenso)
-            .Where(d => d.SolicitudAscenso.DocenteId == docenteId)
+            .Where(d => d.SolicitudAscenso != null && d.SolicitudAscenso.DocenteId == docenteId)
             .OrderByDescending(d => d.FechaCreacion)
             .ToListAsync();
     }
