@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<Documento> Documentos { get; set; }
     DbSet<LogAuditoria> LogsAuditoria { get; set; }
     DbSet<ObraAcademica> ObrasAcademicas { get; set; }
+    DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
     DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
     DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
     

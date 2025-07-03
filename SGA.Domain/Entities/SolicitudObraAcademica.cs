@@ -21,6 +21,7 @@ public class SolicitudObraAcademica : BaseEntity
     public string? ArchivoRuta { get; set; }
     public string? ArchivoTipo { get; set; }
     public long? ArchivoTamano { get; set; }
+    public byte[]? ArchivoContenido { get; set; } // PDF comprimido almacenado en BD
     
     // Estado de la solicitud
     public string Estado { get; set; } = "Pendiente"; // Pendiente, Aprobada, Rechazada

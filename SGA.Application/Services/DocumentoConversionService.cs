@@ -83,38 +83,63 @@ public class DocumentoConversionService
         return documentosCreados;
     }
 
-    private async Task<Documento?> ConvertirObraADocumentoAsync(Guid obraId)
+    private async Task<Documento?> ConvertirObraADocumentoAsync(Guid solicitudId)
     {
         try
         {
-            Console.WriteLine($"[DocumentoConversion] Convirtiendo obra académica {obraId}");
+            Console.WriteLine($"[DocumentoConversion] Convirtiendo solicitud de obra académica {solicitudId}");
             
-            // Buscar la obra académica directamente (no la solicitud)
-            var obra = await _context.ObrasAcademicas
-                .FirstOrDefaultAsync(o => o.Id == obraId && o.EsVerificada == true);
+            // Buscar la solicitud de obra académica aprobada
+            var solicitud = await _context.SolicitudesObrasAcademicas
+                .FirstOrDefaultAsync(s => s.Id == solicitudId && s.Estado == "Aprobada");
                 
-            if (obra == null)
+            if (solicitud == null)
             {
-                Console.WriteLine($"[DocumentoConversion] Obra académica {obraId} no encontrada o no verificada");
+                Console.WriteLine($"[DocumentoConversion] Solicitud de obra académica {solicitudId} no encontrada o no aprobada");
                 return null;
             }
             
-            // Verificar que tenga archivo
-            if (obra.ContenidoArchivoPDF == null || obra.ContenidoArchivoPDF.Length == 0)
+            // Obtener contenido del archivo (BD preferido, fallback a archivo físico)
+            byte[] contenidoArchivo;
+            long tamanoArchivo;
+            
+            if (solicitud.ArchivoContenido != null && solicitud.ArchivoContenido.Length > 0)
             {
-                Console.WriteLine($"[DocumentoConversion] Obra académica {obraId} no tiene archivo adjunto");
+                // Usar archivo de BD (migración completa)
+                Console.WriteLine($"[DocumentoConversion] Usando archivo desde BD para solicitud {solicitudId}");
+                contenidoArchivo = solicitud.ArchivoContenido;
+                tamanoArchivo = solicitud.ArchivoTamano ?? contenidoArchivo.Length;
+            }
+            else if (!string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            {
+                // Fallback a archivo físico (compatibilidad)
+                Console.WriteLine($"[DocumentoConversion] Usando archivo físico para solicitud {solicitudId}: {solicitud.ArchivoRuta}");
+                try
+                {
+                    contenidoArchivo = await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
+                    tamanoArchivo = contenidoArchivo.Length;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DocumentoConversion] Error al leer archivo físico {solicitud.ArchivoRuta}: {ex.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DocumentoConversion] Solicitud de obra académica {solicitudId} no tiene archivo en BD ni ruta física");
                 return null;
             }
             
             var documento = new Documento
             {
-                NombreArchivo = obra.NombreArchivo ?? $"obra_{obra.Titulo?.Replace(" ", "_") ?? obraId.ToString()[..8]}.pdf",
-                RutaArchivo = $"solicitud_ascenso/obra_{obraId}",
-                TamanoArchivo = obra.TamanoArchivo ?? obra.ContenidoArchivoPDF.Length,
+                NombreArchivo = solicitud.ArchivoNombre ?? $"obra_{solicitud.Titulo?.Replace(" ", "_") ?? solicitudId.ToString()[..8]}.pdf",
+                RutaArchivo = $"solicitud_ascenso/obra_{solicitudId}",
+                TamanoArchivo = tamanoArchivo,
                 TipoDocumento = TipoDocumento.ObrasAcademicas,
-                ContenidoArchivo = obra.ContenidoArchivoPDF,
-                ContentType = obra.ContentType ?? "application/pdf",
-                DocenteId = obra.DocenteId // Asignar el DocenteId de la obra
+                ContenidoArchivo = contenidoArchivo,
+                ContentType = solicitud.ArchivoTipo ?? "application/pdf",
+                DocenteId = solicitud.DocenteId
             };
 
             Console.WriteLine($"[DocumentoConversion] Creando documento: {documento.NombreArchivo}, Tamaño: {documento.TamanoArchivo}");
@@ -125,7 +150,7 @@ public class DocumentoConversionService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DocumentoConversion] Error convirtiendo obra {obraId}: {ex.Message}");
+            Console.WriteLine($"[DocumentoConversion] Error convirtiendo solicitud de obra {solicitudId}: {ex.Message}");
             Console.WriteLine($"[DocumentoConversion] StackTrace: {ex.StackTrace}");
             return null;
         }
