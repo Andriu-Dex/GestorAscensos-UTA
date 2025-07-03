@@ -4,6 +4,7 @@
 @attribute [Authorize]
 @inject IApiService ApiService
 @inject IJSRuntime JSRuntime
+@inject Blazored.Toast.Services.IToastService ToastService
 @inject AuthenticationStateProvider AuthStateProvider
 
 <div class="container mt-4">
@@ -148,7 +149,7 @@
     {
         if (docenteIdSeleccionado <= 0)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Debe ingresar un ID de docente válido");
+            ToastService.ShowWarning("Debe ingresar un ID de docente válido");
             return;
         }
 
@@ -178,7 +179,7 @@
     {
         if (solicitudIdSeleccionada <= 0)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Debe ingresar un ID de solicitud válido");
+            ToastService.ShowWarning("Debe ingresar un ID de solicitud válido");
             return;
         }
 

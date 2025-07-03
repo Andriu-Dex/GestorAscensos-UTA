@@ -9,16 +9,27 @@ window.evidenciasInvestigacionHelpers = {
         if (file) {
           // Validar tamaño del archivo (max 10MB)
           if (file.size > 10 * 1024 * 1024) {
-            alert(
-              "El archivo es demasiado grande. El tamaño máximo permitido es 10MB."
-            );
+            if (typeof showToast === "function") {
+              showToast(
+                "El archivo es demasiado grande. El tamaño máximo permitido es 10MB.",
+                "error"
+              );
+            } else {
+              console.error(
+                "El archivo es demasiado grande. El tamaño máximo permitido es 10MB."
+              );
+            }
             e.target.value = "";
             return;
           }
 
           // Validar tipo de archivo
           if (file.type !== "application/pdf") {
-            alert("Solo se permiten archivos PDF.");
+            if (typeof showToast === "function") {
+              showToast("Solo se permiten archivos PDF.", "error");
+            } else {
+              console.error("Solo se permiten archivos PDF.");
+            }
             e.target.value = "";
             return;
           }

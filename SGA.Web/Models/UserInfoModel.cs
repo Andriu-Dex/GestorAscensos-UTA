@@ -2,7 +2,7 @@ namespace SGA.Web.Models
 {
     public class UserInfoModel
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string Nombres { get; set; } = string.Empty;
         public string Apellidos { get; set; } = string.Empty;

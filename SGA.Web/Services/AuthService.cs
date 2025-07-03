@@ -59,7 +59,7 @@ namespace SGA.Web.Services
                         
                         var userInfoModel = new UserInfoModel
                         {
-                            Id = apiResponse.Usuario?.Id ?? Guid.Empty,
+                            Id = apiResponse.Usuario?.Id.ToString() ?? "",
                             Username = apiResponse.Usuario?.Email ?? "",
                             Email = apiResponse.Usuario?.Email ?? "",
                             Nombres = apiResponse.Usuario?.Docente?.Nombres ?? "",
@@ -205,7 +205,7 @@ namespace SGA.Web.Services
                             
                             _currentUser = new UserInfoModel
                             {
-                                Id = docenteDto.Id,
+                                Id = docenteDto.Id.ToString(),
                                 Username = docenteDto.Email,
                                 Email = docenteDto.Email,
                                 Nombres = docenteDto.Nombres,
@@ -261,7 +261,7 @@ namespace SGA.Web.Services
                         
                         _currentUser = new UserInfoModel
                         {
-                            Id = Guid.Empty,
+                            Id = "",
                             Username = email,
                             Email = email,
                             Nombres = "Usuario", // Por defecto, se actualizará con datos reales

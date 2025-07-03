@@ -1,9 +1,14 @@
 @page "/solicitudes"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using System.Net.Http.Json
+@using SGA.Web.Extensions
 @attribute [Authorize]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject Blazored.Toast.Services.IToastService ToastService
 
 <div class="container mt-4">
     <h3>Mis Solicitudes de Ascenso</h3>
@@ -47,7 +52,7 @@
                         <tbody>
                             @foreach (var solicitud in solicitudes)
                             {
-                                <tr @onclick="() => ViewSolicitudDetails(solicitud.Id)" style="cursor: pointer;">
+                                <tr>
                                     <td>SOL-@solicitud.Id.ToString().Substring(0, 8)</td>
                                     <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
                                     <td>
@@ -215,6 +220,12 @@
                     <button type="button" class="btn btn-primary" @onclick="() => GenerateReport(selectedSolicitud.Id)">
                         <i class="bi bi-file-pdf"></i> Generar Reporte
                     </button>
+                    @if (System.Diagnostics.Debugger.IsAttached)
+                    {
+                        <button type="button" class="btn btn-secondary" @onclick="DebugDetails">
+                            <i class="bi bi-bug"></i> Debug
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -230,6 +241,7 @@
     
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("Iniciando carga de solicitudes...");
         await LoadSolicitudes();
     }
     
@@ -238,17 +250,55 @@
         try
         {
             isLoading = true;
+            StateHasChanged();
+            
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            if (string.IsNullOrEmpty(token))
+            {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
+            
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            solicitudes = await Http.GetFromJsonAsync<List<SolicitudAscensoDto>>("api/solicitudascenso/mis-solicitudes");
+            
+            var response = await Http.GetAsync("api/solicitudascenso/mis-solicitudes");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    // Primero obtener el contenido como string para debug
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Respuesta del servidor: {content}");
+                    
+                    solicitudes = await response.DeserializeJsonSafeAsync<List<SolicitudAscensoDto>>();
+                    Console.WriteLine($"Solicitudes cargadas: {solicitudes?.Count ?? 0}");
+                }
+                catch (Exception ex)
+                {
+                    solicitudes = new List<SolicitudAscensoDto>();
+                    ToastService.ShowError($"Error al procesar la respuesta del servidor: {ex.Message}");
+                    Console.WriteLine($"Error de deserialización: {ex}");
+                }
+            }
+            else
+            {
+                solicitudes = new List<SolicitudAscensoDto>();
+                var errorMessage = await response.GetErrorMessageAsync();
+                ToastService.ShowError($"Error al cargar solicitudes: {response.StatusCode} - {errorMessage}");
+                Console.WriteLine($"Error HTTP: {response.StatusCode} - {errorMessage}");
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al cargar solicitudes
+            solicitudes = new List<SolicitudAscensoDto>();
+            ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
+            Console.WriteLine($"Error general: {ex}");
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
     
@@ -263,12 +313,42 @@
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            selectedSolicitud = await Http.GetFromJsonAsync<SolicitudAscensoDto>($"api/solicitudascenso/{solicitudId}");
-            showDetails = true;
+            
+            var response = await Http.GetAsync($"api/solicitudascenso/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    // Debug del contenido
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Detalle de solicitud: {content}");
+                    
+                    selectedSolicitud = await response.DeserializeJsonSafeAsync<SolicitudAscensoDto>();
+                    
+                    if (selectedSolicitud == null)
+                        throw new InvalidOperationException("No se pudieron cargar los detalles de la solicitud");
+                    
+                    Console.WriteLine($"Solicitud cargada: {selectedSolicitud.Id}");
+                    showDetails = true;
+                }
+                catch (Exception ex)
+                {
+                    ToastService.ShowError($"Error al procesar detalles de la solicitud: {ex.Message}");
+                    Console.WriteLine($"Error de deserialización de detalles: {ex}");
+                }
+            }
+            else
+            {
+                var errorMessage = await response.GetErrorMessageAsync();
+                ToastService.ShowError($"Error al cargar detalles: {response.StatusCode} - {errorMessage}");
+                Console.WriteLine($"Error HTTP detalles: {response.StatusCode} - {errorMessage}");
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al cargar detalles de la solicitud
+            ToastService.ShowError($"Error al cargar detalles de la solicitud: {ex.Message}");
+            Console.WriteLine($"Error general detalles: {ex}");
         }
     }
     
@@ -291,12 +371,18 @@
             
             if (response.IsSuccessStatusCode)
             {
+                ToastService.ShowSuccess("Solicitud cancelada exitosamente");
                 await LoadSolicitudes();
             }
+            else
+            {
+                var errorMessage = await response.GetErrorMessageAsync();
+                ToastService.ShowError($"Error al cancelar solicitud: {errorMessage}");
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al cancelar solicitud
+            ToastService.ShowError($"Error al cancelar solicitud: {ex.Message}");
         }
     }
     
@@ -308,9 +394,9 @@
             var url = $"api/reporte/solicitud/{solicitudId}?token={token}";
             await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al generar reporte
+            ToastService.ShowError($"Error al generar reporte: {ex.Message}");
         }
     }
     
@@ -318,6 +404,7 @@
     {
         try
         {
+            ToastService.ShowInfo("Descargando documento...");
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -331,15 +418,16 @@
                               $"documento-{documentoId}.pdf";
                 
                 await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                ToastService.ShowSuccess("Documento descargado correctamente");
             }
             else
             {
-                // Error al descargar documento
+                ToastService.ShowError("Error al descargar el documento");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Error al descargar documento
+            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
         }
     }
 
@@ -390,4 +478,38 @@
         public string TipoDocumento { get; set; } = string.Empty;
         public DateTime FechaCreacion { get; set; }
     }
+
+    private void DebugDetails()
+    {
+        if (selectedSolicitud == null) return;
+
+        Console.WriteLine("===== DEBUGGING SOLICITUD DETAILS =====");
+        Console.WriteLine($"ID: {selectedSolicitud.Id}");
+        Console.WriteLine($"DocenteID: {selectedSolicitud.DocenteId}");
+        Console.WriteLine($"DocenteNombre: {selectedSolicitud.DocenteNombre}");
+        Console.WriteLine($"NivelActual: {selectedSolicitud.NivelActual}");
+        Console.WriteLine($"NivelSolicitado: {selectedSolicitud.NivelSolicitado}");
+        Console.WriteLine($"Estado: {selectedSolicitud.Estado}");
+        Console.WriteLine($"FechaSolicitud: {selectedSolicitud.FechaSolicitud}");
+        Console.WriteLine($"PromedioEvaluaciones: {selectedSolicitud.PromedioEvaluaciones}");
+        Console.WriteLine($"HorasCapacitacion: {selectedSolicitud.HorasCapacitacion}");
+        Console.WriteLine($"NumeroObrasAcademicas: {selectedSolicitud.NumeroObrasAcademicas}");
+        Console.WriteLine($"MesesInvestigacion: {selectedSolicitud.MesesInvestigacion}");
+        Console.WriteLine($"TiempoEnNivelDias: {selectedSolicitud.TiempoEnNivelDias}");
+        
+        Console.WriteLine("\nDOCUMENTOS:");
+        if (selectedSolicitud.Documentos != null && selectedSolicitud.Documentos.Any())
+        {
+            foreach (var doc in selectedSolicitud.Documentos)
+            {
+                Console.WriteLine($"  - ID: {doc.Id}, Nombre: {doc.NombreArchivo}, Tamaño: {doc.TamanoArchivo}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("  No hay documentos");
+        }
+        Console.WriteLine("===== END DEBUGGING =====");
+    }
+
 }

@@ -210,7 +210,7 @@ public class AuthController : ControllerBase
 
             return Ok(new
             {
-                id = docente.Id,
+                id = docente.Id.ToString(), // Convertir Guid a string para evitar problemas de deserialización
                 nombres = docente.Nombres,
                 apellidos = docente.Apellidos,
                 cedula = docente.Cedula,

@@ -76,7 +76,11 @@ window.downloadFile = (
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Error al descargar archivo:", error);
-    alert("Error al descargar el archivo: " + error.message);
+    if (typeof showToast === "function") {
+      showToast("Error al descargar el archivo: " + error.message, "error");
+    } else {
+      console.error("Error al descargar el archivo: " + error.message);
+    }
   }
 };
 
@@ -191,7 +195,11 @@ window.showPdfInModal = (base64String, title = "Visualizar PDF") => {
     };
   } catch (error) {
     console.error("Error al mostrar PDF en modal:", error);
-    alert("Error al visualizar el archivo: " + error.message);
+    if (typeof showToast === "function") {
+      showToast("Error al visualizar el archivo: " + error.message, "error");
+    } else {
+      console.error("Error al visualizar el archivo: " + error.message);
+    }
   }
 };
 

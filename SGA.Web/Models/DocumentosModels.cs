@@ -84,6 +84,7 @@ namespace SGA.Web.Models
     public class CertificadoCapacitacionDetalleDto
     {
         public Guid Id { get; set; }
+        public Guid? SolicitudId { get; set; }
         public string NombreCurso { get; set; } = string.Empty;
         public string InstitucionOfertante { get; set; } = string.Empty;
         public string TipoCapacitacion { get; set; } = string.Empty;

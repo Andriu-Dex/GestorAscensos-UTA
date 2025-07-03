@@ -63,11 +63,15 @@ public class SolicitudesController : ControllerBase
             if (docente == null)
                 return NotFound("Docente no encontrado");
 
+            Console.WriteLine($"Cargando solicitudes para docente: {docente.Id} - {email}");
             var solicitudes = await _solicitudService.GetSolicitudesByDocenteAsync(docente.Id);
+            Console.WriteLine($"Solicitudes encontradas: {solicitudes.Count}");
+            
             return Ok(solicitudes);
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Error en GetMisSolicitudes: {ex}");
             return StatusCode(500, new { message = ex.Message });
         }
     }
@@ -170,6 +174,52 @@ public class SolicitudesController : ControllerBase
                 return NotFound("Documento no encontrado");
 
             return File(contenido, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> CancelarSolicitud(Guid id)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
+            if (solicitud == null)
+                return NotFound("Solicitud no encontrada");
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteId != docente.Id)
+                return Forbid("No tiene permisos para cancelar esta solicitud");
+
+            // Solo se pueden cancelar solicitudes en estado Pendiente
+            if (solicitud.Estado != "Pendiente")
+                return BadRequest("Solo se pueden cancelar solicitudes en estado Pendiente");
+
+            // Procesar como rechazo con motivo especial
+            var procesarRequest = new ProcesarSolicitudRequest
+            {
+                SolicitudId = id,
+                Aprobar = false,
+                MotivoRechazo = "Cancelada por el docente"
+            };
+
+            var resultado = await _solicitudService.ProcesarSolicitudAsync(id, procesarRequest, docente.Id);
+            
+            if (!resultado)
+                return BadRequest("No se pudo cancelar la solicitud");
+
+            return Ok(new { message = "Solicitud cancelada exitosamente" });
         }
         catch (Exception ex)
         {

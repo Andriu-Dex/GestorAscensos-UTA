@@ -153,6 +153,31 @@ public class SolicitudService : ISolicitudService
     {
         var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
         
+        // Para obtener información del aprobador, usamos el AprobadoPor de la navegación
+        string? aprobadorNombre = null;
+        if (solicitud.AprobadoPor != null && solicitud.AprobadoPor.Docente != null)
+        {
+            aprobadorNombre = solicitud.AprobadoPor.Docente.NombreCompleto;
+        }
+        
+        // Convertir los documentos de la solicitud
+        var documentos = new List<DocumentoDto>();
+        if (solicitud.Documentos != null && solicitud.Documentos.Any())
+        {
+            foreach (var doc in solicitud.Documentos)
+            {
+                documentos.Add(new DocumentoDto
+                {
+                    Id = doc.Id,
+                    NombreArchivo = doc.NombreArchivo,
+                    Nombre = doc.NombreArchivo,
+                    TamanoArchivo = doc.TamanoArchivo,
+                    TipoDocumento = doc.TipoDocumento.ToString(),
+                    FechaCreacion = doc.FechaCreacion
+                });
+            }
+        }
+        
         return new SolicitudAscensoDto
         {
             Id = solicitud.Id,
@@ -168,12 +193,13 @@ public class SolicitudService : ISolicitudService
             MotivoRechazo = solicitud.MotivoRechazo,
             FechaSolicitud = solicitud.FechaSolicitud,
             FechaAprobacion = solicitud.FechaAprobacion,
+            AprobadoPor = aprobadorNombre,
             PromedioEvaluaciones = solicitud.PromedioEvaluaciones,
             HorasCapacitacion = solicitud.HorasCapacitacion,
             NumeroObrasAcademicas = solicitud.NumeroObrasAcademicas,
             MesesInvestigacion = solicitud.MesesInvestigacion,
             TiempoEnNivelDias = solicitud.TiempoEnNivelDias,
-            Documentos = new List<DocumentoDto>() // Se puede implementar después
+            Documentos = documentos
         };
     }
 }

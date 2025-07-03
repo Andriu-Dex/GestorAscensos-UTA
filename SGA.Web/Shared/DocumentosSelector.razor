@@ -1,0 +1,645 @@
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@using System.Net.Http.Json
+@using SGA.Web.Models
+@using Microsoft.JSInterop
+
+<div class="documentos-selector">
+    @if (isLoading)
+    {
+        <div class="text-center my-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Cargando documentos...</span>
+            </div>
+            <p class="mt-2">Cargando documentos aprobados...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Obras Académicas -->
+        <div class="documento-seccion mb-4">
+            <h6 class="fw-bold mb-3" style="color: #8a1538;">
+                <i class="bi bi-book"></i> Obras Académicas
+            </h6>
+            @if (obrasAcademicas?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" class="form-check-input" 
+                                           @onchange="e => ToggleAllObras(e.Value as bool? ?? false)" />
+                                </th>
+                                <th width="35%">Título</th>
+                                <th width="20%">Tipo</th>
+                                <th width="15%">Fecha Publicación</th>
+                                <th width="15%">Estado</th>
+                                <th width="10%">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var obra in obrasAcademicas.Where(o => o.Estado == "Aprobada"))
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" 
+                                               checked="@DocumentosSeleccionados[GetDocumentKey("obra", obra.SolicitudId?.ToString() ?? obra.Id.ToString())]" 
+                                               @onchange="e => ToggleObraSelection(obra, e.Value as bool? ?? false)" />
+                                    </td>
+                                    <td title="@obra.Titulo">
+                                        <span class="text-truncate d-block" style="max-width: 300px;">
+                                            @obra.Titulo
+                                        </span>
+                                    </td>
+                                    <td>@obra.TipoObra</td>
+                                    <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <span class="badge bg-success">@obra.Estado</span>
+                                    </td>
+                                    <td>
+                                        @if (obra.TieneArchivo)
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                    @onclick="() => VisualizarPdfObra(obra.SolicitudId.GetValueOrDefault())"
+                                                    title="Ver PDF">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No tiene obras académicas aprobadas disponibles.
+                </div>
+            }
+        </div>
+
+        <!-- Certificados de Capacitación -->
+        <div class="documento-seccion mb-4">
+            <h6 class="fw-bold mb-3" style="color: #8a1538;">
+                <i class="bi bi-award"></i> Certificados de Capacitación
+            </h6>
+            @if (certificadosCapacitacion?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" class="form-check-input" 
+                                           @onchange="e => ToggleAllCertificados(e.Value as bool? ?? false)" />
+                                </th>
+                                <th width="30%">Nombre del Curso</th>
+                                <th width="25%">Institución</th>
+                                <th width="10%">Horas</th>
+                                <th width="15%">Estado</th>
+                                <th width="15%">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var certificado in certificadosCapacitacion.Where(c => c.Estado == "Aprobada"))
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" 
+                                               checked="@DocumentosSeleccionados[GetDocumentKey("certificado", certificado.Id.ToString())]" 
+                                               @onchange="e => ToggleCertificadoSelection(certificado, e.Value as bool? ?? false)" />
+                                    </td>
+                                    <td title="@certificado.NombreCurso">
+                                        <span class="text-truncate d-block" style="max-width: 250px;">
+                                            @certificado.NombreCurso
+                                        </span>
+                                    </td>
+                                    <td title="@certificado.InstitucionOfertante">
+                                        <span class="text-truncate d-block" style="max-width: 200px;">
+                                            @certificado.InstitucionOfertante
+                                        </span>
+                                    </td>
+                                    <td>@certificado.HorasDuracion h</td>
+                                    <td>
+                                        <span class="badge bg-success">@certificado.Estado</span>
+                                    </td>
+                                    <td>
+                                        @if (certificado.TieneArchivo)
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                    @onclick="() => VisualizarPdfCertificado(certificado.SolicitudId.GetValueOrDefault())"
+                                                    title="Ver PDF">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No tiene certificados de capacitación aprobados disponibles.
+                </div>
+            }
+        </div>
+
+        <!-- Evidencias de Investigación -->
+        <div class="documento-seccion mb-4">
+            <h6 class="fw-bold mb-3" style="color: #8a1538;">
+                <i class="bi bi-search"></i> Evidencias de Investigación
+            </h6>
+            @if (evidenciasInvestigacion?.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">
+                                    <input type="checkbox" class="form-check-input" 
+                                           @onchange="e => ToggleAllEvidencias(e.Value as bool? ?? false)" />
+                                </th>
+                                <th width="30%">Título del Proyecto</th>
+                                <th width="20%">Tipo</th>
+                                <th width="15%">Duración</th>
+                                <th width="15%">Estado</th>
+                                <th width="15%">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var evidencia in evidenciasInvestigacion.Where(e => e.Estado == "Aprobada"))
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" 
+                                               checked="@DocumentosSeleccionados[GetDocumentKey("evidencia", evidencia.Id.ToString())]" 
+                                               @onchange="e => ToggleEvidenciaSelection(evidencia, e.Value as bool? ?? false)" />
+                                    </td>
+                                    <td title="@evidencia.TituloProyecto">
+                                        <span class="text-truncate d-block" style="max-width: 250px;">
+                                            @evidencia.TituloProyecto
+                                        </span>
+                                    </td>
+                                    <td>@evidencia.TipoEvidencia</td>
+                                    <td>@evidencia.MesesDuracion meses</td>
+                                    <td>
+                                        <span class="badge bg-success">@evidencia.Estado</span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                @onclick="() => VisualizarPdfEvidencia(evidencia.Id)"
+                                                title="Ver PDF">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No tiene evidencias de investigación aprobadas disponibles.
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal para visualizar PDF -->
+@if (showVisualizarPDFModal && !string.IsNullOrEmpty(pdfUrl))
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">@pdfNombreArchivo</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarVisualizarPDF"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @if (isLoadingPDF)
+                    {
+                        <div class="text-center p-5">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando documento...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(errorPDF))
+                    {
+                        <div class="alert alert-danger m-3">
+                            @errorPDF
+                        </div>
+                    }
+                    else
+                    {
+                        <iframe src="@pdfUrl" style="width: 100%; height: 600px; border: none;"></iframe>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarVisualizarPDF">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public EventCallback<Dictionary<string, bool>> OnSelectionChanged { get; set; }
+
+    private List<ObraAcademicaDetalleDto>? obrasAcademicas;
+    private List<CertificadoCapacitacionDetalleDto>? certificadosCapacitacion;
+    private List<EvidenciaInvestigacionViewModel>? evidenciasInvestigacion;
+
+    private Dictionary<string, bool> DocumentosSeleccionados = new();
+    private bool isLoading = true;
+
+    // Variables para el modal de PDF
+    private bool showVisualizarPDFModal = false;
+    private string pdfUrl = string.Empty;
+    private string pdfNombreArchivo = string.Empty;
+    private bool isLoadingPDF = false;
+    private string errorPDF = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDocumentos();
+    }
+
+    private async Task CargarDocumentos()
+    {
+        try
+        {
+            isLoading = true;
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            // Cargar obras académicas (obtener todas las solicitudes del docente)
+            try
+            {
+                var obrasResponse = await Http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/mis-solicitudes");
+                obrasAcademicas = obrasResponse?.Obras ?? new List<ObraAcademicaDetalleDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar obras académicas: {ex.Message}");
+                obrasAcademicas = new List<ObraAcademicaDetalleDto>();
+            }
+
+            // Cargar certificados de capacitación (obtener todas las solicitudes del docente)
+            try
+            {
+                var certificadosResponse = await Http.GetFromJsonAsync<ResponseCertificadosCapacitacionDto>("api/certificados-capacitacion/mis-solicitudes");
+                certificadosCapacitacion = certificadosResponse?.Certificados ?? new List<CertificadoCapacitacionDetalleDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar certificados: {ex.Message}");
+                certificadosCapacitacion = new List<CertificadoCapacitacionDetalleDto>();
+            }
+
+            // Cargar evidencias de investigación
+            try
+            {
+                var evidenciasResponse = await Http.GetFromJsonAsync<ResponseEvidenciasInvestigacionDto>("api/evidencias-investigacion/mis-evidencias");
+                evidenciasInvestigacion = evidenciasResponse?.Evidencias ?? new List<EvidenciaInvestigacionViewModel>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar evidencias: {ex.Message}");
+                evidenciasInvestigacion = new List<EvidenciaInvestigacionViewModel>();
+            }
+
+            // Inicializar diccionario de selecciones
+            InicializarSelecciones();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error general al cargar documentos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void InicializarSelecciones()
+    {
+        DocumentosSeleccionados.Clear();
+
+        // Inicializar obras académicas aprobadas
+        if (obrasAcademicas != null)
+        {
+            foreach (var obra in obrasAcademicas.Where(o => o.Estado == "Aprobada"))
+            {
+                var keyId = obra.SolicitudId?.ToString() ?? obra.Id.ToString();
+                DocumentosSeleccionados[GetDocumentKey("obra", keyId)] = false;
+            }
+        }
+
+        // Inicializar certificados aprobados
+        if (certificadosCapacitacion != null)
+        {
+            foreach (var cert in certificadosCapacitacion.Where(c => c.Estado == "Aprobada"))
+            {
+                DocumentosSeleccionados[GetDocumentKey("certificado", cert.Id.ToString())] = false;
+            }
+        }
+
+        // Inicializar evidencias aprobadas
+        if (evidenciasInvestigacion != null)
+        {
+            foreach (var ev in evidenciasInvestigacion.Where(e => e.Estado == "Aprobada"))
+            {
+                DocumentosSeleccionados[GetDocumentKey("evidencia", ev.Id.ToString())] = false;
+            }
+        }
+    }
+
+    private string GetDocumentKey(string tipo, string id)
+    {
+        return $"{tipo}_{id}";
+    }
+
+    private async Task OnDocumentSelectionChanged()
+    {
+        if (OnSelectionChanged.HasDelegate)
+        {
+            await OnSelectionChanged.InvokeAsync(DocumentosSeleccionados);
+        }
+    }
+
+    private async Task ToggleAllObras(bool selected)
+    {
+        if (obrasAcademicas != null)
+        {
+            foreach (var obra in obrasAcademicas.Where(o => o.Estado == "Aprobada"))
+            {
+                var keyId = obra.SolicitudId?.ToString() ?? obra.Id.ToString();
+                DocumentosSeleccionados[GetDocumentKey("obra", keyId)] = selected;
+            }
+        }
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task ToggleAllCertificados(bool selected)
+    {
+        if (certificadosCapacitacion != null)
+        {
+            foreach (var cert in certificadosCapacitacion.Where(c => c.Estado == "Aprobada"))
+            {
+                DocumentosSeleccionados[GetDocumentKey("certificado", cert.Id.ToString())] = selected;
+            }
+        }
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task ToggleAllEvidencias(bool selected)
+    {
+        if (evidenciasInvestigacion != null)
+        {
+            foreach (var ev in evidenciasInvestigacion.Where(e => e.Estado == "Aprobada"))
+            {
+                DocumentosSeleccionados[GetDocumentKey("evidencia", ev.Id.ToString())] = selected;
+            }
+        }
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task ToggleObraSelection(ObraAcademicaDetalleDto obra, bool selected)
+    {
+        var keyId = obra.SolicitudId?.ToString() ?? obra.Id.ToString();
+        DocumentosSeleccionados[GetDocumentKey("obra", keyId)] = selected;
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task ToggleCertificadoSelection(CertificadoCapacitacionDetalleDto certificado, bool selected)
+    {
+        DocumentosSeleccionados[GetDocumentKey("certificado", certificado.Id.ToString())] = selected;
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task ToggleEvidenciaSelection(EvidenciaInvestigacionViewModel evidencia, bool selected)
+    {
+        DocumentosSeleccionados[GetDocumentKey("evidencia", evidencia.Id.ToString())] = selected;
+        await OnDocumentSelectionChanged();
+        StateHasChanged();
+    }
+
+    private async Task VisualizarPdfObra(Guid solicitudId)
+    {
+        try
+        {
+            isLoadingPDF = true;
+            errorPDF = string.Empty;
+            showVisualizarPDFModal = true;
+            pdfNombreArchivo = "Obra Académica";
+            StateHasChanged();
+
+            var response = await Http.GetAsync($"api/obraacademicas/visualizar-archivo/{solicitudId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                pdfUrl = $"data:application/pdf;base64,{base64}";
+            }
+            else
+            {
+                errorPDF = "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error al visualizar el documento: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPDF = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VisualizarPdfCertificado(Guid solicitudId)
+    {
+        try
+        {
+            isLoadingPDF = true;
+            errorPDF = string.Empty;
+            showVisualizarPDFModal = true;
+            pdfNombreArchivo = "Certificado de Capacitación";
+            StateHasChanged();
+
+            var response = await Http.GetAsync($"api/certificados-capacitacion/visualizar-archivo/{solicitudId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                pdfUrl = $"data:application/pdf;base64,{base64}";
+            }
+            else
+            {
+                errorPDF = "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error al visualizar el documento: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPDF = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VisualizarPdfEvidencia(Guid evidenciaId)
+    {
+        try
+        {
+            isLoadingPDF = true;
+            errorPDF = string.Empty;
+            showVisualizarPDFModal = true;
+            pdfNombreArchivo = "Evidencia de Investigación";
+            StateHasChanged();
+
+            var response = await Http.GetAsync($"api/evidencias-investigacion/visualizar-archivo/{evidenciaId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                pdfUrl = $"data:application/pdf;base64,{base64}";
+            }
+            else
+            {
+                errorPDF = "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error al visualizar el documento: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPDF = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarVisualizarPDF()
+    {
+        showVisualizarPDFModal = false;
+        pdfUrl = string.Empty;
+        pdfNombreArchivo = string.Empty;
+        errorPDF = string.Empty;
+        isLoadingPDF = false;
+        StateHasChanged();
+    }
+
+    public Dictionary<string, List<string>> GetSelectedDocuments()
+    {
+        var selected = new Dictionary<string, List<string>>
+        {
+            ["obras"] = new List<string>(),
+            ["certificados"] = new List<string>(),
+            ["evidencias"] = new List<string>()
+        };
+
+        foreach (var kvp in DocumentosSeleccionados.Where(d => d.Value))
+        {
+            var parts = kvp.Key.Split('_');
+            if (parts.Length == 2)
+            {
+                var tipo = parts[0];
+                var id = parts[1];
+
+                switch (tipo)
+                {
+                    case "obra":
+                        selected["obras"].Add(id);
+                        break;
+                    case "certificado":
+                        selected["certificados"].Add(id);
+                        break;
+                    case "evidencia":
+                        selected["evidencias"].Add(id);
+                        break;
+                }
+            }
+        }
+
+        return selected;
+    }
+
+    public int GetTotalSelectedCount()
+    {
+        return DocumentosSeleccionados.Count(d => d.Value);
+    }
+}
+
+<style>
+    .documentos-selector {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+    }
+
+    .documento-seccion {
+        background-color: white;
+        border-radius: 6px;
+        padding: 15px;
+        border-left: 4px solid #8a1538;
+    }
+
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .table td {
+        vertical-align: middle;
+        font-size: 0.875rem;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(138, 21, 56, 0.05);
+    }
+
+    .btn-outline-primary {
+        --bs-btn-color: #8a1538;
+        --bs-btn-border-color: #8a1538;
+        --bs-btn-hover-bg: #8a1538;
+        --bs-btn-hover-border-color: #8a1538;
+    }
+
+    .form-check-input:checked {
+        background-color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .text-truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>

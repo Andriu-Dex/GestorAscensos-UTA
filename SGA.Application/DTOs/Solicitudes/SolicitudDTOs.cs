@@ -42,7 +42,7 @@ public class CrearSolicitudRequest
     public bool CumpleCapacitacion { get; set; }
     public bool CumpleInvestigacion { get; set; }
     public string Observaciones { get; set; } = string.Empty;
-    public List<int> DocumentosIds { get; set; } = new List<int>();
+    public List<Guid> DocumentosIds { get; set; } = new List<Guid>();
 }
 
 public class ProcesarSolicitudRequest
@@ -54,11 +54,11 @@ public class ProcesarSolicitudRequest
 
 public class DocumentoDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string NombreArchivo { get; set; } = string.Empty;
     public long TamanoArchivo { get; set; }
-    public TipoDocumentoDto? TipoDocumento { get; set; }
+    public string TipoDocumento { get; set; } = string.Empty;
     public DateTime FechaCreacion { get; set; }
 }
 

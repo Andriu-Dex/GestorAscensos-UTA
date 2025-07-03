@@ -422,8 +422,8 @@
 }
 
 @code {
-    // GUID fijo para datos de demostración
-    private static readonly Guid DEMO_USER_ID = new Guid("00000000-0000-0000-0000-000000000001");
+    // ID fijo para datos de demostración
+    private static readonly string DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
     
     private UserInfoModel userInfo = new UserInfoModel();
     private IndicadoresModel indicadores = new IndicadoresModel();
@@ -473,7 +473,7 @@
             IniciarTimer();
             
             // Verificar si se cargó correctamente la información del usuario
-            if (userInfo != null && userInfo.Id != Guid.Empty)
+            if (userInfo != null && !string.IsNullOrEmpty(userInfo.Id))
             {
                 // Cargar indicadores primero
                 await LoadIndicadores();
@@ -627,7 +627,8 @@
             // Verificar y configurar el token
             await EnsureAuthTokenAsync();
             
-            // En modo DEBUG, si estamos usando datos de demostración para el usuario,            // también usamos datos de demostración para los indicadores
+            // En modo DEBUG, si estamos usando datos de demostración para el usuario,
+            // también usamos datos de demostración para los indicadores
             #if DEBUG
             if (userInfo.Id == DEMO_USER_ID && userInfo.Nombres == "Usuario" && userInfo.Apellidos == "Demo")
             {
@@ -694,7 +695,7 @@
             await EnsureAuthTokenAsync();
             
             // Verificar si tenemos información del usuario e indicadores
-            if (userInfo == null || userInfo.Id == Guid.Empty)
+            if (userInfo == null || string.IsNullOrEmpty(userInfo.Id))
             {
                 // Toast message removed
                 return;
