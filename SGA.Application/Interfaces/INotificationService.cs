@@ -14,4 +14,8 @@ public interface INotificationService
     
     // Notificaciones generales
     Task NotificarCambioEstadoSolicitudAsync(string emailDocente, string tipoSolicitud, string nuevoEstado);
+    
+    // Notificaciones para solicitudes de ascenso
+    Task NotificarAprobacionAscensoAsync(string emailDocente, string nombreDocente, string nivelAnterior, string nivelNuevo);
+    Task NotificarRechazoAscensoAsync(string emailDocente, string nombreDocente, string nivelSolicitado, string motivo);
 }

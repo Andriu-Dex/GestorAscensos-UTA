@@ -1,6 +1,8 @@
 @page "/admin/solicitudes"
 @attribute [Authorize(Roles = "Administrador")]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -170,9 +172,9 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button @onclick="() => VerDetalle(solicitud.Id)" 
-                                                    class="btn btn-outline-primary" title="Ver detalles">
-                                                <i class="bi bi-eye"></i>
+                                            <button @onclick="() => VerDocumentos(solicitud.Id)" 
+                                                    class="btn btn-outline-primary" title="Ver documentos">
+                                                <i class="bi bi-file-earmark-pdf"></i>
                                             </button>
                                             @if (solicitud.Estado == "Pendiente" || solicitud.Estado == "En Proceso")
                                             {
@@ -198,60 +200,297 @@
 </div>
 
 <!-- Modal para aprobar solicitud -->
-<div class="modal fade" id="modalAprobar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-check-circle"></i> Aprobar Solicitud
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro de que desea aprobar esta solicitud de ascenso?</p>
-                <div class="mb-3">
-                    <label class="form-label">Observaciones (opcional):</label>
-                    <textarea @bind="observacionesAprobacion" class="form-control" rows="3" 
-                              placeholder="Observaciones sobre la aprobación..."></textarea>
+@if (showApprovalModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Aprobar Solicitud de Ascenso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button @onclick="ConfirmarAprobacion" class="btn btn-success">
-                    <i class="bi bi-check-circle"></i> Aprobar
-                </button>
+                <div class="modal-body">
+                    @if (solicitudParaModal != null)
+                    {
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información de la Solicitud
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Docente:</strong> @solicitudParaModal.DocenteNombres @solicitudParaModal.DocenteApellidos
+                            </p>
+                            <p class="mb-2">
+                                <strong>Cédula:</strong> @solicitudParaModal.DocenteCedula
+                            </p>
+                            <p class="mb-0">
+                                <strong>Ascenso:</strong> 
+                                <span class="badge bg-info">Titular @solicitudParaModal.NivelActual</span>
+                                <i class="bi bi-arrow-right mx-2"></i>
+                                <span class="badge bg-success">Titular @solicitudParaModal.NivelSolicitado</span>
+                            </p>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>¡Atención!</strong> Al aprobar esta solicitud:
+                            <ul class="mb-0 mt-2">
+                                <li>El docente será promovido al nivel <strong>Titular @solicitudParaModal.NivelSolicitado</strong></li>
+                                <li>Se reiniciarán automáticamente sus contadores de obras, horas de capacitación, etc.</li>
+                                <li>Se enviará una notificación de felicitación al docente</li>
+                                <li>Esta acción <strong>no se puede deshacer</strong></li>
+                            </ul>
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones (opcional):</label>
+                        <textarea @bind="observacionesAprobacion" class="form-control" rows="3" 
+                                  placeholder="Comentarios adicionales sobre la aprobación..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ConfirmarAprobacion" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            @:Procesando...
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            @: Aprobar Ascenso
+                        }
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <!-- Modal para rechazar solicitud -->
-<div class="modal fade" id="modalRechazar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-x-circle"></i> Rechazar Solicitud
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro de que desea rechazar esta solicitud de ascenso?</p>
-                <div class="mb-3">
-                    <label class="form-label">Motivo del rechazo (requerido):</label>
-                    <textarea @bind="motivoRechazo" class="form-control" rows="3" 
-                              placeholder="Explique el motivo del rechazo..." required></textarea>
+@if (showRejectionModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle"></i> Rechazar Solicitud de Ascenso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button @onclick="ConfirmarRechazo" class="btn btn-danger" disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))">
-                    <i class="bi bi-x-circle"></i> Rechazar
-                </button>
+                <div class="modal-body">
+                    @if (solicitudParaModal != null)
+                    {
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información de la Solicitud
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Docente:</strong> @solicitudParaModal.DocenteNombres @solicitudParaModal.DocenteApellidos
+                            </p>
+                            <p class="mb-2">
+                                <strong>Cédula:</strong> @solicitudParaModal.DocenteCedula
+                            </p>
+                            <p class="mb-0">
+                                <strong>Nivel solicitado:</strong> 
+                                <span class="badge bg-primary">Titular @solicitudParaModal.NivelSolicitado</span>
+                            </p>
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Motivo del rechazo <span class="text-danger">*</span>:</label>
+                        <textarea @bind="motivoRechazo" class="form-control" rows="4" 
+                                  placeholder="Explique detalladamente el motivo del rechazo..." required></textarea>
+                        <div class="form-text">
+                            Este motivo será enviado al docente junto con la notificación de rechazo.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarRechazo" 
+                            disabled="@(isProcessing || string.IsNullOrWhiteSpace(motivoRechazo))">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            @:Procesando...
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-circle"></i>
+                            @: Rechazar Solicitud
+                        }
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
+
+<!-- Modal para mostrar lista de documentos -->
+@if (showDocumentosModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" style="max-width: 900px;">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        Documentos de la Solicitud SOL-@solicitudSeleccionada?.Id.ToString().Substring(0, 8)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalDocumentos"></button>
+                </div>
+                <div class="modal-body">
+                    @if (documentosLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando documentos...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Cargando documentos...</p>
+                        </div>
+                    }
+                    else if (documentosActuales?.Any() == true)
+                    {
+                        <div class="list-group">
+                            @foreach (var documento in documentosActuales)
+                            {
+                                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-file-earmark-pdf text-danger me-3" style="font-size: 1.5rem;"></i>
+                                        <div>
+                                            <h6 class="mb-1">@documento.NombreArchivo</h6>
+                                            <small class="text-muted">
+                                                Tipo: @documento.TipoDocumento | 
+                                                Tamaño: @FormatFileSize(documento.TamanoArchivo) |
+                                                Fecha: @documento.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="() => VisualizarPDF(documento.Id, documento.NombreArchivo)"
+                                                title="Visualizar PDF">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" 
+                                                @onclick="() => DescargarDocumento(documento.Id, documento.NombreArchivo)"
+                                                title="Descargar">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-file-earmark-x text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">No hay documentos asociados a esta solicitud.</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalDocumentos">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal para visualizar PDF -->
+@if (showVisorPDF)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+        <div class="modal-dialog" style="max-width: 70%; width: 70%;">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        @nombreArchivoPDF
+                    </h5>
+                    <div class="btn-group me-3">
+                        <button type="button" class="btn btn-outline-light btn-sm" 
+                                @onclick="() => DescargarDocumento(documentoIdActual, nombreArchivoPDF)"
+                                title="Descargar PDF">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarVisorPDF"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 70vh;">
+                    @if (pdfLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center h-100">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando PDF...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Cargando documento PDF...</p>
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(pdfDataUrl))
+                    {
+                        <iframe src="@pdfDataUrl" 
+                                style="width: 100%; height: 100%; border: none;" 
+                                title="Visualizador PDF">
+                        </iframe>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-center align-items-center h-100">
+                            <div class="text-center">
+                                <i class="bi bi-file-earmark-x text-muted" style="font-size: 4rem;"></i>
+                                <p class="text-muted mt-2">Error al cargar el documento PDF.</p>
+                                <button class="btn btn-outline-primary" @onclick="() => VisualizarPDF(documentoIdActual, nombreArchivoPDF)">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                    Reintentar
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarVisorPDF">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Toast de notificaciones -->
+@if (showToast)
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header" style="background-color: @GetToastHeaderColor();">
+                <i class="@GetToastIcon() me-2"></i>
+                <strong class="me-auto text-white">@toastTitle</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showToast = false"></button>
+            </div>
+            <div class="toast-body">
+                @toastMessage
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private bool isLoading = true;
@@ -262,13 +501,60 @@
     private string filtroNivel = "";
     private string filtroDocente = "";
     
-    private Guid solicitudSeleccionadaId = Guid.Empty;
+    // Variables para modales de aprobación/rechazo
+    private bool showApprovalModal = false;
+    private bool showRejectionModal = false;
+    private bool isProcessing = false;
+    private SolicitudAscensoDto? solicitudParaModal = null;
     private string observacionesAprobacion = "";
     private string motivoRechazo = "";
+
+    // Variables para notificaciones
+    private bool showToast = false;
+    private string toastTitle = "";
+    private string toastMessage = "";
+    private ToastType toastType = ToastType.Info;
+
+    // Variables para gestión de documentos
+    private bool showDocumentosModal = false;
+    private bool showVisorPDF = false;
+    private bool documentosLoading = false;
+    private bool pdfLoading = false;
+    private SolicitudAscensoDto? solicitudSeleccionada = null;
+    private List<DocumentoDto> documentosActuales = new();
+    private Guid documentoIdActual = Guid.Empty;
+    private string nombreArchivoPDF = "";
+    private string pdfDataUrl = "";
+
+    public enum ToastType
+    {
+        Success,
+        Error,
+        Warning,
+        Info
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await CargarSolicitudes();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (showToast)
+        {
+            // Auto-hide después de 5 segundos
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(5000);
+                await InvokeAsync(() =>
+                {
+                    showToast = false;
+                    StateHasChanged();
+                });
+            });
+        }
+        return Task.CompletedTask;
     }
 
     private async Task CargarSolicitudes()
@@ -287,7 +573,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error al cargar solicitudes: {ex.Message}");
-            // Error al cargar las solicitudes
+            ShowToast("Error", "Error al cargar las solicitudes", ToastType.Error);
         }
         finally
         {
@@ -344,103 +630,285 @@
         return estado switch
         {
             "Pendiente" => "bg-warning",
-            "EnProceso" => "bg-info",
+            "En Proceso" => "bg-info",
             "Aprobada" => "bg-success",
             "Rechazada" => "bg-danger",
             _ => "bg-secondary"
         };
     }
 
-    private Task VerDetalle(Guid solicitudId)
+    // Métodos para gestión de documentos
+    private async Task VerDocumentos(Guid solicitudId)
     {
-        // Redirigir a página de detalle o mostrar modal con detalles
-        // Por ahora, mostrar un mensaje
-        // Ver detalle de solicitud
-        return Task.CompletedTask;
+        try
+        {
+            documentosLoading = true;
+            solicitudSeleccionada = solicitudes.FirstOrDefault(s => s.Id == solicitudId);
+            showDocumentosModal = true;
+            StateHasChanged();
+
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetFromJsonAsync<List<DocumentoDto>>($"api/solicitudascenso/{solicitudId}/documentos");
+            documentosActuales = response ?? new List<DocumentoDto>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar documentos: {ex.Message}");
+            ShowToast("Error", "Error al cargar los documentos", ToastType.Error);
+        }
+        finally
+        {
+            documentosLoading = false;
+            StateHasChanged();
+        }
     }
 
-    private async Task AprobarSolicitud(Guid solicitudId)
+    private async Task VisualizarPDF(Guid documentoId, string nombreArchivo)
     {
-        solicitudSeleccionadaId = solicitudId;
-        observacionesAprobacion = "";
-        await JSRuntime.InvokeVoidAsync("bootstrap.Modal.getOrCreateInstance", "#modalAprobar").AsTask();
-        await JSRuntime.InvokeVoidAsync("showModal", "#modalAprobar");
+        try
+        {
+            pdfLoading = true;
+            documentoIdActual = documentoId;
+            nombreArchivoPDF = nombreArchivo;
+            showVisorPDF = true;
+            StateHasChanged();
+
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.GetAsync($"api/solicitudascenso/documento/{documentoId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64String = Convert.ToBase64String(pdfBytes);
+                pdfDataUrl = $"data:application/pdf;base64,{base64String}";
+            }
+            else
+            {
+                ShowToast("Error", "No se pudo cargar el documento PDF", ToastType.Error);
+                pdfDataUrl = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al visualizar PDF: {ex.Message}");
+            ShowToast("Error", "Error al visualizar el documento", ToastType.Error);
+            pdfDataUrl = "";
+        }
+        finally
+        {
+            pdfLoading = false;
+            StateHasChanged();
+        }
     }
 
-    private async Task RechazarSolicitud(Guid solicitudId)
-    {
-        solicitudSeleccionadaId = solicitudId;
-        motivoRechazo = "";
-        await JSRuntime.InvokeVoidAsync("bootstrap.Modal.getOrCreateInstance", "#modalRechazar").AsTask();
-        await JSRuntime.InvokeVoidAsync("showModal", "#modalRechazar");
-    }
-
-    private async Task ConfirmarAprobacion()
+    private async Task DescargarDocumento(Guid documentoId, string nombreArchivo)
     {
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
+            await JSRuntime.InvokeVoidAsync("downloadDocument", $"api/solicitudascenso/documento/{documentoId}", nombreArchivo);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al descargar documento: {ex.Message}");
+            ShowToast("Error", "Error al descargar el documento", ToastType.Error);
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024:F1} KB";
+        return $"{bytes / (1024 * 1024):F1} MB";
+    }
+
+    private void CerrarModalDocumentos()
+    {
+        showDocumentosModal = false;
+        documentosActuales.Clear();
+        solicitudSeleccionada = null;
+        StateHasChanged();
+    }
+
+    private void CerrarVisorPDF()
+    {
+        showVisorPDF = false;
+        pdfDataUrl = "";
+        documentoIdActual = Guid.Empty;
+        nombreArchivoPDF = "";
+        StateHasChanged();
+    }
+
+    // Métodos para aprobación/rechazo
+    private void AprobarSolicitud(Guid solicitudId)
+    {
+        var solicitud = solicitudes.FirstOrDefault(s => s.Id == solicitudId);
+        if (solicitud != null)
+        {
+            solicitudParaModal = solicitud;
+            observacionesAprobacion = "";
+            showApprovalModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private void RechazarSolicitud(Guid solicitudId)
+    {
+        var solicitud = solicitudes.FirstOrDefault(s => s.Id == solicitudId);
+        if (solicitud != null)
+        {
+            solicitudParaModal = solicitud;
+            motivoRechazo = "";
+            showRejectionModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarModal()
+    {
+        showApprovalModal = false;
+        showRejectionModal = false;
+        solicitudParaModal = null;
+        observacionesAprobacion = "";
+        motivoRechazo = "";
+        StateHasChanged();
+    }
+
+    private async Task ConfirmarAprobacion()
+    {
+        if (solicitudParaModal == null || isProcessing) return;
+        
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+            
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
             var request = new ProcesarSolicitudRequest
             {
-                SolicitudId = solicitudSeleccionadaId,
+                SolicitudId = solicitudParaModal.Id,
                 Aprobar = true,
                 MotivoRechazo = null
             };
 
-            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudSeleccionadaId}/procesar", request);
+            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudParaModal.Id}/procesar", request);
             
             if (response.IsSuccessStatusCode)
             {
-                await JSRuntime.InvokeVoidAsync("hideModal", "#modalAprobar");
+                ShowToast("¡Solicitud Aprobada!", 
+                    $"La solicitud de {solicitudParaModal.DocenteNombres} {solicitudParaModal.DocenteApellidos} ha sido aprobada exitosamente. El docente recibirá una notificación de felicitación.", 
+                    ToastType.Success);
+                
+                CerrarModal();
                 await CargarSolicitudes();
             }
             else
             {
-                // Error al aprobar la solicitud
+                ShowToast("Error", "No se pudo aprobar la solicitud. Intente nuevamente.", 
+                    ToastType.Error);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al aprobar solicitud: {ex.Message}");
-            // Error al aprobar la solicitud
+            ShowToast("Error", $"Error al aprobar solicitud: {ex.Message}", 
+                ToastType.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
         }
     }
 
     private async Task ConfirmarRechazo()
     {
+        if (solicitudParaModal == null || isProcessing || string.IsNullOrWhiteSpace(motivoRechazo)) return;
+        
         try
         {
+            isProcessing = true;
+            StateHasChanged();
+            
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
             var request = new ProcesarSolicitudRequest
             {
-                SolicitudId = solicitudSeleccionadaId,
+                SolicitudId = solicitudParaModal.Id,
                 Aprobar = false,
                 MotivoRechazo = motivoRechazo
             };
 
-            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudSeleccionadaId}/procesar", request);
+            var response = await Http.PostAsJsonAsync($"api/solicitudascenso/{solicitudParaModal.Id}/procesar", request);
             
             if (response.IsSuccessStatusCode)
             {
-                await JSRuntime.InvokeVoidAsync("hideModal", "#modalRechazar");
+                ShowToast("Solicitud Rechazada", 
+                    $"La solicitud de {solicitudParaModal.DocenteNombres} {solicitudParaModal.DocenteApellidos} ha sido rechazada. El docente recibirá una notificación con el motivo.", 
+                    ToastType.Warning);
+                
+                CerrarModal();
                 await CargarSolicitudes();
             }
             else
             {
-                // Error al rechazar la solicitud
+                ShowToast("Error", "No se pudo rechazar la solicitud. Intente nuevamente.", 
+                    ToastType.Error);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al rechazar solicitud: {ex.Message}");
-            // Error al rechazar la solicitud
+            ShowToast("Error", $"Error al rechazar solicitud: {ex.Message}", 
+                ToastType.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
         }
     }
 
+    private void ShowToast(string title, string message, ToastType type)
+    {
+        toastTitle = title;
+        toastMessage = message;
+        toastType = type;
+        showToast = true;
+        StateHasChanged();
+    }
+
+    private string GetToastHeaderColor()
+    {
+        return toastType switch
+        {
+            ToastType.Success => "#198754",
+            ToastType.Error => "#dc3545",
+            ToastType.Warning => "#fd7e14",
+            ToastType.Info => "#0d6efd",
+            _ => "#6c757d"
+        };
+    }
+
+    private string GetToastIcon()
+    {
+        return toastType switch
+        {
+            ToastType.Success => "bi bi-check-circle-fill text-white",
+            ToastType.Error => "bi bi-x-circle-fill text-white",
+            ToastType.Warning => "bi bi-exclamation-triangle-fill text-white",
+            ToastType.Info => "bi bi-info-circle-fill text-white",
+            _ => "bi bi-bell-fill text-white"
+        };
+    }
+
+    // Clases DTO necesarias
     public class SolicitudAscensoDto
     {
         public Guid Id { get; set; }
@@ -483,18 +951,68 @@
         public string TipoDocumento { get; set; } = string.Empty;
         public DateTime FechaCreacion { get; set; }
     }
-
-    public class SolicitudAdminModel
-    {
-        public int Id { get; set; }
-        public string DocenteNombres { get; set; } = "";
-        public string DocenteApellidos { get; set; } = "";
-        public string DocenteEmail { get; set; } = "";
-        public string DocenteCedula { get; set; } = "";
-        public int NivelActual { get; set; }
-        public int NivelSolicitado { get; set; }
-        public DateTime FechaSolicitud { get; set; }
-        public string Estado { get; set; } = "";
-        public string? Observaciones { get; set; }
-    }
 }
+
+<script>
+window.downloadDocument = async (url, filename) => {
+    try {
+        // Obtener el token de autenticación
+        const token = localStorage.getItem('authToken');
+        
+        // Hacer la petición con el token
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token.replace(/"/g, '')}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al descargar el documento');
+        }
+        
+        // Obtener el blob del archivo
+        const blob = await response.blob();
+        
+        // Crear un enlace temporal para la descarga
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = filename || 'documento.pdf';
+        
+        // Agregar el enlace al DOM temporalmente
+        document.body.appendChild(link);
+        
+        // Hacer clic en el enlace para iniciar la descarga
+        link.click();
+        
+        // Remover el enlace del DOM
+        document.body.removeChild(link);
+        
+        // Liberar el objeto URL
+        window.URL.revokeObjectURL(link.href);
+        
+        console.log(`Descarga iniciada: ${filename}`);
+    } catch (error) {
+        console.error('Error al descargar documento:', error);
+        alert('Error al descargar el documento. Por favor, intente nuevamente.');
+    }
+};
+
+// Función para cerrar modales con tecla Escape
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        // Buscar si hay algún modal abierto
+        const modals = document.querySelectorAll('.modal.show');
+        if (modals.length > 0) {
+            // Enviar evento para cerrar el modal más reciente
+            const lastModal = modals[modals.length - 1];
+            const closeButton = lastModal.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.click();
+            }
+        }
+    }
+});
+
+console.log('AdminSolicitudes JavaScript cargado correctamente');
+</script>

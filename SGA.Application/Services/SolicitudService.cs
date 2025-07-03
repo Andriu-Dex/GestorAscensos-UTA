@@ -16,6 +16,7 @@ public class SolicitudService : ISolicitudService
     private readonly IAuditoriaService _auditoriaService;
     private readonly IDocumentoRepository _documentoRepository;
     private readonly DocumentoConversionService _documentoConversionService;
+    private readonly INotificationService _notificationService;
 
     public SolicitudService(
         ISolicitudAscensoRepository solicitudRepository,
@@ -24,7 +25,8 @@ public class SolicitudService : ISolicitudService
         IDocenteService docenteService,
         IAuditoriaService auditoriaService,
         IDocumentoRepository documentoRepository,
-        DocumentoConversionService documentoConversionService)
+        DocumentoConversionService documentoConversionService,
+        INotificationService notificationService)
     {
         _solicitudRepository = solicitudRepository;
         _docenteRepository = docenteRepository;
@@ -33,6 +35,7 @@ public class SolicitudService : ISolicitudService
         _auditoriaService = auditoriaService;
         _documentoRepository = documentoRepository;
         _documentoConversionService = documentoConversionService;
+        _notificationService = notificationService;
     }
 
     public async Task<SolicitudAscensoDto> CrearSolicitudAsync(Guid docenteId, CrearSolicitudRequest request)
@@ -172,6 +175,13 @@ public class SolicitudService : ISolicitudService
         if (solicitud.Estado != EstadoSolicitud.Pendiente && solicitud.Estado != EstadoSolicitud.EnProceso)
             return false;
 
+        // Obtener información del docente antes de procesar
+        var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
+        if (docente == null) return false;
+
+        var nivelAnterior = solicitud.NivelActual.ToString();
+        var nivelSolicitado = solicitud.NivelSolicitado.ToString();
+
         solicitud.Estado = request.Aprobar ? EstadoSolicitud.Aprobada : EstadoSolicitud.Rechazada;
         solicitud.FechaAprobacion = DateTime.UtcNow;
         solicitud.AprobadoPorId = administradorId;
@@ -183,6 +193,22 @@ public class SolicitudService : ISolicitudService
         if (request.Aprobar)
         {
             await _docenteService.ActualizarNivelDocenteAsync(solicitud.DocenteId, solicitud.NivelSolicitado.ToString());
+            
+            // Enviar notificación de felicitación
+            await _notificationService.NotificarAprobacionAscensoAsync(
+                docente.Email, 
+                docente.NombreCompleto, 
+                nivelAnterior, 
+                nivelSolicitado);
+        }
+        else
+        {
+            // Enviar notificación de rechazo
+            await _notificationService.NotificarRechazoAscensoAsync(
+                docente.Email, 
+                docente.NombreCompleto, 
+                nivelSolicitado, 
+                request.MotivoRechazo ?? "No especificado");
         }
 
         await _auditoriaService.RegistrarAccionAsync(

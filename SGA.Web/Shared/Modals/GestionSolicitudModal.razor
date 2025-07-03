@@ -1,0 +1,182 @@
+<!-- Modal para aprobar solicitud -->
+@if (ShowApprovalModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Aprobar Solicitud de Ascenso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (SolicitudSeleccionada != null)
+                    {
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información de la Solicitud
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Docente:</strong> @SolicitudSeleccionada.DocenteNombres @SolicitudSeleccionada.DocenteApellidos
+                            </p>
+                            <p class="mb-2">
+                                <strong>Cédula:</strong> @SolicitudSeleccionada.DocenteCedula
+                            </p>
+                            <p class="mb-0">
+                                <strong>Ascenso:</strong> 
+                                <span class="badge bg-info">Titular @SolicitudSeleccionada.NivelActual</span>
+                                <i class="bi bi-arrow-right mx-2"></i>
+                                <span class="badge bg-success">Titular @SolicitudSeleccionada.NivelSolicitado</span>
+                            </p>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>¡Atención!</strong> Al aprobar esta solicitud:
+                            <ul class="mb-0 mt-2">
+                                <li>El docente será promovido al nivel <strong>Titular @SolicitudSeleccionada.NivelSolicitado</strong></li>
+                                <li>Se reiniciarán automáticamente sus contadores de obras, horas de capacitación, etc.</li>
+                                <li>Se enviará una notificación de felicitación al docente</li>
+                                <li>Esta acción <strong>no se puede deshacer</strong></li>
+                            </ul>
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones (opcional):</label>
+                        <textarea @bind="ObservacionesAprobacion" class="form-control" rows="3" 
+                                  placeholder="Comentarios adicionales sobre la aprobación..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ConfirmarAprobacion" disabled="@IsProcessing">
+                        @if (IsProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            @:Procesando...
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle"></i>
+                            @: Aprobar Ascenso
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal para rechazar solicitud -->
+@if (ShowRejectionModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle"></i> Rechazar Solicitud de Ascenso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (SolicitudSeleccionada != null)
+                    {
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información de la Solicitud
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Docente:</strong> @SolicitudSeleccionada.DocenteNombres @SolicitudSeleccionada.DocenteApellidos
+                            </p>
+                            <p class="mb-2">
+                                <strong>Cédula:</strong> @SolicitudSeleccionada.DocenteCedula
+                            </p>
+                            <p class="mb-0">
+                                <strong>Nivel solicitado:</strong> 
+                                <span class="badge bg-primary">Titular @SolicitudSeleccionada.NivelSolicitado</span>
+                            </p>
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Motivo del rechazo <span class="text-danger">*</span>:</label>
+                        <textarea @bind="MotivoRechazo" class="form-control" rows="4" 
+                                  placeholder="Explique detalladamente el motivo del rechazo..." required></textarea>
+                        <div class="form-text">
+                            Este motivo será enviado al docente junto con la notificación de rechazo.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarRechazo" 
+                            disabled="@(IsProcessing || string.IsNullOrWhiteSpace(MotivoRechazo))">
+                        @if (IsProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            @:Procesando...
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-circle"></i>
+                            @: Rechazar Solicitud
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool ShowApprovalModal { get; set; }
+    [Parameter] public bool ShowRejectionModal { get; set; }
+    [Parameter] public SolicitudAscensoDto? SolicitudSeleccionada { get; set; }
+    [Parameter] public bool IsProcessing { get; set; }
+    [Parameter] public string ObservacionesAprobacion { get; set; } = string.Empty;
+    [Parameter] public string MotivoRechazo { get; set; } = string.Empty;
+    
+    [Parameter] public EventCallback OnCerrarModal { get; set; }
+    [Parameter] public EventCallback OnConfirmarAprobacion { get; set; }
+    [Parameter] public EventCallback OnConfirmarRechazo { get; set; }
+    
+    // Parámetros bidireccionales para los campos de texto
+    [Parameter] public EventCallback<string> ObservacionesAprobacionChanged { get; set; }
+    [Parameter] public EventCallback<string> MotivoRechazoChanged { get; set; }
+
+    private async Task CerrarModal()
+    {
+        await OnCerrarModal.InvokeAsync();
+    }
+
+    private async Task ConfirmarAprobacion()
+    {
+        if (IsProcessing) return;
+        await OnConfirmarAprobacion.InvokeAsync();
+    }
+
+    private async Task ConfirmarRechazo()
+    {
+        if (IsProcessing || string.IsNullOrWhiteSpace(MotivoRechazo)) return;
+        await OnConfirmarRechazo.InvokeAsync();
+    }
+
+    public class SolicitudAscensoDto
+    {
+        public Guid Id { get; set; }
+        public string DocenteNombres { get; set; } = string.Empty;
+        public string DocenteApellidos { get; set; } = string.Empty;
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public string Estado { get; set; } = string.Empty;
+        public DateTime FechaSolicitud { get; set; }
+    }
+}

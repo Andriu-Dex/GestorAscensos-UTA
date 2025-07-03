@@ -127,4 +127,43 @@ public class NotificationService : INotificationService
             _logger.LogError(ex, "Error al notificar cambio de estado");
         }
     }
+
+    // Notificaciones para solicitudes de ascenso
+    public async Task NotificarAprobacionAscensoAsync(string emailDocente, string nombreDocente, string nivelAnterior, string nivelNuevo)
+    {
+        try
+        {
+            _logger.LogInformation("🎉 Ascenso aprobado para {EmailDocente}: {NivelAnterior} -> {NivelNuevo}", 
+                emailDocente, nivelAnterior, nivelNuevo);
+            
+            // TODO: Enviar email de felicitación al docente
+            // El mensaje podría ser algo como:
+            // "¡Felicitaciones! Su solicitud de ascenso ha sido aprobada. 
+            //  Ha sido promovido de {nivelAnterior} a {nivelNuevo}."
+            
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar aprobación de ascenso");
+        }
+    }
+
+    public async Task NotificarRechazoAscensoAsync(string emailDocente, string nombreDocente, string nivelSolicitado, string motivo)
+    {
+        try
+        {
+            _logger.LogInformation("❌ Ascenso rechazado para {EmailDocente}: {NivelSolicitado}, Motivo: {Motivo}", 
+                emailDocente, nivelSolicitado, motivo);
+            
+            // TODO: Enviar email al docente notificando el rechazo
+            // El mensaje podría incluir el motivo y pasos a seguir
+            
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al notificar rechazo de ascenso");
+        }
+    }
 }
