@@ -980,7 +980,7 @@
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            var url = $"api/reporte/solicitud/{solicitudId}?token={token}";
+            var url = $"api/reportes/solicitud/{solicitudId}?token={token}";
             await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         }
         catch (Exception ex)

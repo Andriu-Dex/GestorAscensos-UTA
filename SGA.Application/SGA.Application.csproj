@@ -22,6 +22,7 @@
     
     <!-- Reportes -->
     <PackageReference Include="iText7" Version="8.0.2" />
+    <PackageReference Include="iText7.bouncy-castle-adapter" Version="8.0.2" />
     
     <!-- Seguridad -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />

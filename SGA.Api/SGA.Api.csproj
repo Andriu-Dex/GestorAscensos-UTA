@@ -32,6 +32,7 @@
     
     <!-- Archivos y PDFs -->
     <PackageReference Include="iText7" Version="8.0.2" />
+    <PackageReference Include="iText7.bouncy-castle-adapter" Version="8.0.2" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
     
     <!-- Seguridad -->

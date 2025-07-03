@@ -127,7 +127,7 @@
             descargando = true;
             
             // Obtener el reporte del docente actual
-            var response = await ApiService.GetAsync<byte[]>("api/reporte/mi-reporte");
+            var response = await ApiService.GetAsync<byte[]>("api/reportes/hoja-vida");
             
             if (response != null)
             {
@@ -158,7 +158,7 @@
             descargando = true;
             
             // Obtener el reporte de un docente específico
-            var response = await ApiService.GetAsync<byte[]>($"api/reporte/docente/{docenteIdSeleccionado}");
+            var response = await ApiService.GetAsync<byte[]>($"api/reportes/hoja-vida");
             
             if (response != null)
             {
@@ -188,7 +188,7 @@
             descargando = true;
             
             // Obtener el reporte de una solicitud específica
-            var response = await ApiService.GetAsync<byte[]>($"api/reporte/solicitud/{solicitudIdSeleccionada}");
+            var response = await ApiService.GetAsync<byte[]>($"api/reportes/solicitud/{solicitudIdSeleccionada}");
             
             if (response != null)
             {

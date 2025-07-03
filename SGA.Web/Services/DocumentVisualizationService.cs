@@ -263,7 +263,7 @@ public class DocumentVisualizationService
         try
         {
             await SetAuthorizationHeader();
-            var response = await _http.GetAsync($"api/reporte/solicitud/{solicitudId}");
+            var response = await _http.GetAsync($"api/reportes/solicitud/{solicitudId}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -308,7 +308,7 @@ public class DocumentVisualizationService
         try
         {
             await SetAuthorizationHeader();
-            var response = await _http.GetAsync($"api/reporte/solicitud/{solicitudId}");
+            var response = await _http.GetAsync($"api/reportes/solicitud/{solicitudId}");
             
             if (response.IsSuccessStatusCode)
             {
