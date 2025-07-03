@@ -1,6 +1,7 @@
 using Microsoft.JSInterop;
 using Blazored.Toast.Services;
-using SGA.Web.Services;
+using Blazored.LocalStorage;
+using SGA.Web.Models;
 
 namespace SGA.Web.Services;
 
@@ -181,12 +182,154 @@ public class DocumentVisualizationService
             return false;
         }
     }
-}
 
-public class DocumentViewResult
-{
-    public bool Success { get; set; }
-    public string? PdfUrl { get; set; }
-    public string? FileName { get; set; }
-    public string? ErrorMessage { get; set; }
+    public async Task<DocumentViewResult> VisualizarDocumentoSolicitud(Guid documentoId)
+    {
+        try
+        {
+            await SetAuthorizationHeader();
+            var response = await _http.GetAsync($"api/documento/{documentoId}/view");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "documento.pdf";
+                
+                var base64 = Convert.ToBase64String(fileBytes);
+                var pdfUrl = $"data:application/pdf;base64,{base64}";
+                
+                return new DocumentViewResult 
+                { 
+                    Success = true, 
+                    PdfUrl = pdfUrl, 
+                    FileName = fileName 
+                };
+            }
+            else
+            {
+                var errorMessage = "No se pudo cargar el documento";
+                _toastService.ShowError(errorMessage);
+                return new DocumentViewResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = errorMessage 
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Error al cargar el documento: {ex.Message}";
+            _toastService.ShowError(errorMessage);
+            return new DocumentViewResult 
+            { 
+                Success = false, 
+                ErrorMessage = errorMessage 
+            };
+        }
+    }
+
+    public async Task<bool> DescargarDocumentoSolicitud(Guid documentoId)
+    {
+        try
+        {
+            await SetAuthorizationHeader();
+            var response = await _http.GetAsync($"api/documento/{documentoId}/download");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"documento-{documentoId}.pdf";
+                
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                
+                _toastService.ShowSuccess("Documento descargado correctamente");
+                return true;
+            }
+            else
+            {
+                _toastService.ShowError("No se pudo descargar el documento");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError($"Error al descargar documento: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<DocumentViewResult> VisualizarReporteSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            await SetAuthorizationHeader();
+            var response = await _http.GetAsync($"api/reporte/solicitud/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"reporte-solicitud-{solicitudId.ToString().Substring(0, 8)}.pdf";
+                
+                var base64 = Convert.ToBase64String(fileBytes);
+                var pdfUrl = $"data:application/pdf;base64,{base64}";
+                
+                return new DocumentViewResult 
+                { 
+                    Success = true, 
+                    PdfUrl = pdfUrl, 
+                    FileName = fileName 
+                };
+            }
+            else
+            {
+                var errorMessage = "No se pudo generar el reporte";
+                _toastService.ShowError(errorMessage);
+                return new DocumentViewResult 
+                { 
+                    Success = false, 
+                    ErrorMessage = errorMessage 
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Error al generar el reporte: {ex.Message}";
+            _toastService.ShowError(errorMessage);
+            return new DocumentViewResult 
+            { 
+                Success = false, 
+                ErrorMessage = errorMessage 
+            };
+        }
+    }
+
+    public async Task<bool> DescargarReporteSolicitud(Guid solicitudId)
+    {
+        try
+        {
+            await SetAuthorizationHeader();
+            var response = await _http.GetAsync($"api/reporte/solicitud/{solicitudId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"reporte-solicitud-{solicitudId.ToString().Substring(0, 8)}.pdf";
+                
+                await _jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                
+                _toastService.ShowSuccess("Reporte descargado correctamente");
+                return true;
+            }
+            else
+            {
+                _toastService.ShowError("No se pudo descargar el reporte");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError($"Error al descargar reporte: {ex.Message}");
+            return false;
+        }
+    }
 }

@@ -206,15 +206,8 @@ public class SolicitudesController : ControllerBase
             if (solicitud.Estado != "Pendiente")
                 return BadRequest("Solo se pueden cancelar solicitudes en estado Pendiente");
 
-            // Procesar como rechazo con motivo especial
-            var procesarRequest = new ProcesarSolicitudRequest
-            {
-                SolicitudId = id,
-                Aprobar = false,
-                MotivoRechazo = "Cancelada por el docente"
-            };
-
-            var resultado = await _solicitudService.ProcesarSolicitudAsync(id, procesarRequest, docente.Id);
+            // Cancelar la solicitud directamente usando el nuevo método
+            var resultado = await _solicitudService.CancelarSolicitudAsync(id, docente.Id);
             
             if (!resultado)
                 return BadRequest("No se pudo cancelar la solicitud");

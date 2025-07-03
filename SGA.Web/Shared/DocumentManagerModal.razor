@@ -1,0 +1,420 @@
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
+@using SGA.Web.Services
+@using SGA.Web.Models
+@inject DocumentVisualizationService DocumentService
+@inject IJSRuntime JSRuntime
+@inject IToastService ToastService
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-files"></i> Documentos de la Solicitud
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnClose" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    @if (Documentos?.Any() == true)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" 
+                                            class="btn @(selectedViewMode == "list" ? "btn-primary" : "btn-outline-primary")"
+                                            @onclick="SetViewModeList"
+                                            style="@(selectedViewMode == "list" ? "background-color: #8a1538; border-color: #8a1538;" : "color: #8a1538; border-color: #8a1538;")">
+                                        <i class="bi bi-list-ul"></i> Lista
+                                    </button>
+                                    <button type="button" 
+                                            class="btn @(selectedViewMode == "preview" ? "btn-primary" : "btn-outline-primary")"
+                                            @onclick="SetViewModePreview"
+                                            style="@(selectedViewMode == "preview" ? "background-color: #8a1538; border-color: #8a1538;" : "color: #8a1538; border-color: #8a1538;")">
+                                        <i class="bi bi-eye"></i> Vista Previa
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (selectedViewMode == "list")
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nombre del Archivo</th>
+                                            <th>Tipo</th>
+                                            <th>Tamaño</th>
+                                            <th>Fecha</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var documento in Documentos)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <i class="bi bi-file-pdf text-danger me-2"></i>
+                                                    @documento.NombreArchivo
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">@documento.TipoDocumento</span>
+                                                </td>
+                                                <td>@FormatFileSize(documento.TamanoArchivo)</td>
+                                                <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button type="button" 
+                                                                class="btn btn-outline-primary btn-sm" 
+                                                                @onclick="() => PreviewDocument(documento)"
+                                                                title="Vista previa">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                        <button type="button" 
+                                                                class="btn btn-outline-success btn-sm" 
+                                                                @onclick="() => DownloadDocument(documento)"
+                                                                title="Descargar">
+                                                            <i class="bi bi-download"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else if (selectedViewMode == "preview")
+                        {
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6 class="mb-3">Seleccionar documento:</h6>
+                                    <div class="list-group">
+                                        @foreach (var documento in Documentos)
+                                        {
+                                            <button type="button" 
+                                                    class="list-group-item list-group-item-action @(selectedDocumento?.Id == documento.Id ? "active" : "")"
+                                                    @onclick="() => SelectDocumentForPreview(documento)"
+                                                    style="@(selectedDocumento?.Id == documento.Id ? "background-color: #8a1538; border-color: #8a1538;" : "")">
+                                                <div class="d-flex w-100 justify-content-between">
+                                                    <h6 class="mb-1">
+                                                        <i class="bi bi-file-pdf me-2"></i>
+                                                        @TruncateFileName(documento.NombreArchivo, 20)
+                                                    </h6>
+                                                    <small>@FormatFileSize(documento.TamanoArchivo)</small>
+                                                </div>
+                                                <p class="mb-1">@documento.TipoDocumento</p>
+                                                <small>@documento.FechaCreacion.ToString("dd/MM/yyyy")</small>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    @if (selectedDocumento != null)
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0">Vista previa: @selectedDocumento.NombreArchivo</h6>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => DownloadDocument(selectedDocumento)">
+                                                <i class="bi bi-download"></i> Descargar
+                                            </button>
+                                        </div>
+                                        <div class="border rounded" style="height: 400px; overflow: hidden;">
+                                            @if (isLoadingPreview)
+                                            {
+                                                <div class="d-flex justify-content-center align-items-center h-100">
+                                                    <div class="text-center">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Cargando...</span>
+                                                        </div>
+                                                        <p class="mt-2">Cargando vista previa...</p>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (!string.IsNullOrEmpty(previewError))
+                                            {
+                                                <div class="d-flex justify-content-center align-items-center h-100">
+                                                    <div class="text-center">
+                                                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                                                        <p class="mt-2 text-muted">@previewError</p>
+                                                        <button class="btn btn-sm btn-primary" @onclick="() => SelectDocumentForPreview(selectedDocumento)" style="background-color: #8a1538; border-color: #8a1538;">
+                                                            <i class="bi bi-arrow-clockwise"></i> Reintentar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else if (!string.IsNullOrEmpty(previewUrl))
+                                            {
+                                                <iframe src="@previewUrl" 
+                                                        style="width: 100%; height: 100%; border: none;"
+                                                        title="Vista previa del documento">
+                                                </iframe>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
+                                            <div class="text-center text-muted">
+                                                <i class="bi bi-file-pdf" style="font-size: 3rem;"></i>
+                                                <p class="mt-2">Seleccione un documento para ver la vista previa</p>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <hr class="my-4">
+                        
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="button" 
+                                        class="btn btn-success me-2" 
+                                        @onclick="DownloadAllDocuments"
+                                        disabled="@isDownloadingAll">
+                                    @if (isDownloadingAll)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-download me-2"></i>
+                                    }
+                                    Descargar Todos
+                                </button>
+                            </div>
+                            <div>
+                                <span class="text-muted">Total: @Documentos.Count documento@(Documentos.Count != 1 ? "s" : "")</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-files text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No hay documentos</h5>
+                            <p class="text-muted">Esta solicitud no tiene documentos adjuntos.</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnClose">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public List<DocumentoDto> Documentos { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string selectedViewMode = "list";
+    private DocumentoDto? selectedDocumento;
+    private bool isLoadingPreview = false;
+    private bool isDownloadingAll = false;
+    private string? previewUrl;
+    private string? previewError;
+
+    private void SetViewMode(string mode)
+    {
+        selectedViewMode = mode;
+        if (mode == "preview" && selectedDocumento == null && Documentos.Any())
+        {
+            _ = SelectDocumentForPreview(Documentos.First());
+        }
+    }
+
+    private void SetViewModeList() => SetViewMode("list");
+    private void SetViewModePreview() => SetViewMode("preview");
+
+    private async Task SelectDocumentForPreview(DocumentoDto documento)
+    {
+        selectedDocumento = documento;
+        isLoadingPreview = true;
+        previewError = null;
+        previewUrl = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await LoadDocumentPreview(documento.Id);
+            if (result.Success)
+            {
+                previewUrl = result.PdfUrl;
+            }
+            else
+            {
+                previewError = result.ErrorMessage ?? "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            previewError = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPreview = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviewDocument(DocumentoDto documento)
+    {
+        selectedViewMode = "preview";
+        await SelectDocumentForPreview(documento);
+    }
+
+    private async Task DownloadDocument(DocumentoDto documento)
+    {
+        try
+        {
+            ToastService.ShowInfo($"Descargando {documento.NombreArchivo}...");
+            
+            var success = await DownloadDocumentById(documento.Id);
+            if (success)
+            {
+                ToastService.ShowSuccess($"Documento {documento.NombreArchivo} descargado correctamente");
+            }
+            else
+            {
+                ToastService.ShowError($"Error al descargar {documento.NombreArchivo}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
+        }
+    }
+
+    private async Task DownloadAllDocuments()
+    {
+        if (!Documentos.Any()) return;
+
+        isDownloadingAll = true;
+        StateHasChanged();
+
+        try
+        {
+            ToastService.ShowInfo($"Descargando {Documentos.Count} documentos...");
+            
+            var successCount = 0;
+            foreach (var documento in Documentos)
+            {
+                try
+                {
+                    var success = await DownloadDocumentById(documento.Id);
+                    if (success) successCount++;
+                    
+                    // Pequeña pausa entre descargas para evitar saturar el servidor
+                    await Task.Delay(500);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error descargando {documento.NombreArchivo}: {ex.Message}");
+                }
+            }
+
+            if (successCount == Documentos.Count)
+            {
+                ToastService.ShowSuccess($"Todos los documentos descargados correctamente ({successCount})");
+            }
+            else if (successCount > 0)
+            {
+                ToastService.ShowWarning($"Descargados {successCount} de {Documentos.Count} documentos");
+            }
+            else
+            {
+                ToastService.ShowError("No se pudieron descargar los documentos");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error en descarga masiva: {ex.Message}");
+        }
+        finally
+        {
+            isDownloadingAll = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DocumentViewResult> LoadDocumentPreview(Guid documentoId)
+    {
+        try
+        {
+            return await DocumentService.VisualizarDocumentoSolicitud(documentoId);
+        }
+        catch (Exception ex)
+        {
+            return new DocumentViewResult 
+            { 
+                Success = false, 
+                ErrorMessage = ex.Message 
+            };
+        }
+    }
+
+    private async Task<bool> DownloadDocumentById(Guid documentoId)
+    {
+        try
+        {
+            return await DocumentService.DescargarDocumentoSolicitud(documentoId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error descargando documento {documentoId}: {ex.Message}");
+            return false;
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private string TruncateFileName(string fileName, int maxLength)
+    {
+        if (fileName.Length <= maxLength) return fileName;
+        
+        var extension = Path.GetExtension(fileName);
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var truncatedName = nameWithoutExtension.Substring(0, Math.Max(0, maxLength - extension.Length - 3));
+        
+        return $"{truncatedName}...{extension}";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'hidden'");
+        }
+        else if (!IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+        }
+    }
+
+    public void Dispose()
+    {
+        JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+    }
+}

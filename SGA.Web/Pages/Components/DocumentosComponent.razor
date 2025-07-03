@@ -1,4 +1,6 @@
 @using SGA.Web.Models
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
@@ -45,7 +47,7 @@
                         {
                             <tr>
                                 <td>@documento.Nombre</td>
-                                <td>@documento.TipoDocumento?.Nombre</td>
+                                <td>@documento.TipoDocumento</td>
                                 <td>@(documento.Descripcion ?? "Sin descripción")</td>
                                 <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
                                 <td>
@@ -92,7 +94,7 @@
     [Parameter] public EventCallback OnShowUploadModal { get; set; }
     [Parameter] public EventCallback<DocumentoDto> OnViewDocument { get; set; }
     [Parameter] public EventCallback<DocumentoDto> OnDownloadDocument { get; set; }
-    [Parameter] public EventCallback<int> OnDeleteDocument { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeleteDocument { get; set; }
 
     private void ShowUploadModal()
     {
@@ -109,7 +111,7 @@
         OnDownloadDocument.InvokeAsync(documento);
     }
 
-    private void DeleteDocument(int id)
+    private void DeleteDocument(Guid id)
     {
         OnDeleteDocument.InvokeAsync(id);
     }

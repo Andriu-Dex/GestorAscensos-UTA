@@ -9,6 +9,7 @@ public interface ISolicitudService
     Task<List<SolicitudAscensoDto>> GetTodasLasSolicitudesAsync();
     Task<SolicitudAscensoDto?> GetSolicitudByIdAsync(Guid solicitudId);
     Task<bool> ProcesarSolicitudAsync(Guid solicitudId, ProcesarSolicitudRequest request, Guid administradorId);
+    Task<bool> CancelarSolicitudAsync(Guid solicitudId, Guid docenteId);
     Task<bool> TieneDocumenteSolicitudActivaAsync(Guid docenteId);
     Task<byte[]?> DescargarDocumentoAsync(Guid documentoId);
 }

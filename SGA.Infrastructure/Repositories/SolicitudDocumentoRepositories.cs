@@ -62,9 +62,19 @@ public class SolicitudAscensoRepository : ISolicitudAscensoRepository
 
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var solicitud = await _context.SolicitudesAscenso.FindAsync(id);
+        var solicitud = await _context.SolicitudesAscenso
+            .Include(s => s.Documentos)
+            .FirstOrDefaultAsync(s => s.Id == id);
+            
         if (solicitud == null) return false;
 
+        // Eliminar primero los documentos asociados
+        if (solicitud.Documentos.Any())
+        {
+            _context.Documentos.RemoveRange(solicitud.Documentos);
+        }
+
+        // Luego eliminar la solicitud
         _context.SolicitudesAscenso.Remove(solicitud);
         await _context.SaveChangesAsync();
         return true;

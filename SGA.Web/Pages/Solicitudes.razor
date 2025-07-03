@@ -3,21 +3,90 @@
 @using Microsoft.JSInterop
 @using System.Net.Http.Json
 @using SGA.Web.Extensions
+@using SGA.Web.Services
+@using SGA.Web.Models
 @attribute [Authorize]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject Blazored.Toast.Services.IToastService ToastService
+@inject DocumentVisualizationService DocumentService
 
 <div class="container mt-4">
     <h3>Mis Solicitudes de Ascenso</h3>
     
-    <div class="card">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Solicitudes</h5>
-            <button class="btn btn-light" @onclick="() => NavigateToCreateSolicitud()">
+    <!-- Filtros y controles -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                <select class="form-select" value="@selectedEstadoFilter" @onchange="@((ChangeEventArgs e) => { selectedEstadoFilter = e.Value?.ToString() ?? ""; FilterSolicitudes(); })">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="EnProceso">En Proceso</option>
+                    <option value="Aprobada">Aprobada</option>
+                    <option value="Rechazada">Rechazada</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @onclick="() => NavigateToCreateSolicitud()" style="background-color: #8a1538; border-color: #8a1538;">
                 <i class="bi bi-plus-circle"></i> Nueva Solicitud
+            </button>
+        </div>
+    </div>
+    
+    <!-- Estadísticas rápidas -->
+    @if (solicitudes?.Any() == true)
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-primary">@solicitudes.Count</h5>
+                        <p class="card-text">Total Solicitudes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-warning">@solicitudes.Count(s => s.Estado == "Pendiente")</h5>
+                        <p class="card-text">Pendientes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-success">@solicitudes.Count(s => s.Estado == "Aprobada")</h5>
+                        <p class="card-text">Aprobadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-danger">@solicitudes.Count(s => s.Estado == "Rechazada")</h5>
+                        <p class="card-text">Rechazadas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" style="background-color: #8a1538!important;">
+            <h5 class="mb-0">
+                <i class="bi bi-clipboard-check"></i> Solicitudes
+                @if (!string.IsNullOrEmpty(selectedEstadoFilter))
+                {
+                    <span class="badge bg-light text-dark ms-2">Filtrado: @selectedEstadoFilter</span>
+                }
+            </h5>
+            <button class="btn btn-outline-light btn-sm" @onclick="LoadSolicitudes" disabled="@isLoading">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
             </button>
         </div>
         <div class="card-body">
@@ -64,18 +133,85 @@
                                     <td>@solicitud.NivelSolicitado</td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-primary" @onclick="() => ViewSolicitudDetails(solicitud.Id)">
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => ViewSolicitudDetails(solicitud.Id)"
+                                                    title="Ver detalles de la solicitud">
                                                 <i class="bi bi-eye"></i>
                                             </button>
+                                            
+                                            @if (solicitud.Documentos?.Any() == true)
+                                            {
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-info dropdown-toggle" 
+                                                            data-bs-toggle="dropdown" 
+                                                            aria-expanded="false"
+                                                            title="Gestionar documentos">
+                                                        <i class="bi bi-files"></i>
+                                                        <span class="badge bg-info rounded-pill ms-1">@solicitud.Documentos.Count</span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <button class="dropdown-item" 
+                                                                    @onclick="() => ShowDocumentManager(solicitud)">
+                                                                <i class="bi bi-folder2-open me-2"></i>
+                                                                Ver todos los documentos
+                                                            </button>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        @foreach (var doc in solicitud.Documentos.Take(3))
+                                                        {
+                                                            <li>
+                                                                <button class="dropdown-item" 
+                                                                        @onclick="() => PreviewSingleDocument(doc)">
+                                                                    <i class="bi bi-file-pdf text-danger me-2"></i>
+                                                                    @TruncateFileName(doc.NombreArchivo, 25)
+                                                                </button>
+                                                            </li>
+                                                        }
+                                                        @if (solicitud.Documentos.Count > 3)
+                                                        {
+                                                            <li>
+                                                                <span class="dropdown-item-text text-muted">
+                                                                    <i class="bi bi-three-dots"></i>
+                                                                    y @(solicitud.Documentos.Count - 3) más...
+                                                                </span>
+                                                            </li>
+                                                        }
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <button class="dropdown-item text-success" 
+                                                                    @onclick="() => DownloadAllSolicitudDocuments(solicitud.Documentos)">
+                                                                <i class="bi bi-download me-2"></i>
+                                                                Descargar todos
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-secondary" 
+                                                        disabled
+                                                        title="Sin documentos">
+                                                    <i class="bi bi-files"></i>
+                                                </button>
+                                            }
+                                            
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => ViewReportInModal(solicitud.Id)"
+                                                    title="Ver reporte de la solicitud">
+                                                <i class="bi bi-file-pdf"></i>
+                                            </button>
+                                            
                                             @if (solicitud.Estado == "Pendiente")
                                             {
-                                                <button class="btn btn-sm btn-danger" @onclick="() => CancelSolicitud(solicitud.Id)">
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        @onclick="() => ShowCancelConfirmation(solicitud)"
+                                                        title="Cancelar solicitud">
                                                     <i class="bi bi-x-circle"></i>
                                                 </button>
                                             }
-                                            <button class="btn btn-sm btn-info" @onclick="() => GenerateReport(solicitud.Id)">
-                                                <i class="bi bi-file-pdf"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -152,37 +288,107 @@
                     <h6>Documentos Adjuntos</h6>
                     @if (selectedSolicitud.Documentos != null && selectedSolicitud.Documentos.Any())
                     {
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Tipo</th>
-                                        <th>Fecha</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var documento in selectedSolicitud.Documentos)
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Tipo</th>
+                                                <th>Tamaño</th>
+                                                <th>Fecha</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var documento in selectedSolicitud.Documentos.Take(3))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <i class="bi bi-file-pdf text-danger me-1"></i>
+                                                        @TruncateFileName(documento.NombreArchivo, 25)
+                                                    </td>
+                                                    <td><span class="badge bg-info">@documento.TipoDocumento</span></td>
+                                                    <td>@FormatFileSize(documento.TamanoArchivo)</td>
+                                                    <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                                </tr>
+                                            }
+                                            @if (selectedSolicitud.Documentos.Count > 3)
+                                            {
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">
+                                                        <i class="bi bi-three-dots"></i>
+                                                        y @(selectedSolicitud.Documentos.Count - 3) documento@(selectedSolicitud.Documentos.Count - 3 > 1 ? "s" : "") más
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary btn-sm" 
+                                            @onclick="() => ShowDocumentManager(selectedSolicitud)"
+                                            style="background-color: #8a1538; border-color: #8a1538;">
+                                        <i class="bi bi-folder2-open"></i> Gestionar Documentos
+                                    </button>
+                                    
+                                    @if (selectedSolicitud.Documentos.Count > 1)
                                     {
-                                        <tr>
-                                            <td>@documento.NombreArchivo</td>
-                                            <td>@documento.TipoDocumento</td>
-                                            <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary" @onclick="() => DownloadDocument(documento.Id)">
-                                                    <i class="bi bi-download"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" 
+                                                    class="btn btn-outline-info btn-sm dropdown-toggle" 
+                                                    data-bs-toggle="dropdown" 
+                                                    aria-expanded="false">
+                                                <i class="bi bi-eye"></i> Vista Rápida
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @foreach (var doc in selectedSolicitud.Documentos.Take(5))
+                                                {
+                                                    <li>
+                                                        <button class="dropdown-item" 
+                                                                @onclick="() => PreviewSingleDocument(doc)">
+                                                            <i class="bi bi-file-pdf text-danger me-2"></i>
+                                                            @TruncateFileName(doc.NombreArchivo, 30)
+                                                        </button>
+                                                    </li>
+                                                }
+                                                @if (selectedSolicitud.Documentos.Count > 5)
+                                                {
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item" 
+                                                                @onclick="() => ShowDocumentManager(selectedSolicitud)">
+                                                            <i class="bi bi-three-dots me-2"></i>
+                                                            Ver todos los documentos
+                                                        </button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
                                     }
-                                </tbody>
-                            </table>
+                                    else if (selectedSolicitud.Documentos.Count == 1)
+                                    {
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => PreviewSingleDocument(selectedSolicitud.Documentos.First())">
+                                            <i class="bi bi-eye"></i> Ver Documento
+                                        </button>
+                                    }
+                                    
+                                    <button class="btn btn-outline-success btn-sm" 
+                                            @onclick="() => DownloadAllSolicitudDocuments(selectedSolicitud.Documentos)">
+                                        <i class="bi bi-download"></i> Descargar Todos
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     }
                     else
                     {
-                        <div class="alert alert-info">No hay documentos adjuntos a esta solicitud.</div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> No hay documentos adjuntos a esta solicitud.
+                        </div>
                     }
                     
                     @if (selectedSolicitud.Estado == "Rechazada" && !string.IsNullOrEmpty(selectedSolicitud.MotivoRechazo))
@@ -216,10 +422,36 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">Cerrar</button>
-                    <button type="button" class="btn btn-primary" @onclick="() => GenerateReport(selectedSolicitud.Id)">
-                        <i class="bi bi-file-pdf"></i> Generar Reporte
-                    </button>
+                    <div class="btn-group me-auto" role="group">
+                        <button type="button" 
+                                class="btn btn-outline-primary" 
+                                @onclick="() => ShowDocumentManager(selectedSolicitud)">
+                            <i class="bi bi-files"></i> Documentos
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-success" 
+                                @onclick="() => ViewReportInModal(selectedSolicitud.Id)">
+                            <i class="bi bi-file-pdf"></i> Ver Reporte
+                        </button>
+                        <button type="button" 
+                                class="btn btn-outline-info" 
+                                @onclick="() => DownloadReport(selectedSolicitud.Id)">
+                            <i class="bi bi-download"></i> Descargar Reporte
+                        </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        @if (selectedSolicitud.Estado == "Pendiente")
+                        {
+                            <button type="button" 
+                                    class="btn btn-outline-danger" 
+                                    @onclick="() => ShowCancelConfirmation(selectedSolicitud)">
+                                <i class="bi bi-x-circle"></i> Cancelar Solicitud
+                            </button>
+                        }
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">
+                            <i class="bi bi-x-lg"></i> Cerrar
+                        </button>
+                    </div>
                     @if (System.Diagnostics.Debugger.IsAttached)
                     {
                         <button type="button" class="btn btn-secondary" @onclick="DebugDetails">
@@ -233,11 +465,56 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal para gestión de documentos -->
+<SGA.Web.Shared.DocumentManagerModal IsVisible="showDocumentManager" 
+                     Documentos="currentSolicitudDocuments" 
+                     OnClose="CloseDocumentManager" />
+
+<!-- Modal para visualizar PDFs -->
+<SGA.Web.Shared.PdfViewerModal IsVisible="showPdfViewer"
+               PdfUrl="@currentPdfUrl"
+               FileName="@currentPdfFileName"
+               IsLoading="@isPdfLoading"
+               ErrorMessage="@pdfErrorMessage"
+               OnClose="ClosePdfViewer"
+               OnDownload="DownloadCurrentPdf"
+               OnRetry="RetryLoadPdf" />
+
+<!-- Modal para confirmar cancelación -->
+<SGA.Web.Shared.CancelSolicitudModal IsVisible="showCancelConfirmation"
+                     Solicitud="@currentSolicitudInfo"
+                     IsProcessing="@isCancelling"
+                     OnConfirm="ConfirmCancelSolicitud"
+                     OnCancel="CloseCancelConfirmation" />
+
 @code {
     private List<SolicitudAscensoDto>? solicitudes;
+    private List<SolicitudAscensoDto>? solicitudesOriginales; // Para filtrado
     private bool isLoading = true;
     private bool showDetails = false;
     private SolicitudAscensoDto? selectedSolicitud;
+    
+    // Estados para filtros
+    private string selectedEstadoFilter = "";
+    
+    // Estados para modales
+    private bool showDocumentManager = false;
+    private bool showPdfViewer = false;
+    private bool showCancelConfirmation = false;
+    
+    // Estados para gestión de documentos
+    private List<DocumentoDto> currentSolicitudDocuments = new();
+    
+    // Estados para PDF viewer
+    private string? currentPdfUrl;
+    private string? currentPdfFileName;
+    private bool isPdfLoading = false;
+    private string? pdfErrorMessage;
+    private Guid? currentReportSolicitudId;
+    
+    // Estados para cancelación  
+    private SolicitudData? currentSolicitudInfo;
+    private bool isCancelling = false;
     
     protected override async Task OnInitializedAsync()
     {
@@ -267,12 +544,18 @@
             {
                 try
                 {
-                    // Primero obtener el contenido como string para debug
                     var content = await response.Content.ReadAsStringAsync();
                     Console.WriteLine($"Respuesta del servidor: {content}");
                     
                     solicitudes = await response.DeserializeJsonSafeAsync<List<SolicitudAscensoDto>>();
+                    solicitudesOriginales = solicitudes?.ToList(); // Guardar copia para filtrado
                     Console.WriteLine($"Solicitudes cargadas: {solicitudes?.Count ?? 0}");
+                    
+                    // Aplicar filtro actual si existe
+                    if (!string.IsNullOrEmpty(selectedEstadoFilter))
+                    {
+                        FilterSolicitudes();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -307,6 +590,26 @@
         NavigationManager.NavigateTo("/solicitudes/nueva");
     }
     
+    private void FilterSolicitudes()
+    {
+        if (solicitudesOriginales == null)
+        {
+            solicitudes = new List<SolicitudAscensoDto>();
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(selectedEstadoFilter))
+        {
+            solicitudes = solicitudesOriginales.ToList();
+        }
+        else
+        {
+            solicitudes = solicitudesOriginales.Where(s => s.Estado == selectedEstadoFilter).ToList();
+        }
+        
+        StateHasChanged();
+    }
+    
     private async Task ViewSolicitudDetails(Guid solicitudId)
     {
         try
@@ -320,7 +623,6 @@
             {
                 try
                 {
-                    // Debug del contenido
                     var content = await response.Content.ReadAsStringAsync();
                     Console.WriteLine($"Detalle de solicitud: {content}");
                     
@@ -357,8 +659,233 @@
         showDetails = false;
     }
     
+    #region Gestión de Documentos
+    
+    private void ShowDocumentManager(SolicitudAscensoDto solicitud)
+    {
+        currentSolicitudDocuments = solicitud.Documentos?.ToList() ?? new List<DocumentoDto>();
+        showDocumentManager = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+    }
+    
+    private void CloseDocumentManager()
+    {
+        showDocumentManager = false;
+        currentSolicitudDocuments.Clear();
+    }
+    
+    private async Task DownloadAllSolicitudDocuments(List<DocumentoDto> documentos)
+    {
+        if (!documentos.Any()) return;
+
+        ToastService.ShowInfo($"Descargando {documentos.Count} documentos...");
+        
+        var successCount = 0;
+        foreach (var documento in documentos)
+        {
+            try
+            {
+                var success = await DocumentService.DescargarDocumentoSolicitud(documento.Id);
+                if (success) successCount++;
+                
+                // Pausa entre descargas
+                await Task.Delay(500);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error descargando {documento.NombreArchivo}: {ex.Message}");
+            }
+        }
+
+        if (successCount == documentos.Count)
+        {
+            ToastService.ShowSuccess($"Todos los documentos descargados correctamente ({successCount})");
+        }
+        else if (successCount > 0)
+        {
+            ToastService.ShowWarning($"Descargados {successCount} de {documentos.Count} documentos");
+        }
+        else
+        {
+            ToastService.ShowError("No se pudieron descargar los documentos");
+        }
+    }
+    
+    #endregion
+    
+    #region Visualización de PDFs y Reportes
+    
+    private async Task ViewReportInModal(Guid solicitudId)
+    {
+        currentReportSolicitudId = solicitudId;
+        isPdfLoading = true;
+        pdfErrorMessage = null;
+        currentPdfUrl = null;
+        currentPdfFileName = null;
+        showPdfViewer = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+        
+        StateHasChanged();
+        
+        try
+        {
+            var result = await DocumentService.VisualizarReporteSolicitud(solicitudId);
+            
+            if (result.Success)
+            {
+                currentPdfUrl = result.PdfUrl;
+                currentPdfFileName = result.FileName;
+                pdfErrorMessage = null;
+            }
+            else
+            {
+                pdfErrorMessage = result.ErrorMessage ?? "Error al cargar el reporte";
+            }
+        }
+        catch (Exception ex)
+        {
+            pdfErrorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isPdfLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task DownloadReport(Guid solicitudId)
+    {
+        try
+        {
+            ToastService.ShowInfo("Generando reporte...");
+            var success = await DocumentService.DescargarReporteSolicitud(solicitudId);
+            
+            if (!success)
+            {
+                ToastService.ShowError("Error al descargar el reporte");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar reporte: {ex.Message}");
+        }
+    }
+    
+    private void ClosePdfViewer()
+    {
+        showPdfViewer = false;
+        currentPdfUrl = null;
+        currentPdfFileName = null;
+        pdfErrorMessage = null;
+        isPdfLoading = false;
+        currentReportSolicitudId = null;
+    }
+    
+    private async Task DownloadCurrentPdf()
+    {
+        if (currentReportSolicitudId.HasValue)
+        {
+            // Es un reporte de solicitud
+            await DownloadReport(currentReportSolicitudId.Value);
+        }
+        else if (!string.IsNullOrEmpty(currentPdfFileName) && !string.IsNullOrEmpty(currentPdfUrl))
+        {
+            // Es un documento individual
+            try
+            {
+                // Extraer el ID del documento del URL si es posible, 
+                // o implementar otra lógica para descargar el documento actual
+                ToastService.ShowInfo($"Descargando {currentPdfFileName}...");
+                
+                // Como backup, podemos crear una descarga directa desde el PDF URL
+                await JSRuntime.InvokeVoidAsync("downloadFromDataUrl", currentPdfUrl, currentPdfFileName);
+                ToastService.ShowSuccess($"Documento {currentPdfFileName} descargado correctamente");
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Error al descargar: {ex.Message}");
+            }
+        }
+    }
+    
+    private async Task RetryLoadPdf()
+    {
+        if (currentReportSolicitudId.HasValue)
+        {
+            await ViewReportInModal(currentReportSolicitudId.Value);
+        }
+    }
+    
+    #endregion
+    
+    #region Cancelación de Solicitudes
+    
+    private void ShowCancelConfirmation(SolicitudAscensoDto solicitud)
+    {
+        currentSolicitudInfo = new SolicitudData
+        {
+            Id = solicitud.Id,
+            NivelActual = solicitud.NivelActual,
+            NivelSolicitado = solicitud.NivelSolicitado,
+            Estado = solicitud.Estado,
+            FechaSolicitud = solicitud.FechaSolicitud
+        };
+        
+        showCancelConfirmation = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+    }
+    
+    private void CloseCancelConfirmation()
+    {
+        showCancelConfirmation = false;
+        currentSolicitudInfo = null;
+        isCancelling = false;
+    }
+    
+    private async Task ConfirmCancelSolicitud()
+    {
+        if (currentSolicitudInfo == null) return;
+        
+        isCancelling = true;
+        StateHasChanged();
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.DeleteAsync($"api/solicitudascenso/{currentSolicitudInfo.Id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Solicitud cancelada exitosamente");
+                CloseCancelConfirmation();
+                await LoadSolicitudes(); // Recargar la lista
+            }
+            else
+            {
+                var errorMessage = await response.GetErrorMessageAsync();
+                ToastService.ShowError($"Error al cancelar solicitud: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cancelar solicitud: {ex.Message}");
+        }
+        finally
+        {
+            isCancelling = false;
+            StateHasChanged();
+        }
+    }
+    
+    #endregion
+    
+    #region Métodos de utilidad heredados
+    
     private async Task CancelSolicitud(Guid solicitudId)
     {
+        // Método legacy - mantenido por compatibilidad pero no usado
         if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea cancelar esta solicitud?"))
             return;
             
@@ -388,6 +915,7 @@
     
     private async Task GenerateReport(Guid solicitudId)
     {
+        // Método legacy - mantenido por compatibilidad pero no usado
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
@@ -402,6 +930,7 @@
     
     private async Task DownloadDocument(Guid documentoId)
     {
+        // Método legacy - mantenido por compatibilidad pero no usado
         try
         {
             ToastService.ShowInfo("Descargando documento...");
@@ -443,6 +972,33 @@
         };
     }
     
+    // Métodos de utilidad para formateo
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private string TruncateFileName(string fileName, int maxLength)
+    {
+        if (fileName.Length <= maxLength) return fileName;
+        
+        var extension = Path.GetExtension(fileName);
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var truncatedName = nameWithoutExtension.Substring(0, Math.Max(0, maxLength - extension.Length - 3));
+        
+        return $"{truncatedName}...{extension}";
+    }
+    
+    #endregion
+    
     public class SolicitudAscensoDto
     {
         public Guid Id { get; set; }
@@ -470,13 +1026,15 @@
         public List<DocumentoDto> Documentos { get; set; } = new();
     }
     
-    public class DocumentoDto
+    // Clase eliminada - usando SGA.Web.Models.DocumentoDto
+
+    public class SolicitudInfo
     {
         public Guid Id { get; set; }
-        public string NombreArchivo { get; set; } = string.Empty;
-        public long TamanoArchivo { get; set; }
-        public string TipoDocumento { get; set; } = string.Empty;
-        public DateTime FechaCreacion { get; set; }
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public string Estado { get; set; } = string.Empty;
+        public DateTime FechaSolicitud { get; set; }
     }
 
     private void DebugDetails()
@@ -512,4 +1070,45 @@
         Console.WriteLine("===== END DEBUGGING =====");
     }
 
+    #region Vista previa de documentos individuales
+    
+    private async Task PreviewSingleDocument(DocumentoDto documento)
+    {
+        currentReportSolicitudId = null;
+        isPdfLoading = true;
+        pdfErrorMessage = null;
+        currentPdfUrl = null;
+        currentPdfFileName = documento.NombreArchivo;
+        showPdfViewer = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+        
+        StateHasChanged();
+        
+        try
+        {
+            var result = await DocumentService.VisualizarDocumentoSolicitud(documento.Id);
+            
+            if (result.Success)
+            {
+                currentPdfUrl = result.PdfUrl;
+                currentPdfFileName = result.FileName ?? documento.NombreArchivo;
+                pdfErrorMessage = null;
+            }
+            else
+            {
+                pdfErrorMessage = result.ErrorMessage ?? "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            pdfErrorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isPdfLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    #endregion
 }

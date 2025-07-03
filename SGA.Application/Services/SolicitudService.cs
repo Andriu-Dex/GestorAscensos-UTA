@@ -139,6 +139,34 @@ public class SolicitudService : ISolicitudService
         return true;
     }
 
+    public async Task<bool> CancelarSolicitudAsync(Guid solicitudId, Guid docenteId)
+    {
+        var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+        if (solicitud == null) return false;
+
+        // Verificar que la solicitud pertenece al docente
+        if (solicitud.DocenteId != docenteId) return false;
+
+        // Solo se pueden cancelar solicitudes en estado Pendiente
+        if (solicitud.Estado != EstadoSolicitud.Pendiente) return false;
+
+        // Registrar la cancelación en auditoría antes de eliminar
+        var docente = await _docenteRepository.GetByIdAsync(docenteId);
+        await _auditoriaService.RegistrarAccionAsync(
+            "CANCELAR_SOLICITUD",
+            docenteId.ToString(), 
+            docente?.Email, 
+            "SolicitudAscenso",
+            "Pendiente", 
+            "Eliminada por cancelación del docente", 
+            solicitudId.ToString());
+
+        // Eliminar la solicitud completamente de la base de datos
+        var eliminada = await _solicitudRepository.DeleteAsync(solicitudId);
+
+        return eliminada;
+    }
+
     public async Task<bool> TieneDocumenteSolicitudActivaAsync(Guid docenteId)
     {
         return await _solicitudRepository.TieneDocumenteSolicitudActivaAsync(docenteId);

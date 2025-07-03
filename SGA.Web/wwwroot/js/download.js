@@ -217,3 +217,27 @@ window.openPdfModal = (dataUrl) => {
     })
   );
 };
+
+// Función para descargar desde data URL
+window.downloadFromDataUrl = (dataUrl, fileName) => {
+  try {
+    // Crear un elemento <a> temporal para iniciar la descarga
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = fileName;
+
+    // Agregar el elemento al DOM (no visible)
+    document.body.appendChild(link);
+
+    // Iniciar la descarga
+    link.click();
+
+    // Limpiar - remover el elemento
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error al descargar desde data URL:", error);
+    if (typeof showToast === "function") {
+      showToast("Error al descargar el archivo: " + error.message, "error");
+    }
+  }
+};

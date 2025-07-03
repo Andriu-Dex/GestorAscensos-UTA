@@ -154,18 +154,8 @@ namespace SGA.Web.Models
         public string ArchivoTipo { get; set; } = "application/pdf";
     }
 
-    // DTOs para documentos
-    public class DocumentoDto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }
-        public string RutaArchivo { get; set; } = string.Empty;
-        public int TipoDocumentoId { get; set; }
-        public TipoDocumentoDto? TipoDocumento { get; set; }
-        public DateTime FechaCreacion { get; set; }
-        public bool Verificado { get; set; }
-    }
+    // DTOs para documentos - Se movió a DocumentoDTOs.cs para evitar duplicación
+    // La clase DocumentoDto ahora está en SGA.Web.Models.DocumentoDTOs.cs
 
     public class TipoDocumentoDto
     {

@@ -1,0 +1,164 @@
+@using Microsoft.JSInterop
+@using SGA.Web.Models
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #dc3545; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Confirmar Cancelación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnCancel" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-2 text-center">
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="col-10">
+                            <h6 class="mb-3">¿Está seguro que desea cancelar esta solicitud?</h6>
+                            
+                            @if (Solicitud != null)
+                            {
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <strong>Solicitud:</strong> 
+                                                <br>SOL-@Solicitud.Id.ToString().Substring(0, 8)
+                                            </div>
+                                            <div class="col-6">
+                                                <strong>Fecha:</strong> 
+                                                <br>@Solicitud.FechaSolicitud.ToString("dd/MM/yyyy")
+                                            </div>
+                                        </div>
+                                        <hr class="my-2">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <strong>Nivel Actual:</strong> 
+                                                <br>@Solicitud.NivelActual
+                                            </div>
+                                            <div class="col-6">
+                                                <strong>Nivel Solicitado:</strong> 
+                                                <br>@Solicitud.NivelSolicitado
+                                            </div>
+                                        </div>
+                                        <hr class="my-2">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <strong>Estado:</strong> 
+                                                <span class="badge @GetEstadoBadgeClass(Solicitud.Estado)">
+                                                    @Solicitud.Estado
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="alert alert-warning mt-3" role="alert">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-info-circle"></i> Información importante:
+                                </h6>
+                                <ul class="mb-0">
+                                    <li>Esta acción <strong>no se puede deshacer</strong></li>
+                                    <li>La solicitud será eliminada permanentemente</li>
+                                    <li>Los documentos adjuntos también serán eliminados</li>
+                                    <li>Podrá crear una nueva solicitud posteriormente</li>
+                                </ul>
+                            </div>
+
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" @bind="confirmationChecked" id="confirmationCheck">
+                                <label class="form-check-label" for="confirmationCheck">
+                                    Entiendo que esta acción no se puede deshacer
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnCancel">
+                        <i class="bi bi-x-lg"></i> No, Mantener Solicitud
+                    </button>
+                    <button type="button" 
+                            class="btn btn-danger" 
+                            @onclick="OnConfirm"
+                            disabled="@(!confirmationChecked || isProcessing)">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash"></i>
+                        }
+                        Sí, Cancelar Solicitud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public SolicitudData? Solicitud { get; set; }
+    [Parameter] public bool IsProcessing { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool confirmationChecked = false;
+    private bool isProcessing = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            confirmationChecked = false;
+        }
+        isProcessing = IsProcessing;
+    }
+
+    private async Task HandleConfirm()
+    {
+        if (confirmationChecked && !isProcessing)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    private string GetEstadoBadgeClass(string estado)
+    {
+        return estado switch
+        {
+            "Pendiente" => "bg-warning",
+            "EnProceso" => "bg-info",
+            "Aprobada" => "bg-success",
+            "Rechazada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'hidden'");
+        }
+        else if (!IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+        }
+    }
+
+    public void Dispose()
+    {
+        JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+    }
+}
