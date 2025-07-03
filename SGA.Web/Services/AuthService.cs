@@ -189,17 +189,42 @@ namespace SGA.Web.Services
                         if (docenteDto != null)
                         {
                             Console.WriteLine($"[AUTH DEBUG] Datos del docente obtenidos: {docenteDto.Nombres} {docenteDto.Apellidos}");
+                            Console.WriteLine($"[AUTH DEBUG] Nivel actual en DTO: '{docenteDto.NivelActual}'");
                             Console.WriteLine($"[AUTH DEBUG] Fecha inicio nivel actual: {docenteDto.FechaInicioNivelActual}");
                             
                             // Convertir NivelActual de string a int
                             int nivelActual = 1; // valor por defecto
                             if (!string.IsNullOrEmpty(docenteDto.NivelActual))
                             {
-                                // Extraer el número del nivel (ej: "Titular Auxiliar 1" -> 1)
-                                var parts = docenteDto.NivelActual.Split(' ');
-                                if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out int nivel))
+                                // El nivel viene como "Titular1", "Titular2", etc.
+                                if (docenteDto.NivelActual.StartsWith("Titular") && docenteDto.NivelActual.Length > 7)
                                 {
-                                    nivelActual = nivel;
+                                    var numeroTexto = docenteDto.NivelActual.Substring(7); // Obtener el número después de "Titular"
+                                    if (int.TryParse(numeroTexto, out int nivel))
+                                    {
+                                        nivelActual = nivel;
+                                        Console.WriteLine($"[AUTH DEBUG] Nivel parseado correctamente: {nivelActual}");
+                                    }
+                                }
+                                else
+                                {
+                                    // Fallback: intentar extraer el último número de cualquier formato
+                                    var parts = docenteDto.NivelActual.Split(' ');
+                                    if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out int nivel))
+                                    {
+                                        nivelActual = nivel;
+                                        Console.WriteLine($"[AUTH DEBUG] Nivel parseado con fallback 1: {nivelActual}");
+                                    }
+                                    else
+                                    {
+                                        // Último fallback: buscar cualquier dígito en el string
+                                        var digitos = System.Text.RegularExpressions.Regex.Match(docenteDto.NivelActual, @"\d+");
+                                        if (digitos.Success && int.TryParse(digitos.Value, out int nivelRegex))
+                                        {
+                                            nivelActual = nivelRegex;
+                                            Console.WriteLine($"[AUTH DEBUG] Nivel parseado con fallback 2: {nivelActual}");
+                                        }
+                                    }
                                 }
                             }
                             
@@ -227,7 +252,7 @@ namespace SGA.Web.Services
                                 _currentUser.EsAdmin = role == "Administrador";
                             }
                             
-                            Console.WriteLine($"[AUTH DEBUG] Usuario actualizado con fecha: {_currentUser.FechaIngresoNivelActual}");
+                            Console.WriteLine($"[AUTH DEBUG] Usuario actualizado con nivel: {nivelActual} y fecha: {_currentUser.FechaIngresoNivelActual}");
                             return _currentUser;
                         }
                         else

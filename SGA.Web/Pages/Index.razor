@@ -366,7 +366,8 @@
             // Configurar el header de autorización
             await AuthService.ConfigureAuthenticationHeader();
             
-            userInfo = await AuthService.GetUserInfo();
+            // Refrescar información del usuario para asegurar datos actualizados
+            userInfo = await AuthService.RefreshUserInfo();
             
             if (userInfo == null)
             {
@@ -389,10 +390,11 @@
             CalcularTiempoDetallado();
             IniciarTimer();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Si hay un error al obtener la información del usuario, 
             // es posible que el token haya expirado
+            Console.WriteLine($"Error en OnInitializedAsync: {ex.Message}");
             await HandleLogout();
         }
         finally
@@ -408,7 +410,48 @@
         {
             await JSRuntime.InvokeVoidAsync("initializeAnimations");
         }
-    }    private async Task LoadIndicadores()
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        // Este método se ejecuta cada vez que se navega a la página
+        // Útil para refrescar datos cuando el usuario regresa después de una acción
+        if (userInfo != null)
+        {
+            await RefreshUserData();
+        }
+    }
+    
+    /// <summary>
+    /// Método público para refrescar los datos del usuario desde componentes externos
+    /// </summary>
+    public async Task RefreshUserData()
+    {
+        try
+        {
+            // Refrescar información del usuario
+            userInfo = await AuthService.RefreshUserInfo();
+            
+            if (userInfo != null)
+            {
+                await LoadIndicadores();
+                await LoadRequisitos();
+                await VerificarSolicitudActiva();
+                
+                // Recalcular tiempo detallado
+                CalcularTiempoDetallado();
+                
+                // Forzar actualización de la UI
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al refrescar datos del usuario: {ex.Message}");
+        }
+    }
+    
+    private async Task LoadIndicadores()
     {
         try
         {
@@ -428,7 +471,7 @@
                 indicadores = new IndicadoresModel();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // En caso de error, inicializar con valores predeterminados
             indicadores = new IndicadoresModel();
@@ -461,7 +504,7 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // En caso de error, inicializar con valores predeterminados
             requisitos = new RequisitosModel();
@@ -483,7 +526,7 @@
                 tieneSolicitudActiva = false;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             tieneSolicitudActiva = false;
         }
@@ -507,7 +550,7 @@
                 await LoadRequisitos();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Silenciar errores de actualización de indicadores
         }
@@ -640,7 +683,7 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Silenciar errores de importación de indicadores
         }
