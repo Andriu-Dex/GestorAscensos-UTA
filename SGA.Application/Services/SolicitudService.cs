@@ -358,4 +358,116 @@ public class SolicitudService : ISolicitudService
         var documentosVerificacion = await _documentoRepository.GetBySolicitudIdAsync(solicitudId);
         Console.WriteLine($"[SolicitudService] Verificación: {documentosVerificacion.Count} documentos encontrados para solicitud {solicitudId}");
     }
+
+    public async Task<bool> ReenviarSolicitudAsync(Guid solicitudId, Guid docenteId)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+                return false;
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteId != docenteId)
+                return false;
+
+            // Solo permitir reenviar si está rechazada
+            if (solicitud.Estado != EstadoSolicitud.Rechazada)
+                return false;
+
+            // Cambiar estado a pendiente y limpiar datos de revisión
+            solicitud.Estado = EstadoSolicitud.Pendiente;
+            solicitud.MotivoRechazo = null;
+            solicitud.FechaAprobacion = null;
+            solicitud.AprobadoPorId = null;
+            solicitud.FechaSolicitud = DateTime.UtcNow; // Actualizar fecha de solicitud
+
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "REENVIAR_SOLICITUD_ASCENSO",
+                docenteId.ToString(),
+                null,
+                "SolicitudAscenso",
+                "Rechazada",
+                "Pendiente",
+                null
+            );
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al reenviar solicitud {solicitudId}: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> ReenviarSolicitudConDocumentosAsync(Guid solicitudId, Guid docenteId, Dictionary<string, List<string>> documentosSeleccionados)
+    {
+        try
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
+            if (solicitud == null)
+                return false;
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteId != docenteId)
+                return false;
+
+            // Solo permitir reenviar si está rechazada
+            if (solicitud.Estado != EstadoSolicitud.Rechazada)
+                return false;
+
+            // Primero eliminamos las asociaciones existentes de documentos
+            var documentosExistentes = await _documentoRepository.GetBySolicitudIdAsync(solicitudId);
+            foreach (var documento in documentosExistentes)
+            {
+                documento.SolicitudAscensoId = null;
+                await _documentoRepository.UpdateAsync(documento);
+            }
+
+            // Convertir y crear nuevos documentos
+            var documentosIds = new List<Guid>();
+            if (documentosSeleccionados != null && documentosSeleccionados.Any())
+            {
+                var documentosConvertidos = await _documentoConversionService.ConvertirYCrearDocumentosAsync(documentosSeleccionados);
+                documentosIds.AddRange(documentosConvertidos);
+                
+                // Asociar los nuevos documentos a la solicitud
+                if (documentosIds.Any())
+                {
+                    await AsociarDocumentosASolicitudAsync(solicitudId, documentosIds);
+                }
+            }
+
+            // Cambiar estado a pendiente y limpiar datos de revisión
+            solicitud.Estado = EstadoSolicitud.Pendiente;
+            solicitud.MotivoRechazo = null;
+            solicitud.FechaAprobacion = null;
+            solicitud.AprobadoPorId = null;
+            solicitud.FechaSolicitud = DateTime.UtcNow; // Actualizar fecha de solicitud
+
+            await _solicitudRepository.UpdateAsync(solicitud);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "REENVIAR_SOLICITUD_ASCENSO_CON_DOCUMENTOS",
+                docenteId.ToString(),
+                null,
+                "SolicitudAscenso",
+                "Rechazada",
+                "Pendiente",
+                $"Documentos actualizados: {documentosIds.Count} documentos asociados"
+            );
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al reenviar solicitud con documentos {solicitudId}: {ex.Message}");
+            return false;
+        }
+    }
 }

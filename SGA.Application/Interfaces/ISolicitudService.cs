@@ -12,4 +12,6 @@ public interface ISolicitudService
     Task<bool> CancelarSolicitudAsync(Guid solicitudId, Guid docenteId);
     Task<bool> TieneDocumenteSolicitudActivaAsync(Guid docenteId);
     Task<byte[]?> DescargarDocumentoAsync(Guid documentoId);
+    Task<bool> ReenviarSolicitudAsync(Guid solicitudId, Guid docenteId);
+    Task<bool> ReenviarSolicitudConDocumentosAsync(Guid solicitudId, Guid docenteId, Dictionary<string, List<string>> documentosSeleccionados);
 }

@@ -272,6 +272,83 @@ public class SolicitudesController : ControllerBase
         }
     }
 
+    [HttpPut("{id}/reenviar")]
+    public async Task<ActionResult> ReenviarSolicitud(Guid id)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
+            if (solicitud == null)
+                return NotFound("Solicitud no encontrada");
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteId != docente.Id)
+                return Forbid("No tiene permisos para reenviar esta solicitud");
+
+            // Solo se pueden reenviar solicitudes rechazadas
+            if (solicitud.Estado != "Rechazada")
+                return BadRequest("Solo se pueden reenviar solicitudes rechazadas");
+
+            var resultado = await _solicitudService.ReenviarSolicitudAsync(id, docente.Id);
+            
+            if (!resultado)
+                return BadRequest("No se pudo reenviar la solicitud");
+
+            return Ok(new { message = "Solicitud reenviada exitosamente para nueva revisión" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("{id}/reenviar-con-documentos")]
+    public async Task<ActionResult> ReenviarSolicitudConDocumentos(Guid id, [FromBody] Dictionary<string, List<string>> documentosSeleccionados)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
+            if (solicitud == null)
+                return NotFound("Solicitud no encontrada");
+
+            // Verificar que la solicitud pertenece al docente
+            if (solicitud.DocenteId != docente.Id)
+                return Forbid("No tiene permisos para reenviar esta solicitud");
+
+            // Solo se pueden reenviar solicitudes rechazadas
+            if (solicitud.Estado != "Rechazada")
+                return BadRequest("Solo se pueden reenviar solicitudes rechazadas");
+
+            var resultado = await _solicitudService.ReenviarSolicitudConDocumentosAsync(id, docente.Id, documentosSeleccionados);
+            
+            if (!resultado)
+                return BadRequest("No se pudo reenviar la solicitud con los documentos seleccionados");
+
+            return Ok(new { message = "Solicitud reenviada exitosamente con documentos actualizados" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SolicitudesController] Error al reenviar solicitud con documentos: {ex.Message}");
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
     [HttpGet("{id}/debug-documentos")]
     public async Task<ActionResult> DebugDocumentosSolicitud(Guid id)
     {

@@ -212,6 +212,16 @@
                                                     <i class="bi bi-x-circle"></i>
                                                 </button>
                                             }
+                                            
+                                            @if (solicitud.Estado == "Rechazada")
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        @onclick="() => ShowReenviarConfirmation(solicitud)"
+                                                        title="Reenviar solicitud para revisión"
+                                                        style="background-color: #8a1538; border-color: #8a1538; color: white;">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -224,6 +234,7 @@
     </div>
 </div>
 
+<!-- Modal de detalles de solicitud -->
 @if (showDetails && selectedSolicitud != null)
 {
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
@@ -285,182 +296,62 @@
                         </div>
                     </div>
                     
+                    @if (!string.IsNullOrEmpty(selectedSolicitud.MotivoRechazo))
+                    {
+                        <div class="alert alert-danger">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Motivo de Rechazo</h6>
+                            <p class="mb-0">@selectedSolicitud.MotivoRechazo</p>
+                        </div>
+                    }
+                    
                     <h6>Documentos Adjuntos</h6>
                     @if (selectedSolicitud.Documentos != null && selectedSolicitud.Documentos.Any())
                     {
-                        <div class="row">
-                            <div class="col-md-8">
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-striped">
-                                        <thead>
-                                            <tr>
-                                                <th>Nombre</th>
-                                                <th>Tipo</th>
-                                                <th>Tamaño</th>
-                                                <th>Fecha</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var documento in selectedSolicitud.Documentos.Take(3))
-                                            {
-                                                <tr>
-                                                    <td>
-                                                        <i class="bi bi-file-pdf text-danger me-1"></i>
-                                                        @TruncateFileName(documento.NombreArchivo, 25)
-                                                    </td>
-                                                    <td><span class="badge bg-info">@documento.TipoDocumento</span></td>
-                                                    <td>@FormatFileSize(documento.TamanoArchivo)</td>
-                                                    <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
-                                                </tr>
-                                            }
-                                            @if (selectedSolicitud.Documentos.Count > 3)
-                                            {
-                                                <tr>
-                                                    <td colspan="4" class="text-center text-muted">
-                                                        <i class="bi bi-three-dots"></i>
-                                                        y @(selectedSolicitud.Documentos.Count - 3) documento@(selectedSolicitud.Documentos.Count - 3 > 1 ? "s" : "") más
-                                                    </td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-primary btn-sm" 
-                                            @onclick="() => ShowDocumentManager(selectedSolicitud)"
-                                            style="background-color: #8a1538; border-color: #8a1538;">
-                                        <i class="bi bi-folder2-open"></i> Gestionar Documentos
-                                    </button>
-                                    
-                                    @if (selectedSolicitud.Documentos.Count > 1)
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Documento</th>
+                                        <th>Tamaño</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var documento in selectedSolicitud.Documentos)
                                     {
-                                        <div class="btn-group" role="group">
-                                            <button type="button" 
-                                                    class="btn btn-outline-info btn-sm dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" 
-                                                    aria-expanded="false">
-                                                <i class="bi bi-eye"></i> Vista Rápida
-                                            </button>
-                                            <ul class="dropdown-menu">
-                                                @foreach (var doc in selectedSolicitud.Documentos.Take(5))
-                                                {
-                                                    <li>
-                                                        <button class="dropdown-item" 
-                                                                @onclick="() => PreviewSingleDocument(doc)">
-                                                            <i class="bi bi-file-pdf text-danger me-2"></i>
-                                                            @TruncateFileName(doc.NombreArchivo, 30)
-                                                        </button>
-                                                    </li>
-                                                }
-                                                @if (selectedSolicitud.Documentos.Count > 5)
-                                                {
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <button class="dropdown-item" 
-                                                                @onclick="() => ShowDocumentManager(selectedSolicitud)">
-                                                            <i class="bi bi-three-dots me-2"></i>
-                                                            Ver todos los documentos
-                                                        </button>
-                                                    </li>
-                                                }
-                                            </ul>
-                                        </div>
+                                        <tr>
+                                            <td>
+                                                <i class="bi bi-file-pdf text-danger me-2"></i>
+                                                @documento.NombreArchivo
+                                            </td>
+                                            <td>@FormatFileSize(documento.TamanoArchivo)</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary btn-sm" 
+                                                            @onclick="() => PreviewSingleDocument(documento)"
+                                                            title="Vista previa">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     }
-                                    else if (selectedSolicitud.Documentos.Count == 1)
-                                    {
-                                        <button class="btn btn-outline-info btn-sm" 
-                                                @onclick="() => PreviewSingleDocument(selectedSolicitud.Documentos.First())">
-                                            <i class="bi bi-eye"></i> Ver Documento
-                                        </button>
-                                    }
-                                    
-                                    <button class="btn btn-outline-success btn-sm" 
-                                            @onclick="() => DownloadAllSolicitudDocuments(selectedSolicitud.Documentos)">
-                                        <i class="bi bi-download"></i> Descargar Todos
-                                    </button>
-                                </div>
-                            </div>
+                                </tbody>
+                            </table>
                         </div>
                     }
                     else
                     {
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> No hay documentos adjuntos a esta solicitud.
-                        </div>
-                    }
-                    
-                    @if (selectedSolicitud.Estado == "Rechazada" && !string.IsNullOrEmpty(selectedSolicitud.MotivoRechazo))
-                    {
-                        <div class="mt-3">
-                            <h6>Motivo de Rechazo</h6>
-                            <div class="alert alert-danger">
-                                @selectedSolicitud.MotivoRechazo
-                            </div>
-                        </div>
-                    }
-                    
-                    @if (selectedSolicitud.FechaAprobacion.HasValue)
-                    {
-                        <div class="mt-3">
-                            <h6>Información de Revisión</h6>
-                            <ul class="list-group">
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span>Fecha de Revisión:</span>
-                                    <strong>@selectedSolicitud.FechaAprobacion.Value.ToString("dd/MM/yyyy")</strong>
-                                </li>
-                                @if (!string.IsNullOrEmpty(selectedSolicitud.AprobadoPor))
-                                {
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span>Revisado por:</span>
-                                        <strong>@selectedSolicitud.AprobadoPor</strong>
-                                    </li>
-                                }
-                            </ul>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            No hay documentos adjuntos a esta solicitud.
                         </div>
                     }
                 </div>
                 <div class="modal-footer">
-                    <div class="btn-group me-auto" role="group">
-                        <button type="button" 
-                                class="btn btn-outline-primary" 
-                                @onclick="() => ShowDocumentManager(selectedSolicitud)">
-                            <i class="bi bi-files"></i> Documentos
-                        </button>
-                        <button type="button" 
-                                class="btn btn-outline-success" 
-                                @onclick="() => ViewReportInModal(selectedSolicitud.Id)">
-                            <i class="bi bi-file-pdf"></i> Ver Reporte
-                        </button>
-                        <button type="button" 
-                                class="btn btn-outline-info" 
-                                @onclick="() => DownloadReport(selectedSolicitud.Id)">
-                            <i class="bi bi-download"></i> Descargar Reporte
-                        </button>
-                    </div>
-                    <div class="btn-group" role="group">
-                        @if (selectedSolicitud.Estado == "Pendiente")
-                        {
-                            <button type="button" 
-                                    class="btn btn-outline-danger" 
-                                    @onclick="() => ShowCancelConfirmation(selectedSolicitud)">
-                                <i class="bi bi-x-circle"></i> Cancelar Solicitud
-                            </button>
-                        }
-                        <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">
-                            <i class="bi bi-x-lg"></i> Cerrar
-                        </button>
-                    </div>
-                    @if (System.Diagnostics.Debugger.IsAttached)
-                    {
-                        <button type="button" class="btn btn-secondary" @onclick="DebugDetails">
-                            <i class="bi bi-bug"></i> Debug
-                        </button>
-                        <button type="button" class="btn btn-info" @onclick="() => DebugDocumentosSolicitud(selectedSolicitud.Id)">
-                            <i class="bi bi-search"></i> Debug Docs
-                        </button>
-                    }
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
                 </div>
             </div>
         </div>
@@ -469,12 +360,12 @@
 }
 
 <!-- Modal para gestión de documentos -->
-<SGA.Web.Shared.DocumentManagerModal IsVisible="showDocumentManager" 
+<DocumentManagerModal IsVisible="showDocumentManager" 
                      Documentos="currentSolicitudDocuments" 
                      OnClose="CloseDocumentManager" />
 
 <!-- Modal para visualizar PDFs -->
-<SGA.Web.Shared.PdfViewerModal IsVisible="showPdfViewer"
+<PdfViewerModal IsVisible="showPdfViewer"
                PdfUrl="@currentPdfUrl"
                FileName="@currentPdfFileName"
                IsLoading="@isPdfLoading"
@@ -484,18 +375,81 @@
                OnRetry="RetryLoadPdf" />
 
 <!-- Modal para confirmar cancelación -->
-<SGA.Web.Shared.CancelSolicitudModal IsVisible="showCancelConfirmation"
+<CancelSolicitudModal IsVisible="showCancelConfirmation"
                      Solicitud="@currentSolicitudInfo"
                      IsProcessing="@isCancelling"
                      OnConfirm="ConfirmCancelSolicitud"
                      OnCancel="CloseCancelConfirmation" />
 
+<!-- Modal para reenvío con selección de documentos -->
+@if (showReenviarFormulario && currentSolicitudInfo != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-repeat"></i> Reenviar Solicitud - Seleccionar Documentos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseReenviarFormulario"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Información de la solicitud -->
+                    <div class="alert alert-info">
+                        <h6>Solicitud: SOL-@currentSolicitudInfo.Id.ToString().Substring(0, 8)</h6>
+                        <p>Seleccione los documentos que desea enviar con la solicitud reenviada.</p>
+                    </div>
+
+                    <!-- Componente selector de documentos -->
+                    <DocumentosSelector @ref="reenviarDocumentosSelector"
+                                        OnSelectionChanged="OnReenvioDocumentSelectionChanged" />
+
+                    @if (totalDocumentosReenvio > 0)
+                    {
+                        <div class="alert alert-success mt-3">
+                            <i class="bi bi-check-circle"></i>
+                            Se han seleccionado <strong>@totalDocumentosReenvio</strong> documentos.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning mt-3">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Debe seleccionar al menos un documento para reenviar la solicitud.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseReenviarFormulario" disabled="@isReenviandoConDocumentos">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmReenviarConDocumentos" 
+                            disabled="@(isReenviandoConDocumentos || totalDocumentosReenvio == 0)"
+                            style="background-color: #8a1538; border-color: #8a1538;">
+                        @if (isReenviandoConDocumentos)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            @:Reenviando...
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-repeat"></i>
+                            @: Reenviar con Documentos Seleccionados
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
-    private List<SolicitudAscensoDto>? solicitudes;
-    private List<SolicitudAscensoDto>? solicitudesOriginales; // Para filtrado
+    private List<SGA.Web.Models.SolicitudAscensoDto>? solicitudes;
+    private List<SGA.Web.Models.SolicitudAscensoDto>? solicitudesOriginales; // Para filtrado
     private bool isLoading = true;
     private bool showDetails = false;
-    private SolicitudAscensoDto? selectedSolicitud;
+    private SGA.Web.Models.SolicitudAscensoDto? selectedSolicitud;
     
     // Estados para filtros
     private string selectedEstadoFilter = "";
@@ -518,6 +472,12 @@
     // Estados para cancelación  
     private SolicitudData? currentSolicitudInfo;
     private bool isCancelling = false;
+    
+    // Estados para reenvío con documentos
+    private bool showReenviarFormulario = false;
+    private DocumentosSelector? reenviarDocumentosSelector;
+    private int totalDocumentosReenvio = 0;
+    private bool isReenviandoConDocumentos = false;
     
     protected override async Task OnInitializedAsync()
     {
@@ -547,29 +507,36 @@
             {
                 try
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Respuesta del servidor: {content}");
-                    
-                    solicitudes = await response.DeserializeJsonSafeAsync<List<SolicitudAscensoDto>>();
-                    solicitudesOriginales = solicitudes?.ToList(); // Guardar copia para filtrado
-                    Console.WriteLine($"Solicitudes cargadas: {solicitudes?.Count ?? 0}");
-                    
-                    // Aplicar filtro actual si existe
-                    if (!string.IsNullOrEmpty(selectedEstadoFilter))
+                    var solicitudesData = await response.DeserializeJsonSafeAsync<List<SGA.Web.Models.SolicitudAscensoDto>>();
+                    if (solicitudesData != null)
                     {
-                        FilterSolicitudes();
+                        solicitudes = solicitudesData;
+                        solicitudesOriginales = solicitudesData.ToList(); // Guardar copia original para filtros
+                        Console.WriteLine($"Solicitudes cargadas: {solicitudes.Count}");
+                        
+                        foreach (var sol in solicitudes)
+                        {
+                            Console.WriteLine($"Solicitud {sol.Id}: {sol.Estado}, Documentos: {sol.Documentos?.Count ?? 0}");
+                        }
+                    }
+                    else
+                    {
+                        solicitudes = new List<SGA.Web.Models.SolicitudAscensoDto>();
+                        solicitudesOriginales = new List<SGA.Web.Models.SolicitudAscensoDto>();
                     }
                 }
                 catch (Exception ex)
                 {
-                    solicitudes = new List<SolicitudAscensoDto>();
-                    ToastService.ShowError($"Error al procesar la respuesta del servidor: {ex.Message}");
-                    Console.WriteLine($"Error de deserialización: {ex}");
+                    solicitudes = new List<SGA.Web.Models.SolicitudAscensoDto>();
+                    solicitudesOriginales = new List<SGA.Web.Models.SolicitudAscensoDto>();
+                    ToastService.ShowError($"Error al procesar datos de solicitudes: {ex.Message}");
+                    Console.WriteLine($"Error deserialización: {ex}");
                 }
             }
             else
             {
-                solicitudes = new List<SolicitudAscensoDto>();
+                solicitudes = new List<SGA.Web.Models.SolicitudAscensoDto>();
+                solicitudesOriginales = new List<SGA.Web.Models.SolicitudAscensoDto>();
                 var errorMessage = await response.GetErrorMessageAsync();
                 ToastService.ShowError($"Error al cargar solicitudes: {response.StatusCode} - {errorMessage}");
                 Console.WriteLine($"Error HTTP: {response.StatusCode} - {errorMessage}");
@@ -577,7 +544,8 @@
         }
         catch (Exception ex)
         {
-            solicitudes = new List<SolicitudAscensoDto>();
+            solicitudes = new List<SGA.Web.Models.SolicitudAscensoDto>();
+            solicitudesOriginales = new List<SGA.Web.Models.SolicitudAscensoDto>();
             ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
             Console.WriteLine($"Error general: {ex}");
         }
@@ -597,7 +565,7 @@
     {
         if (solicitudesOriginales == null)
         {
-            solicitudes = new List<SolicitudAscensoDto>();
+            solicitudes = new List<SGA.Web.Models.SolicitudAscensoDto>();
             return;
         }
         
@@ -626,27 +594,19 @@
             {
                 try
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Detalle de solicitud: {content}");
-                    
-                    selectedSolicitud = await response.DeserializeJsonSafeAsync<SolicitudAscensoDto>();
-                    
-                    if (selectedSolicitud == null)
-                        throw new InvalidOperationException("No se pudieron cargar los detalles de la solicitud");
-                    
-                    Console.WriteLine($"Solicitud cargada inicialmente: {selectedSolicitud.Id} con {selectedSolicitud.Documentos?.Count ?? 0} documentos");
-                    
-                    // Siempre cargar documentos por separado para asegurar completitud
-                    await CargarDocumentosSolicitud(solicitudId);
-                    
-                    Console.WriteLine($"Solicitud después de cargar documentos: {selectedSolicitud.Id} con {selectedSolicitud.Documentos?.Count ?? 0} documentos");
-                    showDetails = true;
-                    StateHasChanged(); // Forzar actualización de la UI
+                    var solicitudDetalle = await response.DeserializeJsonSafeAsync<SGA.Web.Models.SolicitudAscensoDto>();
+                    if (solicitudDetalle != null)
+                    {
+                        selectedSolicitud = solicitudDetalle;
+                        await CargarDocumentosSolicitud(solicitudId);
+                        showDetails = true;
+                        StateHasChanged();
+                    }
                 }
                 catch (Exception ex)
                 {
                     ToastService.ShowError($"Error al procesar detalles de la solicitud: {ex.Message}");
-                    Console.WriteLine($"Error de deserialización de detalles: {ex}");
+                    Console.WriteLine($"Error deserialización detalles: {ex}");
                 }
             }
             else
@@ -677,16 +637,11 @@
                 if (documentos != null && selectedSolicitud != null)
                 {
                     selectedSolicitud.Documentos = documentos;
-                    Console.WriteLine($"Documentos cargados correctamente: {documentos.Count}");
-                    
-                    foreach (var doc in documentos)
-                    {
-                        Console.WriteLine($"  - {doc.NombreArchivo} ({doc.TipoDocumento}) - ID: {doc.Id}");
-                    }
+                    Console.WriteLine($"Documentos cargados: {documentos.Count}");
                 }
                 else
                 {
-                    Console.WriteLine("No se pudieron deserializar los documentos o selectedSolicitud es null");
+                    Console.WriteLine("No se encontraron documentos o selectedSolicitud es null");
                     if (selectedSolicitud != null)
                     {
                         selectedSolicitud.Documentos = new List<SGA.Web.Models.DocumentoDto>();
@@ -718,11 +673,12 @@
     private void CloseDetailsModal()
     {
         showDetails = false;
+        selectedSolicitud = null;
     }
     
     #region Gestión de Documentos
     
-    private void ShowDocumentManager(SolicitudAscensoDto solicitud)
+    private void ShowDocumentManager(SGA.Web.Models.SolicitudAscensoDto solicitud)
     {
         currentSolicitudDocuments = solicitud.Documentos?.ToList() ?? new List<SGA.Web.Models.DocumentoDto>();
         showDocumentManager = true;
@@ -854,8 +810,6 @@
             // Es un documento individual
             try
             {
-                // Extraer el ID del documento del URL si es posible, 
-                // o implementar otra lógica para descargar el documento actual
                 ToastService.ShowInfo($"Descargando {currentPdfFileName}...");
                 
                 // Como backup, podemos crear una descarga directa desde el PDF URL
@@ -877,11 +831,49 @@
         }
     }
     
+    private async Task PreviewSingleDocument(SGA.Web.Models.DocumentoDto documento)
+    {
+        currentReportSolicitudId = null;
+        isPdfLoading = true;
+        pdfErrorMessage = null;
+        currentPdfUrl = null;
+        currentPdfFileName = documento.NombreArchivo;
+        showPdfViewer = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+        
+        StateHasChanged();
+        
+        try
+        {
+            var result = await DocumentService.VisualizarDocumentoSolicitud(documento.Id);
+            
+            if (result.Success)
+            {
+                currentPdfUrl = result.PdfUrl;
+                currentPdfFileName = result.FileName;
+                pdfErrorMessage = null;
+            }
+            else
+            {
+                pdfErrorMessage = result.ErrorMessage ?? "Error al cargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            pdfErrorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isPdfLoading = false;
+            StateHasChanged();
+        }
+    }
+    
     #endregion
     
     #region Cancelación de Solicitudes
     
-    private void ShowCancelConfirmation(SolicitudAscensoDto solicitud)
+    private void ShowCancelConfirmation(SGA.Web.Models.SolicitudAscensoDto solicitud)
     {
         currentSolicitudInfo = new SolicitudData
         {
@@ -942,85 +934,85 @@
     
     #endregion
     
-    #region Métodos de utilidad heredados
+    #region Reenvío de Solicitudes con Documentos
     
-    private async Task CancelSolicitud(Guid solicitudId)
+    private void ShowReenviarConfirmation(SGA.Web.Models.SolicitudAscensoDto solicitud)
     {
-        // Método legacy - mantenido por compatibilidad pero no usado
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea cancelar esta solicitud?"))
-            return;
-            
+        currentSolicitudInfo = new SolicitudData
+        {
+            Id = solicitud.Id,
+            NivelActual = solicitud.NivelActual,
+            NivelSolicitado = solicitud.NivelSolicitado,
+            Estado = solicitud.Estado,
+            FechaSolicitud = solicitud.FechaSolicitud
+        };
+        
+        showReenviarFormulario = true;
+        showDetails = false; // Cerrar modal de detalles si está abierto
+    }
+    
+    private void CloseReenviarFormulario()
+    {
+        showReenviarFormulario = false;
+        currentSolicitudInfo = null;
+        totalDocumentosReenvio = 0;
+        reenviarDocumentosSelector = null;
+        isReenviandoConDocumentos = false;
+    }
+    
+    private void OnReenvioDocumentSelectionChanged(Dictionary<string, bool> seleccionados)
+    {
+        if (reenviarDocumentosSelector != null)
+        {
+            totalDocumentosReenvio = reenviarDocumentosSelector.GetTotalSelectedCount();
+        }
+        StateHasChanged();
+    }
+    
+    private async Task ConfirmReenviarConDocumentos()
+    {
+        if (currentSolicitudInfo == null || reenviarDocumentosSelector == null) return;
+        
+        isReenviandoConDocumentos = true;
+        StateHasChanged();
+        
         try
         {
             var token = await LocalStorage.GetItemAsStringAsync("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.DeleteAsync($"api/solicitudascenso/{solicitudId}");
+            var documentosSeleccionados = reenviarDocumentosSelector.GetSelectedDocuments();
+            var request = new { DocumentosSeleccionados = documentosSeleccionados };
+            
+            var response = await Http.PutAsJsonAsync($"api/solicitudascenso/{currentSolicitudInfo.Id}/reenviar-con-documentos", request);
             
             if (response.IsSuccessStatusCode)
             {
-                ToastService.ShowSuccess("Solicitud cancelada exitosamente");
+                ToastService.ShowSuccess("Solicitud reenviada exitosamente con los nuevos documentos");
+                CloseReenviarFormulario();
                 await LoadSolicitudes();
             }
             else
             {
                 var errorMessage = await response.GetErrorMessageAsync();
-                ToastService.ShowError($"Error al cancelar solicitud: {errorMessage}");
+                ToastService.ShowError($"Error al reenviar solicitud: {errorMessage}");
             }
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cancelar solicitud: {ex.Message}");
+            ToastService.ShowError($"Error al reenviar solicitud: {ex.Message}");
+        }
+        finally
+        {
+            isReenviandoConDocumentos = false;
+            StateHasChanged();
         }
     }
     
-    private async Task GenerateReport(Guid solicitudId)
-    {
-        // Método legacy - mantenido por compatibilidad pero no usado
-        try
-        {
-            var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            var url = $"api/reportes/solicitud/{solicitudId}?token={token}";
-            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
-        }
-        catch (Exception ex)
-        {
-            ToastService.ShowError($"Error al generar reporte: {ex.Message}");
-        }
-    }
+    #endregion
     
-    private async Task DownloadDocument(Guid documentoId)
-    {
-        // Método legacy - mantenido por compatibilidad pero no usado
-        try
-        {
-            ToastService.ShowInfo("Descargando documento...");
-            var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            Http.DefaultRequestHeaders.Authorization = 
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.GetAsync($"api/documento/{documentoId}/download");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? 
-                              $"documento-{documentoId}.pdf";
-                
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
-                ToastService.ShowSuccess("Documento descargado correctamente");
-            }
-            else
-            {
-                ToastService.ShowError("Error al descargar el documento");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.ShowError($"Error al descargar documento: {ex.Message}");
-        }
-    }
-
+    #region Métodos de utilidad
+    
     private string GetEstadoBadgeClass(string estado)
     {
         return estado switch
@@ -1033,7 +1025,6 @@
         };
     }
     
-    // Métodos de utilidad para formateo
     private string FormatFileSize(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB" };
@@ -1060,143 +1051,4 @@
     
     #endregion
     
-    public class SolicitudAscensoDto
-    {
-        public Guid Id { get; set; }
-        public Guid DocenteId { get; set; }
-        public string DocenteNombre { get; set; } = string.Empty;
-        public string DocenteNombres { get; set; } = string.Empty;
-        public string DocenteApellidos { get; set; } = string.Empty;
-        public string DocenteEmail { get; set; } = string.Empty;
-        public string DocenteCedula { get; set; } = string.Empty;
-        public string NivelActual { get; set; } = string.Empty;
-        public string NivelSolicitado { get; set; } = string.Empty;
-        public string Estado { get; set; } = string.Empty;
-        public string? MotivoRechazo { get; set; }
-        public DateTime FechaSolicitud { get; set; }
-        public DateTime? FechaAprobacion { get; set; }
-        public string? AprobadoPor { get; set; }
-        
-        // Datos al momento de la solicitud  
-        public decimal PromedioEvaluaciones { get; set; }
-        public int HorasCapacitacion { get; set; }
-        public int NumeroObrasAcademicas { get; set; }
-        public int MesesInvestigacion { get; set; }
-        public int TiempoEnNivelDias { get; set; }
-        
-        public List<SGA.Web.Models.DocumentoDto> Documentos { get; set; } = new();
-    }
-    
-    // Clase eliminada - usando SGA.Web.Models.DocumentoDto
-
-    public class SolicitudInfo
-    {
-        public Guid Id { get; set; }
-        public string NivelActual { get; set; } = string.Empty;
-        public string NivelSolicitado { get; set; } = string.Empty;
-        public string Estado { get; set; } = string.Empty;
-        public DateTime FechaSolicitud { get; set; }
-    }
-
-    private void DebugDetails()
-    {
-        if (selectedSolicitud == null) return;
-
-        Console.WriteLine("===== DEBUGGING SOLICITUD DETAILS =====");
-        Console.WriteLine($"ID: {selectedSolicitud.Id}");
-        Console.WriteLine($"DocenteID: {selectedSolicitud.DocenteId}");
-        Console.WriteLine($"DocenteNombre: {selectedSolicitud.DocenteNombre}");
-        Console.WriteLine($"NivelActual: {selectedSolicitud.NivelActual}");
-        Console.WriteLine($"NivelSolicitado: {selectedSolicitud.NivelSolicitado}");
-        Console.WriteLine($"Estado: {selectedSolicitud.Estado}");
-        Console.WriteLine($"FechaSolicitud: {selectedSolicitud.FechaSolicitud}");
-        Console.WriteLine($"PromedioEvaluaciones: {selectedSolicitud.PromedioEvaluaciones}");
-        Console.WriteLine($"HorasCapacitacion: {selectedSolicitud.HorasCapacitacion}");
-        Console.WriteLine($"NumeroObrasAcademicas: {selectedSolicitud.NumeroObrasAcademicas}");
-        Console.WriteLine($"MesesInvestigacion: {selectedSolicitud.MesesInvestigacion}");
-        Console.WriteLine($"TiempoEnNivelDias: {selectedSolicitud.TiempoEnNivelDias}");
-        
-        Console.WriteLine("\nDOCUMENTOS:");
-        if (selectedSolicitud.Documentos != null && selectedSolicitud.Documentos.Any())
-        {
-            foreach (var doc in selectedSolicitud.Documentos)
-            {
-                Console.WriteLine($"  - ID: {doc.Id}, Nombre: {doc.NombreArchivo}, Tamaño: {doc.TamanoArchivo}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("  No hay documentos");
-        }
-        Console.WriteLine("===== END DEBUGGING =====");
-    }
-
-    #region Vista previa de documentos individuales
-    
-    private async Task PreviewSingleDocument(SGA.Web.Models.DocumentoDto documento)
-    {
-        currentReportSolicitudId = null;
-        isPdfLoading = true;
-        pdfErrorMessage = null;
-        currentPdfUrl = null;
-        currentPdfFileName = documento.NombreArchivo;
-        showPdfViewer = true;
-        showDetails = false; // Cerrar modal de detalles si está abierto
-        
-        StateHasChanged();
-        
-        try
-        {
-            var result = await DocumentService.VisualizarDocumentoSolicitud(documento.Id);
-            
-            if (result.Success)
-            {
-                currentPdfUrl = result.PdfUrl;
-                currentPdfFileName = result.FileName ?? documento.NombreArchivo;
-                pdfErrorMessage = null;
-            }
-            else
-            {
-                pdfErrorMessage = result.ErrorMessage ?? "Error al cargar el documento";
-            }
-        }
-        catch (Exception ex)
-        {
-            pdfErrorMessage = $"Error inesperado: {ex.Message}";
-        }
-        finally
-        {
-            isPdfLoading = false;
-            StateHasChanged();
-        }
-    }
-    
-    #endregion
-
-    private async Task DebugDocumentosSolicitud(Guid solicitudId)
-    {
-        try
-        {
-            var token = await LocalStorage.GetItemAsStringAsync("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.GetAsync($"api/solicitudascenso/{solicitudId}/debug-documentos");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG FRONTEND] Respuesta del servidor: {content}");
-            }
-            else
-            {
-                Console.WriteLine($"[DEBUG FRONTEND] Error HTTP: {response.StatusCode}");
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG FRONTEND] Error content: {errorContent}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[DEBUG FRONTEND] Excepción: {ex.Message}");
-        }
-    }
 }
