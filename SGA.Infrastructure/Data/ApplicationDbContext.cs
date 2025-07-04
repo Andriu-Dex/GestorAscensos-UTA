@@ -28,6 +28,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
     public DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
     public DbSet<Notificacion> Notificaciones { get; set; }
+    public DbSet<ConfiguracionRequisito> ConfiguracionesRequisitos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -277,6 +278,27 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                 
             entity.HasIndex(e => new { e.UsuarioId, e.Leida });
             entity.HasIndex(e => e.FechaCreacion);
+        });
+
+        // Configuración ConfiguracionRequisito
+        modelBuilder.Entity<ConfiguracionRequisito>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NivelActual).HasConversion<string>().IsRequired();
+            entity.Property(e => e.NivelSolicitado).HasConversion<string>().IsRequired();
+            entity.Property(e => e.TiempoMinimoMeses).IsRequired();
+            entity.Property(e => e.ObrasMinimas).IsRequired();
+            entity.Property(e => e.PuntajeEvaluacionMinimo).HasColumnType("decimal(5,2)").IsRequired();
+            entity.Property(e => e.HorasCapacitacionMinimas).IsRequired();
+            entity.Property(e => e.TiempoInvestigacionMinimo).IsRequired();
+            entity.Property(e => e.EstaActivo).HasDefaultValue(true);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.Property(e => e.ModificadoPor).HasMaxLength(255);
+            
+            // Índices para optimizar consultas
+            entity.HasIndex(e => new { e.NivelActual, e.NivelSolicitado }).IsUnique();
+            entity.HasIndex(e => e.EstaActivo);
+            entity.HasIndex(e => e.NivelActual);
         });
 
         // Datos semilla

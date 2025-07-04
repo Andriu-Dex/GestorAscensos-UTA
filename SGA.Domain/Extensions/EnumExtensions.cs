@@ -93,10 +93,12 @@ public static class EnumExtensions
     }
 
     /// <summary>
-    /// Obtiene los requisitos mínimos para un nivel específico
+    /// Obtiene los requisitos mínimos para un nivel específico (versión legacy - se mantiene para compatibilidad)
+    /// DEPRECADO: Usar GetRequisitosAsync para obtener requisitos dinámicos
     /// </summary>
     /// <param name="nivel">Nivel objetivo</param>
-    /// <returns>Objeto con los requisitos</returns>
+    /// <returns>Objeto con los requisitos hardcodeados</returns>
+    [Obsolete("Usar GetRequisitosAsync para obtener requisitos dinámicos desde base de datos")]
     public static RequisitosPorNivel GetRequisitos(this NivelTitular nivel)
     {
         return nivel switch
@@ -135,6 +137,35 @@ public static class EnumExtensions
             },
             _ => throw new ArgumentException($"No se pueden obtener requisitos para el nivel {nivel}")
         };
+    }
+
+    /// <summary>
+    /// Obtiene el nombre descriptivo del nivel de ascenso
+    /// </summary>
+    /// <param name="nivelActual">Nivel actual</param>
+    /// <param name="nivelSolicitado">Nivel solicitado</param>
+    /// <returns>Descripción del ascenso</returns>
+    public static string GetNombreAscenso(this NivelTitular nivelActual, NivelTitular nivelSolicitado)
+    {
+        return $"{nivelActual.GetDescription()} → {nivelSolicitado.GetDescription()}";
+    }
+
+    /// <summary>
+    /// Obtiene todos los ascensos posibles desde el nivel actual
+    /// </summary>
+    /// <param name="nivelActual">Nivel actual</param>
+    /// <returns>Lista de niveles a los que se puede ascender</returns>
+    public static List<NivelTitular> GetAscensosPosibles(this NivelTitular nivelActual)
+    {
+        var ascensos = new List<NivelTitular>();
+        var siguienteNivel = nivelActual.GetSiguienteNivel();
+        
+        if (siguienteNivel.HasValue)
+        {
+            ascensos.Add(siguienteNivel.Value);
+        }
+        
+        return ascensos;
     }
 }
 

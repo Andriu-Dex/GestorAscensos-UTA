@@ -83,5 +83,19 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.FechaCreacion, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.FechaModificacion, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.EstaActivo, opt => opt.MapFrom(src => true));
+
+        // Mapeos de ConfiguracionRequisito
+        CreateMap<ConfiguracionRequisito, DTOs.Admin.ConfiguracionRequisitoDto>()
+            .ForMember(dest => dest.NombreAscenso, opt => opt.MapFrom(src => $"{src.NivelActual} → {src.NivelSolicitado}"))
+            .ForMember(dest => dest.NivelActualNombre, opt => opt.MapFrom(src => src.NivelActual.ToString()))
+            .ForMember(dest => dest.NivelSolicitadoNombre, opt => opt.MapFrom(src => src.NivelSolicitado.ToString()))
+            .ForMember(dest => dest.ResumenRequisitos, opt => opt.MapFrom(src => 
+                $"{src.TiempoMinimoMeses} meses, {src.ObrasMinimas} obras, {src.PuntajeEvaluacionMinimo}% eval, {src.HorasCapacitacionMinimas}h cap"));
+
+        CreateMap<DTOs.Admin.CrearActualizarConfiguracionRequisitoDto, ConfiguracionRequisito>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.FechaCreacion, opt => opt.Ignore())
+            .ForMember(dest => dest.FechaModificacion, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.ModificadoPor, opt => opt.Ignore());
     }
 }

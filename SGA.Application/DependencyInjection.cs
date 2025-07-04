@@ -44,6 +44,10 @@ public static class DependencyInjection
         // Servicio de conversión de documentos para solicitudes de ascenso
         services.AddScoped<DocumentoConversionService>();
         
+        // Servicio de configuración dinámica de requisitos
+        services.AddScoped<IRequisitosDinamicosService, RequisitosDinamicosService>();
+        services.AddScoped<IConfiguracionRequisitoService, ConfiguracionRequisitoService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         

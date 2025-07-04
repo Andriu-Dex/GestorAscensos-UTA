@@ -14,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<SolicitudObraAcademica> SolicitudesObrasAcademicas { get; set; }
     DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
     DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
+    DbSet<ConfiguracionRequisito> ConfiguracionesRequisitos { get; set; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

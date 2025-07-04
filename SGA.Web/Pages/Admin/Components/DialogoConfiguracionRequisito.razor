@@ -1,0 +1,253 @@
+@using SGA.Web.Models.Admin
+@using SGA.Web.Models.Enums
+@using Microsoft.AspNetCore.Authorization
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 700px;">
+            <MudText Typo="Typo.h6" Class="mb-4">
+                @(EsEdicion ? "Editar Configuración de Requisitos" : "Nueva Configuración de Requisitos")
+            </MudText>
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="NivelTitular" 
+                              @bind-Value="configuracion.NivelActual" 
+                              Label="Nivel Actual"
+                              Variant="Variant.Outlined"
+                              Required="true">
+                        <MudSelectItem Value="NivelTitular.Titular1">Titular Auxiliar 1</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular2">Titular Auxiliar 2</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular3">Titular Auxiliar 3</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular4">Titular Auxiliar 4</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="NivelTitular" 
+                              @bind-Value="configuracion.NivelSolicitado" 
+                              Label="Nivel Solicitado"
+                              Variant="Variant.Outlined"
+                              Required="true">
+                        <MudSelectItem Value="NivelTitular.Titular2">Titular Auxiliar 2</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular3">Titular Auxiliar 3</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular4">Titular Auxiliar 4</MudSelectItem>
+                        <MudSelectItem Value="NivelTitular.Titular5">Titular Auxiliar 5</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" 
+                                    @bind-Value="configuracion.TiempoMinimoMeses" 
+                                    Label="Tiempo Mínimo (Meses)"
+                                    Variant="Variant.Outlined"
+                                    Min="0"
+                                    Max="120"
+                                    Required="true"
+                                    HelperText="Tiempo mínimo en el nivel actual" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" 
+                                    @bind-Value="configuracion.ObrasMinimas" 
+                                    Label="Obras Académicas Mínimas"
+                                    Variant="Variant.Outlined"
+                                    Min="0"
+                                    Max="20"
+                                    Required="true"
+                                    HelperText="Número mínimo de obras académicas" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" 
+                                    @bind-Value="configuracion.PuntajeEvaluacionMinimo" 
+                                    Label="Puntaje Evaluación Mínimo (%)"
+                                    Variant="Variant.Outlined"
+                                    Min="0"
+                                    Max="100"
+                                    Required="true"
+                                    HelperText="Puntaje mínimo de evaluación docente" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" 
+                                    @bind-Value="configuracion.HorasCapacitacionMinimas" 
+                                    Label="Horas Capacitación Mínimas"
+                                    Variant="Variant.Outlined"
+                                    Min="0"
+                                    Max="500"
+                                    Required="true"
+                                    HelperText="Horas mínimas de capacitación" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" 
+                                    @bind-Value="configuracion.TiempoInvestigacionMinimo" 
+                                    Label="Tiempo Investigación (Meses)"
+                                    Variant="Variant.Outlined"
+                                    Min="0"
+                                    Max="60"
+                                    Required="true"
+                                    HelperText="Meses mínimos en investigación" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Checked="configuracion.EstaActivo" 
+                              Label="Configuración Activa"
+                              Color="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="configuracion.Descripcion" 
+                                 Label="Descripción (Opcional)"
+                                 Variant="Variant.Outlined"
+                                 Lines="3"
+                                 HelperText="Descripción adicional de los requisitos" />
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Vista Previa de Requisitos:</MudText>
+            <MudChip Size="Size.Small" Class="mb-2">
+                @GetResumenRequisitos()
+            </MudChip>
+        </MudContainer>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" 
+                  Variant="Variant.Filled" 
+                  OnClick="Guardar"
+                  Disabled="@(!EsConfiguracionValida())">
+            @(EsEdicion ? "Actualizar" : "Crear")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] 
+    public CrearActualizarConfiguracionRequisitoDto Configuracion { get; set; } = new();
+
+    [Parameter] 
+    public bool EsEdicion { get; set; } = false;
+
+    [Parameter] 
+    public Guid? ConfiguracionId { get; set; }
+
+    private CrearActualizarConfiguracionRequisitoDto configuracion = new();
+
+    protected override void OnInitialized()
+    {
+        // Copiar valores del parámetro a la variable local
+        configuracion = new CrearActualizarConfiguracionRequisitoDto
+        {
+            NivelActual = Configuracion.NivelActual,
+            NivelSolicitado = Configuracion.NivelSolicitado,
+            TiempoMinimoMeses = Configuracion.TiempoMinimoMeses,
+            ObrasMinimas = Configuracion.ObrasMinimas,
+            PuntajeEvaluacionMinimo = Configuracion.PuntajeEvaluacionMinimo,
+            HorasCapacitacionMinimas = Configuracion.HorasCapacitacionMinimas,
+            TiempoInvestigacionMinimo = Configuracion.TiempoInvestigacionMinimo,
+            EstaActivo = Configuracion.EstaActivo,
+            Descripcion = Configuracion.Descripcion
+        };
+
+        // Si es nueva configuración, establecer valores por defecto
+        if (!EsEdicion)
+        {
+            configuracion.EstaActivo = true;
+            configuracion.TiempoMinimoMeses = 48; // 4 años por defecto
+            configuracion.PuntajeEvaluacionMinimo = 75m;
+        }
+    }
+
+    private void Cancelar()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Guardar()
+    {
+        if (EsConfiguracionValida())
+        {
+            // Copiar valores de vuelta al parámetro
+            Configuracion.NivelActual = configuracion.NivelActual;
+            Configuracion.NivelSolicitado = configuracion.NivelSolicitado;
+            Configuracion.TiempoMinimoMeses = configuracion.TiempoMinimoMeses;
+            Configuracion.ObrasMinimas = configuracion.ObrasMinimas;
+            Configuracion.PuntajeEvaluacionMinimo = configuracion.PuntajeEvaluacionMinimo;
+            Configuracion.HorasCapacitacionMinimas = configuracion.HorasCapacitacionMinimas;
+            Configuracion.TiempoInvestigacionMinimo = configuracion.TiempoInvestigacionMinimo;
+            Configuracion.EstaActivo = configuracion.EstaActivo;
+            Configuracion.Descripcion = configuracion.Descripcion;
+
+            MudDialog.Close(DialogResult.Ok(Configuracion));
+        }
+        else
+        {
+            Snackbar.Add("Por favor, complete todos los campos requeridos correctamente", Severity.Warning);
+        }
+    }
+
+    private bool EsConfiguracionValida()
+    {
+        // Validaciones básicas
+        if (configuracion.TiempoMinimoMeses <= 0)
+            return false;
+
+        if (configuracion.ObrasMinimas < 0)
+            return false;
+
+        if (configuracion.PuntajeEvaluacionMinimo < 0 || configuracion.PuntajeEvaluacionMinimo > 100)
+            return false;
+
+        if (configuracion.HorasCapacitacionMinimas < 0)
+            return false;
+
+        if (configuracion.TiempoInvestigacionMinimo < 0)
+            return false;
+
+        // Validar que el ascenso sea secuencial
+        if ((int)configuracion.NivelSolicitado != (int)configuracion.NivelActual + 1)
+            return false;
+
+        return true;
+    }
+
+    private string GetResumenRequisitos()
+    {
+        var items = new List<string>();
+
+        if (configuracion.TiempoMinimoMeses > 0)
+        {
+            var años = configuracion.TiempoMinimoMeses / 12;
+            var meses = configuracion.TiempoMinimoMeses % 12;
+            if (años > 0 && meses > 0)
+                items.Add($"{años} año{(años != 1 ? "s" : "")} y {meses} mes{(meses != 1 ? "es" : "")} en nivel");
+            else if (años > 0)
+                items.Add($"{años} año{(años != 1 ? "s" : "")} en nivel");
+            else
+                items.Add($"{meses} mes{(meses != 1 ? "es" : "")} en nivel");
+        }
+
+        if (configuracion.ObrasMinimas > 0)
+            items.Add($"{configuracion.ObrasMinimas} obra{(configuracion.ObrasMinimas != 1 ? "s" : "")} académica{(configuracion.ObrasMinimas != 1 ? "s" : "")}");
+
+        if (configuracion.PuntajeEvaluacionMinimo > 0)
+            items.Add($"{configuracion.PuntajeEvaluacionMinimo}% evaluación docente");
+
+        if (configuracion.HorasCapacitacionMinimas > 0)
+            items.Add($"{configuracion.HorasCapacitacionMinimas} horas capacitación");
+
+        if (configuracion.TiempoInvestigacionMinimo > 0)
+            items.Add($"{configuracion.TiempoInvestigacionMinimo} mes{(configuracion.TiempoInvestigacionMinimo != 1 ? "es" : "")} investigación");
+
+        return items.Any() ? string.Join(", ", items) : "Sin requisitos configurados";
+    }
+}

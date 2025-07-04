@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<ITTHHRepository, TTHHRepository>();
         services.AddScoped<IObraAcademicaRepository, ObraAcademicaRepository>();
         services.AddScoped<ISolicitudEvidenciaInvestigacionRepository, SolicitudEvidenciaInvestigacionRepository>();
+        services.AddScoped<IConfiguracionRequisitoRepository, ConfiguracionRequisitoRepository>();
         
         // Repositorio genérico para obras académicas
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

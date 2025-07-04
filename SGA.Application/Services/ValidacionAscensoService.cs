@@ -9,10 +9,14 @@ namespace SGA.Application.Services;
 public class ValidacionAscensoService : IValidacionAscensoService
 {
     private readonly IExternalDataService _externalDataService;
+    private readonly IRequisitosDinamicosService _requisitosDinamicosService;
 
-    public ValidacionAscensoService(IExternalDataService externalDataService)
+    public ValidacionAscensoService(
+        IExternalDataService externalDataService,
+        IRequisitosDinamicosService requisitosDinamicosService)
     {
         _externalDataService = externalDataService;
+        _requisitosDinamicosService = requisitosDinamicosService;
     }
 
     public DTOs.Docentes.RequisitoAscensoDto ValidarRequisitos(DTOs.Docentes.DocenteDto docente, NivelTitular? nivelDestino = null)
@@ -20,6 +24,28 @@ public class ValidacionAscensoService : IValidacionAscensoService
         var nivelActual = Enum.Parse<NivelTitular>(docente.NivelActual);
         var nivelObjetivo = nivelDestino ?? ObtenerSiguienteNivel(nivelActual) ?? nivelActual;
 
+        // Intentar usar requisitos dinámicos primero
+        var requisitosDinamicos = Task.Run(async () => 
+            await _requisitosDinamicosService.ObtenerRequisitosAsync(nivelActual, nivelObjetivo)).Result;
+
+        if (requisitosDinamicos != null)
+        {
+            return ValidarConRequisitosDinamicos(docente, requisitosDinamicos, nivelActual, nivelObjetivo);
+        }
+
+        // Fallback a validación hardcodeada si no hay requisitos dinámicos configurados
+        return ValidarConRequisitosHardcodeados(docente, nivelActual, nivelObjetivo);
+    }
+
+    /// <summary>
+    /// Valida usando requisitos dinámicos obtenidos de la base de datos
+    /// </summary>
+    private DTOs.Docentes.RequisitoAscensoDto ValidarConRequisitosDinamicos(
+        DTOs.Docentes.DocenteDto docente, 
+        RequisitoAscenso requisitos,
+        NivelTitular nivelActual,
+        NivelTitular nivelObjetivo)
+    {
         var resultado = new DTOs.Docentes.RequisitoAscensoDto
         {
             NivelActual = nivelActual,
@@ -27,17 +53,61 @@ public class ValidacionAscensoService : IValidacionAscensoService
         };
 
         // Calcular años en el nivel actual
-        DateTime fechaInicio;
-        if (docente.FechaInicioNivelActual.Year > 1900)
-            fechaInicio = docente.FechaInicioNivelActual;
-        else if (docente.FechaNombramiento.HasValue && docente.FechaNombramiento.Value.Year > 1900)
-            fechaInicio = docente.FechaNombramiento.Value;
-        else
-            fechaInicio = DateTime.UtcNow;
-        var tiempoEnNivel = DateTime.UtcNow - fechaInicio;
-        var añosEnNivel = (int)(tiempoEnNivel.TotalDays / 365.25);
+        var añosEnNivel = CalcularAñosEnNivel(docente);
 
-        // Validar requisitos según el nivel objetivo
+        // Validar antiguedad (convertir meses a años)
+        resultado.AñosRequeridos = (int)Math.Ceiling(requisitos.TiempoMinimo / 12.0);
+        resultado.AñosActuales = añosEnNivel;
+        resultado.CumpleAntiguedad = añosEnNivel >= resultado.AñosRequeridos;
+
+        // Validar obras académicas
+        resultado.ObrasRequeridas = requisitos.ObrasMinimas;
+        resultado.ObrasActuales = docente.NumeroObrasAcademicas ?? 0;
+        resultado.CumpleObras = resultado.ObrasActuales >= requisitos.ObrasMinimas;
+
+        // Validar evaluación docente
+        resultado.PromedioRequerido = requisitos.PuntajeEvaluacionMinimo;
+        resultado.PromedioActual = docente.PromedioEvaluaciones ?? 0m;
+        resultado.CumpleEvaluacion = resultado.PromedioActual >= requisitos.PuntajeEvaluacionMinimo;
+
+        // Validar capacitación
+        resultado.HorasRequeridas = requisitos.HorasCapacitacionMinimas;
+        resultado.HorasActuales = docente.HorasCapacitacion ?? 0;
+        resultado.CumpleCapacitacion = resultado.HorasActuales >= requisitos.HorasCapacitacionMinimas;
+
+        // Validar investigación (convertir meses a meses)
+        resultado.MesesRequeridos = requisitos.TiempoInvestigacionMinimo;
+        resultado.MesesActuales = docente.MesesInvestigacion ?? 0;
+        resultado.CumpleInvestigacion = resultado.MesesActuales >= requisitos.TiempoInvestigacionMinimo;
+
+        // Validar que cumple todos los requisitos
+        resultado.PuedeAscender = resultado.CumpleAntiguedad && 
+                                resultado.CumpleObras && 
+                                resultado.CumpleEvaluacion && 
+                                resultado.CumpleCapacitacion && 
+                                resultado.CumpleInvestigacion;
+
+        return resultado;
+    }
+
+    /// <summary>
+    /// Valida usando requisitos hardcodeados (fallback)
+    /// </summary>
+    private DTOs.Docentes.RequisitoAscensoDto ValidarConRequisitosHardcodeados(
+        DTOs.Docentes.DocenteDto docente,
+        NivelTitular nivelActual,
+        NivelTitular nivelObjetivo)
+    {
+        var resultado = new DTOs.Docentes.RequisitoAscensoDto
+        {
+            NivelActual = nivelActual,
+            NivelDestino = nivelObjetivo
+        };
+
+        // Calcular años en el nivel actual
+        var añosEnNivel = CalcularAñosEnNivel(docente);
+
+        // Validar requisitos según el nivel objetivo usando métodos existentes
         switch (nivelObjetivo)
         {
             case NivelTitular.Titular2:
@@ -55,6 +125,23 @@ public class ValidacionAscensoService : IValidacionAscensoService
         }
 
         return resultado;
+    }
+
+    /// <summary>
+    /// Calcula los años que lleva el docente en su nivel actual
+    /// </summary>
+    private int CalcularAñosEnNivel(DTOs.Docentes.DocenteDto docente)
+    {
+        DateTime fechaInicio;
+        if (docente.FechaInicioNivelActual.Year > 1900)
+            fechaInicio = docente.FechaInicioNivelActual;
+        else if (docente.FechaNombramiento.HasValue && docente.FechaNombramiento.Value.Year > 1900)
+            fechaInicio = docente.FechaNombramiento.Value;
+        else
+            fechaInicio = DateTime.UtcNow;
+            
+        var tiempoEnNivel = DateTime.UtcNow - fechaInicio;
+        return (int)(tiempoEnNivel.TotalDays / 365.25);
     }
 
     public bool PuedeAscender(DTOs.Docentes.DocenteDto docente)
