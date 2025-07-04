@@ -1,0 +1,84 @@
+/* Estilos para la página de Reportes Administrativos */
+
+/* Asegurar que los iconos de Font Awesome se vean correctamente */
+.fas,
+.fa {
+  color: inherit;
+}
+
+/* Iconos de reportes con colores específicos */
+.reporte-card .icon-wrapper i {
+  color: inherit !important;
+}
+
+/* Colores específicos para cada tipo de reporte */
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-info {
+  color: #0dcaf0 !important;
+}
+
+.text-success {
+  color: #198754 !important;
+}
+
+.text-purple {
+  color: #6f42c1 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-primary {
+  color: #0d6efd !important;
+}
+
+/* Mejorar la visualización de los iconos en las tarjetas */
+.reporte-card {
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.reporte-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.reporte-card .icon-wrapper {
+  padding: 1rem;
+  border-radius: 50%;
+  background-color: rgba(248, 249, 250, 0.8);
+  display: inline-block;
+  margin: 0 auto;
+}
+
+/* Botones con iconos */
+.btn i {
+  color: inherit;
+}
+
+/* Iconos del navbar - asegurar que sean blancos */
+.nav-link i,
+.nav-link span[class*="bi-"] {
+  color: white !important;
+}
+
+/* Iconos en la vista - asegurar que sean oscuros */
+.card-body i,
+.btn i {
+  color: inherit;
+}
+
+/* Override para Bootstrap Icons en navbar */
+.nav-link .bi {
+  color: white !important;
+  filter: brightness(0) invert(1);
+}
+
+/* Iconos de sección en navbar */
+.nav-section-title i {
+  color: #b8b8b8 !important;
+}

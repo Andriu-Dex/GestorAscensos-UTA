@@ -1,0 +1,512 @@
+@page "/reportes-admin"
+@using SGA.Web.Models
+@using SGA.Web.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
+@inject IApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject IToastService ToastService
+@attribute [Authorize(Roles = "Administrador,Admin")]
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Reportes de Gestión Administrativa
+                    </h3>
+                    <p class="mb-0 mt-2">Sistema de reportes para administradores del SGA</p>
+                </div>
+                <div class="card-body">
+                    <!-- Filtros de Reportes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-light">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-link p-0" type="button" 
+                                                @onclick="ToggleFiltros" 
+                                                aria-expanded="@mostrarFiltros">
+                                            <i class="fas @(mostrarFiltros ? "fa-chevron-down" : "fa-chevron-right") me-2"></i>
+                                            Filtros de Reportes
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div class="card-body @(mostrarFiltros ? "show" : "d-none")">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label class="form-label">Fecha Inicio</label>
+                                            <input type="date" class="form-control" 
+                                                   @bind="filtroActual.FechaInicio" 
+                                                   @bind:format="yyyy-MM-dd" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Fecha Fin</label>
+                                            <input type="date" class="form-control" 
+                                                   @bind="filtroActual.FechaFin" 
+                                                   @bind:format="yyyy-MM-dd" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Estado</label>
+                                            <select class="form-select" @bind="filtroActual.Estado">
+                                                <option value="">Todos los estados</option>
+                                                <option value="Pendiente">Pendiente</option>
+                                                <option value="En Revisión">En Revisión</option>
+                                                <option value="Aprobado">Aprobado</option>
+                                                <option value="Rechazado">Rechazado</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Período</label>
+                                            <select class="form-select" @bind="filtroActual.Periodo">
+                                                <option value="Mensual">Mensual</option>
+                                                <option value="Trimestral">Trimestral</option>
+                                                <option value="Anual">Anual</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <button class="btn btn-outline-secondary me-2" @onclick="LimpiarFiltros">
+                                                <i class="fas fa-eraser me-1"></i>
+                                                Limpiar Filtros
+                                            </button>
+                                            <button class="btn btn-primary" @onclick="AplicarFiltros">
+                                                <i class="fas fa-filter me-1"></i>
+                                                Aplicar Filtros
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Reportes -->
+                    <div class="row">
+                        <!-- Reporte de Procesos por Estado -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-list-alt fa-3x text-warning"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Procesos por Estado</h5>
+                                    <p class="card-text text-muted">
+                                        Análisis detallado de todos los procesos de ascenso según su estado actual.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(PROCESOS_POR_ESTADO))"
+                                                disabled="@(cargandoReporte == PROCESOS_POR_ESTADO)">
+                                            @if (cargandoReporte == PROCESOS_POR_ESTADO)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(PROCESOS_POR_ESTADO))"
+                                                disabled="@(cargandoReporte == PROCESOS_POR_ESTADO)">
+                                            @if (cargandoReporte == PROCESOS_POR_ESTADO)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte de Ascensos por Facultad -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-university fa-3x text-info"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Ascensos por Facultad</h5>
+                                    <p class="card-text text-muted">
+                                        Distribución y estadísticas de ascensos organizados por facultades y departamentos.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(ASCENSOS_POR_FACULTAD))"
+                                                disabled="@(cargandoReporte == ASCENSOS_POR_FACULTAD)">
+                                            @if (cargandoReporte == ASCENSOS_POR_FACULTAD)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(ASCENSOS_POR_FACULTAD))"
+                                                disabled="@(cargandoReporte == ASCENSOS_POR_FACULTAD)">
+                                            @if (cargandoReporte == ASCENSOS_POR_FACULTAD)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte de Tiempo de Resolución -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-clock fa-3x text-success"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Tiempo de Resolución</h5>
+                                    <p class="card-text text-muted">
+                                        Análisis de tiempos promedio de resolución de procesos por facultad y nivel.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(TIEMPO_RESOLUCION))"
+                                                disabled="@(cargandoReporte == TIEMPO_RESOLUCION)">
+                                            @if (cargandoReporte == TIEMPO_RESOLUCION)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(TIEMPO_RESOLUCION))"
+                                                disabled="@(cargandoReporte == TIEMPO_RESOLUCION)">
+                                            @if (cargandoReporte == TIEMPO_RESOLUCION)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte de Distribución de Docentes -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-users fa-3x text-purple"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Distribución de Docentes</h5>
+                                    <p class="card-text text-muted">
+                                        Análisis de la distribución actual de docentes por nivel académico y facultad.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(DISTRIBUCION_DOCENTES))"
+                                                disabled="@(cargandoReporte == DISTRIBUCION_DOCENTES)">
+                                            @if (cargandoReporte == DISTRIBUCION_DOCENTES)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(DISTRIBUCION_DOCENTES))"
+                                                disabled="@(cargandoReporte == DISTRIBUCION_DOCENTES)">
+                                            @if (cargandoReporte == DISTRIBUCION_DOCENTES)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte de Actividad por Período -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-chart-line fa-3x text-danger"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Actividad por Período</h5>
+                                    <p class="card-text text-muted">
+                                        Seguimiento de la actividad del sistema por períodos temporales definidos.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(ACTIVIDAD_PERIODO))"
+                                                disabled="@(cargandoReporte == ACTIVIDAD_PERIODO)">
+                                            @if (cargandoReporte == ACTIVIDAD_PERIODO)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(ACTIVIDAD_PERIODO))"
+                                                disabled="@(cargandoReporte == ACTIVIDAD_PERIODO)">
+                                            @if (cargandoReporte == ACTIVIDAD_PERIODO)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte Consolidado de Gestión -->
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card h-100 shadow-sm border-0 reporte-card border-primary">
+                                <div class="card-body text-center">
+                                    <div class="icon-wrapper mb-3">
+                                        <i class="fas fa-chart-pie fa-3x text-primary"></i>
+                                    </div>
+                                    <h5 class="card-title text-primary">Reporte Consolidado</h5>
+                                    <p class="card-text text-muted">
+                                        <strong>Reporte ejecutivo completo</strong> que integra todas las métricas de gestión.
+                                    </p>
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" 
+                                                @onclick="@(() => VerVistaPrevia(CONSOLIDADO_GESTION))"
+                                                disabled="@(cargandoReporte == CONSOLIDADO_GESTION)">
+                                            @if (cargandoReporte == CONSOLIDADO_GESTION)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button class="btn btn-primary" 
+                                                @onclick="@(() => DescargarReporte(CONSOLIDADO_GESTION))"
+                                                disabled="@(cargandoReporte == CONSOLIDADO_GESTION)">
+                                            @if (cargandoReporte == CONSOLIDADO_GESTION)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            <i class="fas fa-download me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --color-primary: #8a1538;
+        --color-secondary: #f8f9fa;
+        --color-purple: #6f42c1;
+    }
+
+    .bg-primary {
+        background-color: var(--color-primary) !important;
+    }
+
+    .text-primary {
+        color: var(--color-primary) !important;
+    }
+
+    .btn-primary {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+
+    .btn-primary:hover {
+        background-color: #6d1129;
+        border-color: #6d1129;
+    }
+
+    .btn-outline-primary {
+        color: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+
+    .border-primary {
+        border-color: var(--color-primary) !important;
+    }
+
+    .text-purple {
+        color: var(--color-purple) !important;
+    }
+
+    .reporte-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .reporte-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+
+    .icon-wrapper {
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-text {
+        font-size: 0.9rem;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+@code {
+    private FiltroReporteAdminDTO filtroActual = new();
+    private bool mostrarFiltros = false;
+    private string? cargandoReporte = null;
+
+    // Constantes para los tipos de reporte
+    private const string PROCESOS_POR_ESTADO = "procesos-por-estado";
+    private const string ASCENSOS_POR_FACULTAD = "ascensos-por-facultad";
+    private const string TIEMPO_RESOLUCION = "tiempo-resolucion";
+    private const string DISTRIBUCION_DOCENTES = "distribucion-docentes";
+    private const string ACTIVIDAD_PERIODO = "actividad-periodo";
+    private const string CONSOLIDADO_GESTION = "consolidado-gestion";
+
+    protected override void OnInitialized()
+    {
+        // Establecer fechas por defecto (últimos 3 meses)
+        filtroActual.FechaFin = DateTime.Now;
+        filtroActual.FechaInicio = DateTime.Now.AddMonths(-3);
+        filtroActual.Periodo = "Mensual";
+    }
+
+    private void ToggleFiltros()
+    {
+        mostrarFiltros = !mostrarFiltros;
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtroActual = new FiltroReporteAdminDTO
+        {
+            FechaFin = DateTime.Now,
+            FechaInicio = DateTime.Now.AddMonths(-3),
+            Periodo = "Mensual"
+        };
+        ToastService.ShowSuccess("Filtros limpiados correctamente");
+    }
+
+    private void AplicarFiltros()
+    {
+        ToastService.ShowInfo("Filtros aplicados. Los reportes se generarán con los criterios seleccionados.");
+    }
+
+    private async Task VerVistaPrevia(string tipoReporte)
+    {
+        try
+        {
+            cargandoReporte = tipoReporte;
+            StateHasChanged();
+
+            var endpoint = $"api/reportesadmin/vista/{tipoReporte}";
+            var response = await ApiService.PostAsync<FiltroReporteAdminDTO, string>(endpoint, filtroActual);
+
+            if (!string.IsNullOrEmpty(response))
+            {
+                var titulo = ObtenerTituloReporte(tipoReporte);
+                await JSRuntime.InvokeVoidAsync("showReportPreview", response, titulo);
+            }
+            else
+            {
+                ToastService.ShowError("Error al generar la vista previa del reporte");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al generar vista previa: {ex.Message}");
+        }
+        finally
+        {
+            cargandoReporte = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarReporte(string tipoReporte)
+    {
+        try
+        {
+            cargandoReporte = tipoReporte;
+            StateHasChanged();
+
+            var endpoint = $"api/reportesadmin/{tipoReporte}";
+            var pdfBytes = await ApiService.PostBytesAsync(endpoint, filtroActual);
+
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                var base64String = Convert.ToBase64String(pdfBytes);
+                var fileName = $"reporte_{tipoReporte}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", 
+                    base64String, fileName);
+                
+                ToastService.ShowSuccess("Reporte descargado exitosamente");
+            }
+            else
+            {
+                ToastService.ShowError("Error al generar el reporte PDF");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar reporte: {ex.Message}");
+        }
+        finally
+        {
+            cargandoReporte = null;
+            StateHasChanged();
+        }
+    }
+
+    private string ObtenerTituloReporte(string tipoReporte)
+    {
+        return tipoReporte switch
+        {
+            PROCESOS_POR_ESTADO => "Reporte de Procesos por Estado",
+            ASCENSOS_POR_FACULTAD => "Reporte de Ascensos por Facultad",
+            TIEMPO_RESOLUCION => "Reporte de Tiempo de Resolución",
+            DISTRIBUCION_DOCENTES => "Reporte de Distribución de Docentes",
+            ACTIVIDAD_PERIODO => "Reporte de Actividad por Período",
+            CONSOLIDADO_GESTION => "Reporte Consolidado de Gestión",
+            _ => "Reporte Administrativo"
+        };
+    }
+}

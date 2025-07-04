@@ -9,6 +9,8 @@ namespace SGA.Web.Services
     {
         Task<T?> GetAsync<T>(string endpoint);
         Task<HttpResponseMessage> PostAsync<T>(string endpoint, T data);
+        Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data);
+        Task<byte[]?> PostBytesAsync<T>(string endpoint, T data);
         Task<HttpResponseMessage> PutAsync<T>(string endpoint, T data);
         Task<HttpResponseMessage> DeleteAsync(string endpoint);
         Task<DatosTTHH?> ObtenerDatosTTHH(string cedula);
@@ -51,6 +53,36 @@ namespace SGA.Web.Services
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error en solicitud POST a {endpoint}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(endpoint, data);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<TResponse>();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error en solicitud POST a {endpoint}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<byte[]?> PostBytesAsync<T>(string endpoint, T data)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync(endpoint, data);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error en solicitud POST bytes a {endpoint}: {ex.Message}");
                 throw;
             }
         }

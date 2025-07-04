@@ -381,7 +381,7 @@
             {
                 var queryString = string.Join("&", parametros
                     .Where(p => !string.IsNullOrEmpty(p.Value?.ToString()))
-                    .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value.ToString())}"));
+                    .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value.ToString() ?? "")}"));
                 
                 if (!string.IsNullOrEmpty(queryString))
                 {

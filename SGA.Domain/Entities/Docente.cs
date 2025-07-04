@@ -39,6 +39,11 @@ public class Docente : BaseEntity
     // Relaciones
     public Guid UsuarioId { get; set; }
     public virtual Usuario Usuario { get; set; } = null!;
+    
+    // Relación con Departamento
+    public Guid? DepartamentoId { get; set; }
+    public virtual Departamento? Departamento { get; set; }
+    
     public virtual ICollection<SolicitudAscenso> SolicitudesAscenso { get; set; } = new List<SolicitudAscenso>();
     public virtual ICollection<ObraAcademica> ObrasAcademicas { get; set; } = new List<ObraAcademica>();
     

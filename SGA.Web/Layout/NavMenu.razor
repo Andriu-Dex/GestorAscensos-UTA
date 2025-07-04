@@ -18,13 +18,7 @@
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inicio
-            </NavLink>
-        </div>
-        
+    <nav class="nav flex-column">        
         <AuthorizeView>
             <Authorized>
                 <!-- Opciones específicas para docentes (no administradores) -->
@@ -127,6 +121,11 @@
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/reportes">
                                 <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Estadísticas
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="reportes-admin">
+                                <span class="bi bi-file-earmark-bar-graph-nav-menu" aria-hidden="true"></span> Reportes de Gestión
                             </NavLink>
                         </div>
                     </Authorized>

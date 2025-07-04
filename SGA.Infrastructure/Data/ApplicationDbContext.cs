@@ -20,6 +20,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Docente> Docentes { get; set; }
+    public DbSet<Facultad> Facultades { get; set; }
+    public DbSet<Departamento> Departamentos { get; set; }
     public DbSet<SolicitudAscenso> SolicitudesAscenso { get; set; }
     public DbSet<Documento> Documentos { get; set; }
     public DbSet<LogAuditoria> LogsAuditoria { get; set; }
@@ -59,6 +61,36 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.HasOne(e => e.Usuario)
                   .WithOne(u => u.Docente)
                   .HasForeignKey<Docente>(e => e.UsuarioId);
+                  
+            entity.HasOne(e => e.Departamento)
+                  .WithMany(d => d.Docentes)
+                  .HasForeignKey(e => e.DepartamentoId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configuración Facultad
+        modelBuilder.Entity<Facultad>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Codigo).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Descripcion).HasMaxLength(1000);
+            entity.HasIndex(e => e.Codigo).IsUnique();
+        });
+
+        // Configuración Departamento
+        modelBuilder.Entity<Departamento>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Codigo).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Descripcion).HasMaxLength(1000);
+            entity.HasIndex(e => e.Codigo).IsUnique();
+            
+            entity.HasOne(e => e.Facultad)
+                  .WithMany(f => f.Departamentos)
+                  .HasForeignKey(e => e.FacultadId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configuración SolicitudAscenso
