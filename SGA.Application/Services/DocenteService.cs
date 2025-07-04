@@ -139,7 +139,7 @@ public class DocenteService : IDocenteService
             {
                 if (docente != null)
                 {
-                    docente.PromedioEvaluaciones = datosDAC.PromedioEvaluaciones;
+                    docente.PromedioEvaluaciones = Math.Round(datosDAC.PromedioEvaluaciones, 2);
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
@@ -541,7 +541,7 @@ public class DocenteService : IDocenteService
         {
             TiempoRol = tiempoRol,
             NumeroObras = docente.NumeroObrasAcademicas ?? 0,
-            PuntajeEvaluacion = datosDAC?.PromedioEvaluaciones ?? 0, // Solo usar datos DAC válidos
+            PuntajeEvaluacion = datosDAC?.PromedioEvaluaciones != null ? Math.Round(datosDAC.PromedioEvaluaciones, 2) : 0, // Solo usar datos DAC válidos con redondeo
             HorasCapacitacion = docente.HorasCapacitacion ?? 0,
             TiempoInvestigacion = docente.MesesInvestigacion ?? 0,
             

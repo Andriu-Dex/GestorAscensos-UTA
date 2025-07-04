@@ -200,7 +200,7 @@ public class ExternalDataService : IExternalDataService
             return null;
         }
 
-        var promedioEvaluacion = evaluaciones.Average(e => (decimal)e.Porcentaje);
+        var promedioEvaluacion = Math.Round(evaluaciones.Average(e => (decimal)e.Porcentaje), 2);
         var totalPeriodos = evaluaciones.Count();
         var primeraEvaluacion = evaluaciones.Last();
         var ultimaEvaluacion = evaluaciones.First();
@@ -222,7 +222,7 @@ public class ExternalDataService : IExternalDataService
             CumpleRequisito = cumpleRequisito,
             RequisitoMinimo = requisitoMinimo,
             PeriodoEvaluado = $"Desde {primeraEvaluacion.FechaEvaluacion:dd/MM/yyyy} hasta {ultimaEvaluacion.FechaEvaluacion:dd/MM/yyyy} (posterior al inicio del cargo actual: {fechaInicioNivel:dd/MM/yyyy})",
-            Mensaje = $"Promedio de {totalPeriodos} evaluaciones posteriores al inicio del cargo actual: {promedioEvaluacion:F1}% " + 
+            Mensaje = $"Promedio de {totalPeriodos} evaluaciones posteriores al inicio del cargo actual: {promedioEvaluacion:F2}% " + 
                      (cumpleRequisito ? "(Cumple requisito mínimo)" : "(NO cumple requisito mínimo)"),
             Evaluaciones = evaluaciones.Select(e => new DTOs.ExternalData.EvaluacionPeriodoDto
             {
