@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IValidacionAscensoService, ValidacionAscensoService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<ITTHHService, TTHHService>();
+        services.AddScoped<IImageService, ImageService>();
         
         // Servicios para obras académicas
         services.AddScoped<IObrasAcademicasService, ObrasAcademicasService>();

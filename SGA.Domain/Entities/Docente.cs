@@ -1,6 +1,8 @@
 using SGA.Domain.Common;
 using SGA.Domain.Enums;
 using SGA.Domain.Extensions;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SGA.Domain.Entities;
 
@@ -22,6 +24,16 @@ public class Docente : BaseEntity
     public int? NumeroObrasAcademicas { get; set; }
     public int? MesesInvestigacion { get; set; }
     public DateTime? FechaUltimaImportacion { get; set; }
+    
+    // Foto de perfil
+    [Column(TypeName = "varbinary(max)")]
+    public byte[]? FotoPerfil { get; set; }
+
+    // Propiedad calculada para mostrar en frontend
+    [NotMapped]
+    public string? FotoPerfilBase64 => FotoPerfil != null 
+        ? Convert.ToBase64String(FotoPerfil)
+        : null;
     
     // Relaciones
     public Guid UsuarioId { get; set; }

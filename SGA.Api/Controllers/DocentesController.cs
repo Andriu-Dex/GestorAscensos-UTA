@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SGA.Application.DTOs.Docentes;
+using SGA.Application.DTOs.Responses;
+using SGA.Application.Constants;
 using SGA.Application.Interfaces;
 using System.Security.Claims;
 
@@ -331,6 +333,78 @@ public class DocentesController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id}/profile-photo")]
+    [RequestSizeLimit(FileLimits.ProfileImages.MaxSizeBytes)]
+    public async Task<ActionResult<FileUploadResponse>> UploadProfilePhoto(Guid id, IFormFile file)
+    {
+        try
+        {
+            // Verificar que el docente autenticado coincida con el ID solicitado
+            var currentDocenteId = GetCurrentDocenteId();
+            if (currentDocenteId == Guid.Empty)
+            {
+                return Unauthorized(FileUploadResponse.ErrorResponse(
+                    "No se pudo identificar al docente",
+                    FileUploadErrorType.DatabaseError));
+            }
+
+            if (currentDocenteId != id)
+            {
+                return Forbid();
+            }
+
+            var result = await _docenteService.UploadProfilePhotoAsync(id, file);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en upload de foto de perfil: {ex.Message}");
+            return StatusCode(500, FileUploadResponse.ErrorResponse(
+                "Error interno del servidor",
+                FileUploadErrorType.ProcessingError));
+        }
+    }
+
+    [HttpGet("upload-config")]
+    public ActionResult<UploadConfigResponse> GetUploadConfig()
+    {
+        try
+        {
+            var config = _docenteService.GetUploadConfig();
+            return Ok(config);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al obtener configuración de carga: {ex.Message}");
+            return StatusCode(500, "Error interno del servidor");
+        }
+    }
+
+    // Método auxiliar para obtener el ID del docente actual
+    private Guid GetCurrentDocenteId()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Guid.Empty;
+
+            // Obtener el docente por email de forma síncrona (no ideal, pero funcional)
+            var docente = _docenteService.GetDocenteByEmailAsync(email).Result;
+            return docente?.Id ?? Guid.Empty;
+        }
+        catch
+        {
+            return Guid.Empty;
         }
     }
 }

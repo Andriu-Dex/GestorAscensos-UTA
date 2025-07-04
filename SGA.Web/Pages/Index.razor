@@ -43,7 +43,14 @@
                 <div class="user-summary-bar animate__animated animate__fadeInLeft mb-4">
                     <div class="user-avatar">
                         <div class="avatar avatar-md">
-                            <span class="avatar-initial">@GetInitials()</span>
+                            @if (!string.IsNullOrEmpty(userInfo.FotoPerfilBase64))
+                            {
+                                <img src="data:image/jpeg;base64,@userInfo.FotoPerfilBase64" alt="Foto de perfil" />
+                            }
+                            else
+                            {
+                                <span class="avatar-initial">@GetInitials()</span>
+                            }
                         </div>
                     </div>
                     <div class="user-info">

@@ -1,4 +1,6 @@
 using SGA.Application.DTOs.Docentes;
+using SGA.Application.DTOs.Responses;
+using Microsoft.AspNetCore.Http;
 
 namespace SGA.Application.Interfaces;
 
@@ -17,4 +19,8 @@ public interface IDocenteService
     Task<bool> ActualizarNivelDocenteAsync(Guid docenteId, string nuevoNivel);
     Task<IndicadoresDocenteDto> GetIndicadoresAsync(string cedula);
     Task<RequisitosAscensoDto> GetRequisitosAscensoAsync(string cedula, string nivelObjetivo);
+    
+    // Métodos para foto de perfil
+    Task<FileUploadResponse> UploadProfilePhotoAsync(Guid docenteId, IFormFile file);
+    UploadConfigResponse GetUploadConfig();
 }

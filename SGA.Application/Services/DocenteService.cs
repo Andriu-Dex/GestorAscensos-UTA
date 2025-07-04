@@ -1,8 +1,12 @@
 using SGA.Application.DTOs.Docentes;
+using SGA.Application.DTOs.Responses;
+using SGA.Application.Constants;
 using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Enums;
 using SGA.Domain.Entities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 
 namespace SGA.Application.Services;
@@ -13,17 +17,23 @@ public class DocenteService : IDocenteService
     private readonly IObraAcademicaRepository _obraAcademicaRepository;
     private readonly IExternalDataService _externalDataService;
     private readonly IAuditoriaService _auditoriaService;
+    private readonly IImageService _imageService;
+    private readonly ILogger<DocenteService> _logger;
 
     public DocenteService(
         IDocenteRepository docenteRepository,
         IObraAcademicaRepository obraAcademicaRepository,
         IExternalDataService externalDataService,
-        IAuditoriaService auditoriaService)
+        IAuditoriaService auditoriaService,
+        IImageService imageService,
+        ILogger<DocenteService> logger)
     {
         _docenteRepository = docenteRepository;
         _obraAcademicaRepository = obraAcademicaRepository;
         _externalDataService = externalDataService;
         _auditoriaService = auditoriaService;
+        _imageService = imageService;
+        _logger = logger;
     }
 
     public async Task<DocenteDto?> GetDocenteByIdAsync(Guid id)
@@ -47,7 +57,8 @@ public class DocenteService : IDocenteService
             HorasCapacitacion = docente.HorasCapacitacion,
             NumeroObrasAcademicas = docente.NumeroObrasAcademicas,
             MesesInvestigacion = docente.MesesInvestigacion,
-            FechaUltimaImportacion = docente.FechaUltimaImportacion
+            FechaUltimaImportacion = docente.FechaUltimaImportacion,
+            FotoPerfilBase64 = docente.FotoPerfilBase64
         };
     }
 
@@ -752,5 +763,67 @@ public class DocenteService : IDocenteService
                 Mensaje = $"Error al importar obras académicas: {ex.Message}"
             };
         }
+    }
+    
+    // Métodos para foto de perfil
+    public async Task<FileUploadResponse> UploadProfilePhotoAsync(Guid docenteId, IFormFile file)
+    {
+        try
+        {
+            // Validar archivo
+            var validation = _imageService.ValidateImage(file);
+            if (!validation.IsValid)
+            {
+                return FileUploadResponse.ErrorResponse(validation.Message, FileUploadErrorType.InvalidFile);
+            }
+
+            // Obtener docente
+            var docente = await _docenteRepository.GetByIdAsync(docenteId);
+            if (docente == null)
+            {
+                return FileUploadResponse.ErrorResponse("Docente no encontrado", FileUploadErrorType.DatabaseError);
+            }
+
+            // Procesar imagen
+            var processedImage = await _imageService.ProcessImageAsync(file);
+            var optimizedMimeType = _imageService.GetOptimizedMimeType(file.ContentType);
+
+            // Actualizar datos del docente
+            docente.FotoPerfil = processedImage;
+
+            // Guardar en base de datos
+            await _docenteRepository.UpdateAsync(docente);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync("SUBIR_FOTO_PERFIL", 
+                docente.Id.ToString(), docente.Email, "Docente", null, 
+                $"Foto de perfil actualizada - Tamaño: {processedImage.Length} bytes", null);
+
+            // Generar base64 de la imagen
+            var imageBase64 = Convert.ToBase64String(processedImage);
+
+            return FileUploadResponse.SuccessResponse(
+                "Foto de perfil actualizada correctamente",
+                imageBase64);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al subir foto de perfil para docente {DocenteId}", docenteId);
+            return FileUploadResponse.ErrorResponse(
+                "Error interno del servidor al procesar la imagen",
+                FileUploadErrorType.ProcessingError);
+        }
+    }
+
+    public UploadConfigResponse GetUploadConfig()
+    {
+        return new UploadConfigResponse
+        {
+            MaxSizeBytes = FileLimits.ProfileImages.MaxSizeBytes,
+            MaxSizeMB = FileLimits.ProfileImages.MaxSizeMB,
+            AllowedExtensions = FileLimits.ProfileImages.AllowedExtensions,
+            AllowedMimeTypes = FileLimits.ProfileImages.AllowedMimeTypes,
+            AcceptAttribute = string.Join(",", FileLimits.ProfileImages.AllowedMimeTypes)
+        };
     }
 }

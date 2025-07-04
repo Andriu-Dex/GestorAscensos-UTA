@@ -20,6 +20,9 @@ public class DocenteDto
     public int? MesesInvestigacion { get; set; }
     public DateTime? FechaUltimaImportacion { get; set; }
     
+    // Foto de perfil
+    public string? FotoPerfilBase64 { get; set; }
+    
     // Propiedades calculadas para ascenso
     public bool PuedeAscender { get; set; }
     public string SiguienteNivel { get; set; } = string.Empty;

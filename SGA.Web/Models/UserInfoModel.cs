@@ -16,6 +16,7 @@ namespace SGA.Web.Models
         public int NivelActual { get; set; }
         public DateTime FechaIngresoNivelActual { get; set; }
         public bool EsAdmin { get; set; }
+        public string? FotoPerfilBase64 { get; set; }
     }
 
     public class FacultadInfo
