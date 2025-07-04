@@ -28,9 +28,16 @@
                 <!-- Opciones específicas para docentes (no administradores) -->
                 <AuthorizeView Roles="Docente" Context="docenteAuth">
                     <Authorized>
+                        <!-- Sección Personal -->
+                        <div class="nav-section-header">
+                            <span class="nav-section-title">
+                                <i class="bi bi-person-fill me-2"></i>Mi Información
+                            </span>
+                        </div>
+                        
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="solicitudes">
-                                <span class="bi bi-clipboard-fill-nav-menu" aria-hidden="true"></span> Mis Solicitudes
+                            <NavLink class="nav-link" href="perfil">
+                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Mi Perfil
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
@@ -38,9 +45,17 @@
                                 <span class="bi bi-file-earmark-fill-nav-menu" aria-hidden="true"></span> Mis Documentos
                             </NavLink>
                         </div>
+
+                        <!-- Sección de Gestión -->
+                        <div class="nav-section-header">
+                            <span class="nav-section-title">
+                                <i class="bi bi-briefcase-fill me-2"></i>Gestión Académica
+                            </span>
+                        </div>
+                        
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="perfil">
-                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Mi Perfil
+                            <NavLink class="nav-link" href="solicitudes">
+                                <span class="bi bi-clipboard-fill-nav-menu" aria-hidden="true"></span> Mis Solicitudes
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
@@ -54,42 +69,65 @@
                 <!-- Opciones específicas para administradores -->
                 <AuthorizeView Roles="Administrador" Context="adminAuth">
                     <Authorized>
+                        <!-- Sección de Gestión Principal -->
+                        <div class="nav-section-header">
+                            <span class="nav-section-title">
+                                <i class="bi bi-gear-fill me-2"></i>Gestión Principal
+                            </span>
+                        </div>
+                        
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/docentes">
-                                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Gestión de Docentes
+                                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Docentes
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/solicitudes">
-                                <span class="bi bi-clipboard-check-fill-nav-menu" aria-hidden="true"></span> Gestión de Solicitudes
+                                <span class="bi bi-clipboard-check-fill-nav-menu" aria-hidden="true"></span> Solicitudes
                             </NavLink>
                         </div>
+
+                        <!-- Sección de Gestión de Contenido -->
+                        <div class="nav-section-header">
+                            <span class="nav-section-title">
+                                <i class="bi bi-folder-fill me-2"></i>Contenido Académico
+                            </span>
+                        </div>
+                        
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/solicitudes-obras">
-                                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Gestión de Obras
+                                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Obras
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/certificados-capacitacion">
-                                <span class="bi bi-award-fill-nav-menu" aria-hidden="true"></span> Gestión de Certificados
+                                <span class="bi bi-award-fill-nav-menu" aria-hidden="true"></span> Certificados
                             </NavLink>
                         </div>
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/evidencias-investigacion">
-                                <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Gestión de Evidencias
+                                <span class="bi bi-search-nav-menu" aria-hidden="true"></span> Evidencias
                             </NavLink>
                         </div>
+
+                        <!-- Sección de Análisis -->
+                        <div class="nav-section-header">
+                            <span class="nav-section-title">
+                                <i class="bi bi-bar-chart-fill me-2"></i>Análisis
+                            </span>
+                        </div>
+                        
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="admin/reportes">
-                                <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Reportes y Estadísticas
+                                <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Estadísticas
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
                 
                 <!-- Cerrar Sesión (común para todos los usuarios) -->
-                <div class="nav-item px-3">
-                    <a class="nav-link" href="javascript:void(0)" @onclick="Logout">
+                <div class="nav-item px-3 logout-section">
+                    <a class="nav-link logout-link" href="javascript:void(0)" @onclick="Logout">
                         <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Cerrar Sesión
                     </a>
                 </div>
