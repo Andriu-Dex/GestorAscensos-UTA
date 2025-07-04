@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using SGA.Web.Models;
 
@@ -19,12 +20,17 @@ namespace SGA.Web.Services
         
         // Nuevos métodos para contenido no-JSON
         Task<string?> GetHtmlAsync(string endpoint);
+        Task<string?> PostForHtmlAsync<T>(string endpoint, T data);
         Task<byte[]?> GetBytesAsync(string endpoint);
     }
 
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ApiService(HttpClient httpClient)
         {
@@ -195,6 +201,34 @@ namespace SGA.Web.Services
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error en solicitud GET HTML a {endpoint}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<string?> PostForHtmlAsync<T>(string endpoint, T data)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(data, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync(endpoint, content);
+                response.EnsureSuccessStatusCode();
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                // Deserializar el JSON para obtener el HTML
+                var htmlContent = JsonSerializer.Deserialize<string>(responseContent, _jsonOptions);
+                return htmlContent;
+            }
+            catch (JsonException ex)
+            {
+                Console.Error.WriteLine($"Error deserializando respuesta JSON de {endpoint}: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error en solicitud POST HTML a {endpoint}: {ex.Message}");
                 throw;
             }
         }

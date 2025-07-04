@@ -148,12 +148,29 @@ namespace SGA.Api.Controllers
 
         #region Endpoints Vista HTML
 
-        [HttpPost("vista/procesos-por-estado")]
-        public async Task<IActionResult> VistaReporteProcesosPorEstado([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/procesos-por-estado")]
+        public async Task<ActionResult<string>> VistaReporteProcesosPorEstado(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] string? estado = null,
+            [FromQuery] Guid? facultadId = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML de procesos por estado", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    Estado = estado,
+                    FacultadId = facultadId
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteProcesosPorEstadoAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)
@@ -163,12 +180,27 @@ namespace SGA.Api.Controllers
             }
         }
 
-        [HttpPost("vista/ascensos-por-facultad")]
-        public async Task<IActionResult> VistaReporteAscensosPorFacultad([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/ascensos-por-facultad")]
+        public async Task<ActionResult<string>> VistaReporteAscensosPorFacultad(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] Guid? facultadId = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML de ascensos por facultad", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    FacultadId = facultadId
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteAscensosPorFacultadAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)
@@ -178,12 +210,27 @@ namespace SGA.Api.Controllers
             }
         }
 
-        [HttpPost("vista/tiempo-resolucion")]
-        public async Task<IActionResult> VistaReporteTiempoResolucion([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/tiempo-resolucion")]
+        public async Task<ActionResult<string>> VistaReporteTiempoResolucion(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] Guid? facultadId = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML de tiempo de resolución", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    FacultadId = facultadId
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteTiempoResolucionAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)
@@ -193,12 +240,27 @@ namespace SGA.Api.Controllers
             }
         }
 
-        [HttpPost("vista/distribucion-docentes")]
-        public async Task<IActionResult> VistaReporteDistribucionDocentes([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/distribucion-docentes")]
+        public async Task<ActionResult<string>> VistaReporteDistribucionDocentes(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] Guid? facultadId = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML de distribución de docentes", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    FacultadId = facultadId
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteDistribucionDocentesAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)
@@ -208,12 +270,27 @@ namespace SGA.Api.Controllers
             }
         }
 
-        [HttpPost("vista/actividad-periodo")]
-        public async Task<IActionResult> VistaReporteActividadPeriodo([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/actividad-periodo")]
+        public async Task<ActionResult<string>> VistaReporteActividadPeriodo(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] string? periodo = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML de actividad por período", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    Periodo = periodo
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteActividadPeriodoAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)
@@ -223,12 +300,27 @@ namespace SGA.Api.Controllers
             }
         }
 
-        [HttpPost("vista/consolidado-gestion")]
-        public async Task<IActionResult> VistaReporteConsolidadoGestion([FromBody] FiltroReporteAdminDTO filtro)
+        [HttpGet("vista/consolidado-gestion")]
+        public async Task<ActionResult<string>> VistaReporteConsolidadoGestion(
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] Guid? facultadId = null)
         {
             try
             {
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogInformation("Admin {Email} generando vista HTML consolidada de gestión", email);
+
+                var filtro = new FiltroReporteAdminDTO
+                {
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    FacultadId = facultadId
+                };
+
                 var html = await _reporteAdminService.GenerarVistaReporteConsolidadoGestionAsync(filtro);
+                
+                _logger.LogInformation("Vista HTML generada exitosamente, longitud: {Length} caracteres", html?.Length ?? 0);
                 return Ok(html);
             }
             catch (Exception ex)

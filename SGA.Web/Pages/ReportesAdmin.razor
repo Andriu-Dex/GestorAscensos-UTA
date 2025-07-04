@@ -436,13 +436,33 @@
             cargandoReporte = tipoReporte;
             StateHasChanged();
 
-            var endpoint = $"api/reportesadmin/vista/{tipoReporte}";
-            var response = await ApiService.PostAsync<FiltroReporteAdminDTO, string>(endpoint, filtroActual);
+            // Construir la URL con query parameters
+            var queryParams = new List<string>();
+            
+            if (filtroActual.FechaInicio.HasValue)
+                queryParams.Add($"fechaInicio={filtroActual.FechaInicio.Value:yyyy-MM-dd}");
+            
+            if (filtroActual.FechaFin.HasValue)
+                queryParams.Add($"fechaFin={filtroActual.FechaFin.Value:yyyy-MM-dd}");
+            
+            if (!string.IsNullOrEmpty(filtroActual.Estado))
+                queryParams.Add($"estado={Uri.EscapeDataString(filtroActual.Estado)}");
+            
+            if (filtroActual.FacultadId.HasValue)
+                queryParams.Add($"facultadId={filtroActual.FacultadId.Value}");
+            
+            if (!string.IsNullOrEmpty(filtroActual.Periodo))
+                queryParams.Add($"periodo={Uri.EscapeDataString(filtroActual.Periodo)}");
 
-            if (!string.IsNullOrEmpty(response))
+            var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+            var endpoint = $"api/reportesadmin/vista/{tipoReporte}{queryString}";
+            
+            var htmlContent = await ApiService.GetHtmlAsync(endpoint);
+
+            if (!string.IsNullOrEmpty(htmlContent))
             {
                 var titulo = ObtenerTituloReporte(tipoReporte);
-                await JSRuntime.InvokeVoidAsync("showReportPreview", response, titulo);
+                await JSRuntime.InvokeVoidAsync("showReportPreview", htmlContent, titulo);
             }
             else
             {

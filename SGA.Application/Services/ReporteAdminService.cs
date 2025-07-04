@@ -836,14 +836,14 @@ namespace SGA.Application.Services
                 <div style='overflow-x: auto;'>
                     <table style='width: 100%; border-collapse: collapse; margin-top: 10px;'>
                         <thead>
-                            <tr style='background-color: #8a1538; color: white;'>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Docente</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Cédula</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Nivel Actual</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Nivel Solicitado</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Fecha Solicitud</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Estado</th>
-                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Días Proceso</th>
+                            <tr style='background-color: #8a1538;'>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Docente</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Cédula</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Nivel Actual</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Nivel Solicitado</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Fecha Solicitud</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Estado</th>
+                                <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Días Proceso</th>
                             </tr>
                         </thead>
                         <tbody>");
@@ -953,11 +953,11 @@ namespace SGA.Application.Services
                             <table style='width: 100%; border-collapse: collapse;'>
                                 <thead>
                                     <tr style='background-color: #f8f9fa;'>
-                                        <th style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Departamento</th>
-                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd;'>Total</th>
-                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd;'>Pendientes</th>
-                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd;'>Aprobadas</th>
-                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd;'>Rechazadas</th>
+                                        <th style='padding: 8px; text-align: left; border: 1px solid #ddd; color: #333; font-weight: bold;'>Departamento</th>
+                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; font-weight: bold;'>Total</th>
+                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; font-weight: bold;'>Pendientes</th>
+                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; font-weight: bold;'>Aprobadas</th>
+                                        <th style='padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; font-weight: bold;'>Rechazadas</th>
                                     </tr>
                                 </thead>
                                 <tbody>");
@@ -1012,10 +1012,10 @@ namespace SGA.Application.Services
                     <div style='overflow-x: auto;'>
                         <table style='width: 100%; border-collapse: collapse;'>
                             <thead>
-                                <tr style='background-color: #8a1538; color: white;'>
-                                    <th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Facultad</th>
-                                    <th style='padding: 12px; text-align: center; border: 1px solid #ddd;'>Tiempo Promedio (días)</th>
-                                    <th style='padding: 12px; text-align: center; border: 1px solid #ddd;'>Total Procesos</th>
+                                <tr style='background-color:rgb(238, 238, 238);'>
+                                    <th style='padding: 12px; text-align: left; border: 1px solid #ddd; color: black; font-weight: bold;'>Facultad</th>
+                                    <th style='padding: 12px; text-align: center; border: 1px solid #ddd; color: black; font-weight: bold;'>Tiempo Promedio (días)</th>
+                                    <th style='padding: 12px; text-align: center; border: 1px solid #ddd; color: black; font-weight: bold;'>Total Procesos</th>
                                 </tr>
                             </thead>
                             <tbody>");
