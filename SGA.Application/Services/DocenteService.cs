@@ -72,8 +72,7 @@ public class DocenteService : IDocenteService
 
     public async Task<DocenteDto?> GetDocenteByEmailAsync(string email)
     {
-        var docentes = await _docenteRepository.GetAllAsync();
-        var docente = docentes.FirstOrDefault(d => d.Email == email);
+        var docente = await _docenteRepository.GetByEmailAsync(email);
         if (docente == null) return null;
 
         return await GetDocenteByIdAsync(docente.Id);

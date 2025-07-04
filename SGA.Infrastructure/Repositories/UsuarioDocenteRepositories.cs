@@ -138,4 +138,12 @@ public class DocenteRepository : IDocenteRepository
         return await _context.Docentes
             .FirstOrDefaultAsync(d => d.Id == id);
     }
+
+    public async Task<Docente?> GetByEmailAsync(string email)
+    {
+        return await _context.Docentes
+            .Include(d => d.Usuario)
+            .Include(d => d.SolicitudesAscenso)
+            .FirstOrDefaultAsync(d => d.Email == email);
+    }
 }

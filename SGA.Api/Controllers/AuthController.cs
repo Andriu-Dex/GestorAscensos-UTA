@@ -220,7 +220,8 @@ public class AuthController : ControllerBase
                 facultad = "Facultad de Ingeniería", // String simple para compatibilidad
                 facultadInfo = new { id = 1, nombre = "Facultad de Ingeniería" }, // Objeto separado
                 nivelActual = int.Parse(docente.NivelActual.Replace("Titular", "")),
-                fechaIngresoNivelActual = docente.FechaInicioNivelActual
+                fechaIngresoNivelActual = docente.FechaInicioNivelActual,
+                fotoPerfilBase64 = docente.FotoPerfilBase64
             });
         }
         catch (Exception ex)

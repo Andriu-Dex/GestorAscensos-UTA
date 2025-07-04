@@ -241,6 +241,7 @@ namespace SGA.Web.Services
                                 NivelActual = nivelActual,
                                 FechaIngresoNivelActual = docenteDto.FechaInicioNivelActual,
                                 FacultadInfo = docenteDto.Facultad,
+                                FotoPerfilBase64 = docenteDto.FotoPerfilBase64,
                                 EsAdmin = false // Se determinará por el token/rol
                             };
                             

@@ -16,6 +16,7 @@ public interface IDocenteRepository
 {
     Task<Docente?> GetByIdAsync(Guid id);
     Task<Docente?> GetByCedulaAsync(string cedula);
+    Task<Docente?> GetByEmailAsync(string email);
     Task<Docente?> GetByUsuarioIdAsync(Guid usuarioId);
     Task<Docente> CreateAsync(Docente docente);
     Task<Docente> UpdateAsync(Docente docente);

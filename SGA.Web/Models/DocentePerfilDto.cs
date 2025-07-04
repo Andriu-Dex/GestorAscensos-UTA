@@ -27,5 +27,8 @@ namespace SGA.Web.Models
         // Información adicional que puede no estar en el DTO original
         public string? Departamento { get; set; }
         public FacultadInfo? Facultad { get; set; }
+        
+        // Foto de perfil
+        public string? FotoPerfilBase64 { get; set; }
     }
 }

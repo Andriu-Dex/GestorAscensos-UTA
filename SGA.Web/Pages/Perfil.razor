@@ -1292,6 +1292,9 @@
                 userInfo.FotoPerfilBase64 = result.PhotoBase64;
                 StateHasChanged();
                 ToastService.ShowSuccess("Foto de perfil actualizada correctamente");
+                
+                // Recargar información del usuario para asegurar consistencia
+                await LoadUserInfo();
             }
             else
             {

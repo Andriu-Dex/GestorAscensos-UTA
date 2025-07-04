@@ -21,7 +21,7 @@ public class DocentesController : ControllerBase
     }
 
     [HttpGet("perfil")]
-    public async Task<ActionResult<DocenteDto>> GetPerfil()
+    public async Task<ActionResult> GetPerfil()
     {
         try
         {
@@ -37,7 +37,32 @@ public class DocentesController : ControllerBase
             if (docente == null)
                 return NotFound("Docente no encontrado");
 
-            return Ok(docente);
+            // Crear un objeto compatible con DocentePerfilDto del frontend
+            var perfilResponse = new
+            {
+                Id = docente.Id,
+                Cedula = docente.Cedula,
+                Nombres = docente.Nombres,
+                Apellidos = docente.Apellidos,
+                Email = docente.Email,
+                NivelActual = docente.NivelActual,
+                FechaInicioNivelActual = docente.FechaInicioNivelActual,
+                FechaUltimoAscenso = docente.FechaUltimoAscenso,
+                NombreCompleto = docente.NombreCompleto,
+                FechaNombramiento = docente.FechaNombramiento,
+                PromedioEvaluaciones = docente.PromedioEvaluaciones,
+                HorasCapacitacion = docente.HorasCapacitacion,
+                NumeroObrasAcademicas = docente.NumeroObrasAcademicas,
+                MesesInvestigacion = docente.MesesInvestigacion,
+                FechaUltimaImportacion = docente.FechaUltimaImportacion,
+                FotoPerfilBase64 = docente.FotoPerfilBase64,
+                PuedeAscender = true, // Esto se puede calcular desde el dominio
+                SiguienteNivel = "", // Esto se puede calcular desde el dominio
+                Departamento = (string?)null,
+                Facultad = (object?)null
+            };
+
+            return Ok(perfilResponse);
         }
         catch (Exception ex)
         {
