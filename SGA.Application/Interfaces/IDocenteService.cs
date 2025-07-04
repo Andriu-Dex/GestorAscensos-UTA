@@ -19,6 +19,7 @@ public interface IDocenteService
     Task<bool> ActualizarNivelDocenteAsync(Guid docenteId, string nuevoNivel);
     Task<IndicadoresDocenteDto> GetIndicadoresAsync(string cedula);
     Task<RequisitosAscensoDto> GetRequisitosAscensoAsync(string cedula, string nivelObjetivo);
+    Task<bool> ActualizarPerfilAsync(Guid docenteId, ActualizarPerfilDto dto);
     
     // Métodos para foto de perfil
     Task<FileUploadResponse> UploadProfilePhotoAsync(Guid docenteId, IFormFile file);

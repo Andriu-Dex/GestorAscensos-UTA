@@ -45,6 +45,7 @@ public class DocentesController : ControllerBase
                 Nombres = docente.Nombres,
                 Apellidos = docente.Apellidos,
                 Email = docente.Email,
+                TelefonoContacto = docente.Celular, // Mapear Celular a TelefonoContacto
                 NivelActual = docente.NivelActual,
                 FechaInicioNivelActual = docente.FechaInicioNivelActual,
                 FechaUltimoAscenso = docente.FechaUltimoAscenso,
@@ -488,6 +489,44 @@ public class DocenteController : ControllerBase
 
             var requisitos = await _docenteService.GetRequisitosAscensoAsync(docente.Cedula, siguienteNivel);
             return Ok(requisitos);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("actualizar-perfil")]
+    public async Task<ActionResult> ActualizarPerfil([FromBody] ActualizarPerfilFrontendDto dto)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Convertir el DTO del frontend al DTO del servicio
+            var actualizarDto = new ActualizarPerfilDto
+            {
+                Nombres = dto.Nombres,
+                Apellidos = dto.Apellidos,
+                Email = dto.Email,
+                Celular = dto.TelefonoContacto
+            };
+
+            var resultado = await _docenteService.ActualizarPerfilAsync(docente.Id, actualizarDto);
+            if (!resultado)
+                return BadRequest("No se pudo actualizar el perfil");
+
+            return Ok(new { message = "Perfil actualizado correctamente" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

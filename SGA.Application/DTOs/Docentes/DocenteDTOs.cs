@@ -7,6 +7,7 @@ public class DocenteDto
     public string Nombres { get; set; } = string.Empty;
     public string Apellidos { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? Celular { get; set; }
     public string NivelActual { get; set; } = string.Empty;
     public DateTime FechaInicioNivelActual { get; set; }
     public DateTime? FechaUltimoAscenso { get; set; }

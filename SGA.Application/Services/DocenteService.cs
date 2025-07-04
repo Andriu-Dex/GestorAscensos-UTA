@@ -48,6 +48,7 @@ public class DocenteService : IDocenteService
             Nombres = docente.Nombres,
             Apellidos = docente.Apellidos,
             Email = docente.Email,
+            Celular = docente.Celular,
             NivelActual = docente.NivelActual.ToString(),
             FechaInicioNivelActual = docente.FechaInicioNivelActual,
             FechaUltimoAscenso = docente.FechaUltimoAscenso,
@@ -775,6 +776,54 @@ public class DocenteService : IDocenteService
                 Exitoso = false,
                 Mensaje = $"Error al importar obras académicas: {ex.Message}"
             };
+        }
+    }
+    
+    public async Task<bool> ActualizarPerfilAsync(Guid docenteId, ActualizarPerfilDto dto)
+    {
+        try
+        {
+            var docente = await _docenteRepository.GetByIdAsync(docenteId);
+            if (docente == null)
+            {
+                return false;
+            }
+
+            // Verificar si el email ya existe para otro docente
+            if (docente.Email != dto.Email)
+            {
+                var existingDocente = await _docenteRepository.GetByEmailAsync(dto.Email);
+                if (existingDocente != null && existingDocente.Id != docenteId)
+                {
+                    throw new InvalidOperationException("Ya existe un docente con ese correo electrónico");
+                }
+            }
+
+            // Actualizar campos
+            docente.Nombres = dto.Nombres;
+            docente.Apellidos = dto.Apellidos;
+            docente.Email = dto.Email;
+            docente.Celular = dto.Celular;
+
+            await _docenteRepository.UpdateAsync(docente);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "Actualización de perfil",
+                docenteId.ToString(),
+                dto.Email,
+                "Docente",
+                null,
+                $"Perfil actualizado: {docente.NombreCompleto}",
+                null
+            );
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar perfil del docente {DocenteId}", docenteId);
+            throw;
         }
     }
     

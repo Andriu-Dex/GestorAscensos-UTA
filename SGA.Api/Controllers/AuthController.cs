@@ -215,7 +215,7 @@ public class AuthController : ControllerBase
                 apellidos = docente.Apellidos,
                 cedula = docente.Cedula,
                 email = docente.Email,
-                telefonoContacto = "", // Se puede agregar este campo al modelo si es necesario
+                telefonoContacto = docente.Celular ?? "", // Usar el campo Celular real
                 facultadId = 1, // Por defecto, se puede obtener de la base de datos si es necesario
                 facultad = "Facultad de Ingeniería", // String simple para compatibilidad
                 facultadInfo = new { id = 1, nombre = "Facultad de Ingeniería" }, // Objeto separado
