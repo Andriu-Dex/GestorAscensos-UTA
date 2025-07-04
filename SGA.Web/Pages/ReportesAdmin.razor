@@ -495,10 +495,11 @@
                 var base64String = Convert.ToBase64String(pdfBytes);
                 var fileName = $"reporte_{tipoReporte}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 
+                // Llamar a la función JavaScript async con await
                 await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", 
                     base64String, fileName);
                 
-                ToastService.ShowSuccess("Reporte descargado exitosamente");
+                ToastService.ShowSuccess("Proceso de descarga iniciado");
             }
             else
             {

@@ -1,31 +1,49 @@
 // Script para descargar archivos (principalmente reportes PDF)
-window.downloadFileFromStream = (fileName, contentBytes) => {
-  // Crear un blob con los bytes recibidos del servidor
-  const blob = new Blob([new Uint8Array(contentBytes)], {
-    type: "application/octet-stream",
-  });
+window.downloadFileFromStream = async (fileName, contentBytes) => {
+  try {
+    // Crear un blob con los bytes recibidos del servidor
+    const blob = new Blob([new Uint8Array(contentBytes)], {
+      type: "application/octet-stream",
+    });
 
-  // Crear URL para el blob
-  const url = URL.createObjectURL(blob);
+    // Verificar si el navegador soporta la File System Access API
+    if ("showSaveFilePicker" in window) {
+      try {
+        // Usar la API moderna para mostrar el explorador de archivos
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: "Archivos PDF",
+              accept: { "application/pdf": [".pdf"] },
+            },
+          ],
+        });
 
-  // Crear un elemento <a> temporal para iniciar la descarga
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
+        // Escribir el archivo
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
 
-  // Agregar el elemento al DOM (no visible)
-  document.body.appendChild(link);
-
-  // Iniciar la descarga
-  link.click();
-
-  // Limpiar - remover el elemento <a> y revocar la URL
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+        console.log("Archivo guardado exitosamente");
+      } catch (err) {
+        // Si el usuario cancela o hay error, usar método fallback
+        if (err.name !== "AbortError") {
+          console.log("Usando método fallback debido a:", err);
+          downloadFileDirectly(blob, fileName);
+        }
+      }
+    } else {
+      // Fallback para navegadores que no soportan File System Access API
+      downloadFileDirectly(blob, fileName);
+    }
+  } catch (error) {
+    console.error("Error al descargar archivo:", error);
+  }
 };
 
-// Función para descargar archivos usando base64
-window.downloadFileFromBase64 = (
+// Función para descargar archivos usando base64 con explorador de archivos
+window.downloadFileFromBase64 = async (
   base64String,
   fileName,
   contentType = "application/pdf"
@@ -64,23 +82,58 @@ window.downloadFileFromBase64 = (
     // Crear blob
     const blob = new Blob([byteArray], { type: contentType });
 
-    // Crear URL para el blob
-    const url = URL.createObjectURL(blob);
+    // Verificar si el navegador soporta la File System Access API
+    if ("showSaveFilePicker" in window) {
+      try {
+        // Usar la API moderna para mostrar el explorador de archivos
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: "Archivos PDF",
+              accept: { "application/pdf": [".pdf"] },
+            },
+          ],
+        });
 
-    // Crear elemento <a> temporal para descargar
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
+        // Escribir el archivo
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
 
-    // Agregar al DOM, hacer clic y limpiar
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+        console.log("Archivo guardado exitosamente");
+      } catch (err) {
+        // Si el usuario cancela o hay error, usar método fallback
+        if (err.name !== "AbortError") {
+          console.log("Usando método fallback debido a:", err);
+          downloadFileDirectly(blob, fileName);
+        }
+      }
+    } else {
+      // Fallback para navegadores que no soportan File System Access API
+      downloadFileDirectly(blob, fileName);
+    }
   } catch (error) {
     console.error("Error al descargar archivo:", error);
   }
 };
+
+// Función auxiliar para descarga directa (fallback)
+function downloadFileDirectly(blob, fileName) {
+  // Crear URL para el blob
+  const url = URL.createObjectURL(blob);
+
+  // Crear elemento <a> temporal para descargar
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+
+  // Agregar al DOM, hacer clic y limpiar
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 // Función legacy para compatibilidad
 window.downloadFile = (
