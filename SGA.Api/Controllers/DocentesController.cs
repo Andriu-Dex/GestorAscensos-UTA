@@ -533,4 +533,31 @@ public class DocenteController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+    [HttpPost("actualizar-indicadores")]
+    public async Task<ActionResult> ActualizarIndicadores()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Importar datos de todos los sistemas
+            await _docenteService.ImportarDatosTTHHAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDACAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDITICAsync(docente.Cedula);
+            await _docenteService.ImportarDatosDIRINVAsync(docente.Cedula);
+
+            return Ok(new { message = "Indicadores actualizados correctamente" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
 }

@@ -13,4 +13,12 @@ public class IndicadoresDocenteDto
     public DateTime? FechaUltimaEvaluacion { get; set; }
     public string PeriodoEvaluado { get; set; } = string.Empty;
     public bool CumpleRequisitoEvaluacion { get; set; }
+    
+    // Propiedades para tiempo detallado que espera el frontend
+    public DateTime FechaInicioRol { get; set; }
+    public TimeSpan TiempoTranscurrido { get; set; }
+    public TimeSpan TiempoRestante { get; set; }
+    public string TiempoTranscurridoTexto { get; set; } = string.Empty;
+    public string TiempoRestanteTexto { get; set; } = string.Empty;
+    public bool CumpleTiempoMinimo { get; set; }
 }

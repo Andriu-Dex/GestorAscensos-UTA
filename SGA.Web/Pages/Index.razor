@@ -554,8 +554,22 @@
             if (response.IsSuccessStatusCode)
             {
                 await JSRuntime.InvokeVoidAsync("showToast", "Indicadores actualizados correctamente");
+                
+                // Refrescar información del usuario para obtener datos actualizados
+                userInfo = await AuthService.RefreshUserInfo();
+                
+                // Cargar indicadores y requisitos actualizados
                 await LoadIndicadores();
                 await LoadRequisitos();
+                
+                // Recalcular tiempo detallado para actualizar la barra de progreso
+                CalcularTiempoDetallado();
+                
+                // Verificar si hay solicitud activa
+                await VerificarSolicitudActiva();
+                
+                // Forzar actualización de la UI
+                StateHasChanged();
             }
         }
         catch (Exception)
@@ -620,74 +634,20 @@
                     {
                         userInfo = await AuthService.RefreshUserInfo();
                         CalcularTiempoDetallado();
-                        await LoadIndicadores();
-                        await LoadRequisitos();
-                        StateHasChanged(); // Forzar actualización de la UI
                     }
-                    else if (tipo == 2) // Solo obras académicas
+                    
+                    // Para todos los tipos de indicadores, actualizar los datos completos
+                    await LoadIndicadores();
+                    await LoadRequisitos();
+                    
+                    // Si es tiempo en rol, recalcular tiempo detallado
+                    if (tipo == 1)
                     {
-                        // Para obras académicas, solo actualizar ese indicador específico
-                        // sin tocar el tiempo en rol actual
-                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
-                        if (indicadoresResponse.IsSuccessStatusCode)
-                        {
-                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
-                            if (nuevosIndicadores != null && indicadores != null)
-                            {
-                                // Solo actualizar el número de obras, mantener el resto igual
-                                indicadores.NumeroObras = nuevosIndicadores.NumeroObras;
-                                StateHasChanged();
-                            }
-                        }
+                        CalcularTiempoDetallado();
                     }
-                    else if (tipo == 3) // Evaluación docente
-                    {
-                        // Para evaluación docente, solo actualizar los campos relacionados con evaluación
-                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
-                        if (indicadoresResponse.IsSuccessStatusCode)
-                        {
-                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
-                            if (nuevosIndicadores != null && indicadores != null)
-                            {
-                                // Solo actualizar los campos de evaluación, mantener el resto igual
-                                indicadores.PuntajeEvaluacion = nuevosIndicadores.PuntajeEvaluacion;
-                                indicadores.PeriodosEvaluados = nuevosIndicadores.PeriodosEvaluados;
-                                indicadores.CumpleRequisitoEvaluacion = nuevosIndicadores.CumpleRequisitoEvaluacion;
-                                indicadores.PeriodoEvaluado = nuevosIndicadores.PeriodoEvaluado;
-                                StateHasChanged();
-                            }
-                        }
-                    }
-                    else if (tipo == 4) // Capacitación
-                    {
-                        // Para capacitación, solo actualizar ese indicador específico
-                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
-                        if (indicadoresResponse.IsSuccessStatusCode)
-                        {
-                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
-                            if (nuevosIndicadores != null && indicadores != null)
-                            {
-                                // Solo actualizar las horas de capacitación, mantener el resto igual
-                                indicadores.HorasCapacitacion = nuevosIndicadores.HorasCapacitacion;
-                                StateHasChanged();
-                            }
-                        }
-                    }
-                    else if (tipo == 5) // Investigación
-                    {
-                        // Para investigación, solo actualizar ese indicador específico
-                        var indicadoresResponse = await Http.GetAsync("api/docente/indicadores");
-                        if (indicadoresResponse.IsSuccessStatusCode)
-                        {
-                            var nuevosIndicadores = await indicadoresResponse.Content.ReadFromJsonAsync<IndicadoresModel>();
-                            if (nuevosIndicadores != null && indicadores != null)
-                            {
-                                // Solo actualizar el tiempo de investigación, mantener el resto igual
-                                indicadores.TiempoInvestigacion = nuevosIndicadores.TiempoInvestigacion;
-                                StateHasChanged();
-                            }
-                        }
-                    }
+                    
+                    // Forzar actualización de la UI para reflejar cambios en la barra de progreso
+                    StateHasChanged();
                 }
                 else
                 {

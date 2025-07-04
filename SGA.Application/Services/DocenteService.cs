@@ -523,8 +523,38 @@ public class DocenteService : IDocenteService
         if (docente == null)
             throw new ArgumentException("Docente no encontrado");
 
-        // Calcular tiempo en rol actual en meses
-        var tiempoRol = (int)Math.Floor((DateTime.UtcNow - docente.FechaInicioNivelActual).TotalDays / 30.44);
+        // Calcular tiempo en rol actual
+        var fechaInicioRol = docente.FechaInicioNivelActual;
+        var tiempoTranscurrido = DateTime.UtcNow - fechaInicioRol;
+        var tiempoRolMeses = (int)Math.Floor(tiempoTranscurrido.TotalDays / 30.44);
+
+        // Calcular requisitos para el siguiente nivel (si existe)
+        var nivelActualNum = int.Parse(docente.NivelActual.ToString().Replace("Titular", ""));
+        var tiempoRequiridoMeses = 48; // Valor por defecto
+        var cumpleTiempoMinimo = true;
+        var tiempoRestante = TimeSpan.Zero;
+        
+        if (nivelActualNum < 5) // Si no está en el nivel máximo
+        {
+            var siguienteNivel = $"Titular{nivelActualNum + 1}";
+            try
+            {
+                var requisitos = GetRequisitosPorNivel(siguienteNivel);
+                tiempoRequiridoMeses = requisitos.TiempoRol;
+                cumpleTiempoMinimo = tiempoRolMeses >= tiempoRequiridoMeses;
+                var mesesRestantes = Math.Max(0, tiempoRequiridoMeses - tiempoRolMeses);
+                tiempoRestante = TimeSpan.FromDays(mesesRestantes * 30.44);
+            }
+            catch (ArgumentException)
+            {
+                // Nivel no válido, usar valores por defecto
+                cumpleTiempoMinimo = true;
+            }
+        }
+
+        // Formatear textos de tiempo
+        var tiempoTranscurridoTexto = FormatearTiempo(tiempoTranscurrido);
+        var tiempoRestanteTexto = cumpleTiempoMinimo ? "Cumplido" : FormatearTiempo(tiempoRestante);
 
         // Obtener información adicional de evaluaciones desde DAC de forma segura
         DTOs.ExternalData.DatosDACDto? datosDAC = null;
@@ -540,17 +570,25 @@ public class DocenteService : IDocenteService
         
         return new IndicadoresDocenteDto
         {
-            TiempoRol = tiempoRol,
+            TiempoRol = tiempoRolMeses,
             NumeroObras = docente.NumeroObrasAcademicas ?? 0,
-            PuntajeEvaluacion = datosDAC?.PromedioEvaluaciones != null ? Math.Round(datosDAC.PromedioEvaluaciones, 2) : 0, // Solo usar datos DAC válidos con redondeo
+            PuntajeEvaluacion = datosDAC?.PromedioEvaluaciones != null ? Math.Round(datosDAC.PromedioEvaluaciones, 2) : 0,
             HorasCapacitacion = docente.HorasCapacitacion ?? 0,
             TiempoInvestigacion = docente.MesesInvestigacion ?? 0,
             
-            // Información adicional de evaluaciones (usando datos DAC si están disponibles)
+            // Información adicional de evaluaciones
             PeriodosEvaluados = datosDAC?.PeriodosEvaluados ?? 0,
             FechaUltimaEvaluacion = datosDAC?.FechaUltimaEvaluacion,
             PeriodoEvaluado = datosDAC?.PeriodoEvaluado ?? string.Empty,
-            CumpleRequisitoEvaluacion = datosDAC?.CumpleRequisito ?? false // Solo cumple si hay datos DAC válidos
+            CumpleRequisitoEvaluacion = datosDAC?.CumpleRequisito ?? false,
+            
+            // Propiedades de tiempo detallado para el frontend
+            FechaInicioRol = fechaInicioRol,
+            TiempoTranscurrido = tiempoTranscurrido,
+            TiempoRestante = tiempoRestante,
+            TiempoTranscurridoTexto = tiempoTranscurridoTexto,
+            TiempoRestanteTexto = tiempoRestanteTexto,
+            CumpleTiempoMinimo = cumpleTiempoMinimo
         };
     }
 
@@ -887,5 +925,35 @@ public class DocenteService : IDocenteService
             AllowedMimeTypes = FileLimits.ProfileImages.AllowedMimeTypes,
             AcceptAttribute = string.Join(",", FileLimits.ProfileImages.AllowedMimeTypes)
         };
+    }
+
+    private string FormatearTiempo(TimeSpan tiempo)
+    {
+        var totalDias = (int)tiempo.TotalDays;
+        var años = totalDias / 365;
+        var meses = (totalDias % 365) / 30;
+        var dias = (totalDias % 365) % 30;
+
+        var partes = new List<string>();
+
+        if (años > 0)
+            partes.Add($"{años} año{(años != 1 ? "s" : "")}");
+
+        if (meses > 0)
+            partes.Add($"{meses} mes{(meses != 1 ? "es" : "")}");
+
+        if (dias > 0 && años == 0) // Solo mostrar días si no hay años
+            partes.Add($"{dias} día{(dias != 1 ? "s" : "")}");
+
+        if (partes.Count == 0)
+            return "0 días";
+
+        if (partes.Count == 1)
+            return partes[0];
+
+        if (partes.Count == 2)
+            return $"{partes[0]} y {partes[1]}";
+
+        return $"{string.Join(", ", partes.Take(partes.Count - 1))} y {partes.Last()}";
     }
 }
