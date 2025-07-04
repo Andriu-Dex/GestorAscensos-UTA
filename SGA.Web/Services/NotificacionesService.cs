@@ -37,7 +37,7 @@ public class NotificacionesService : IAsyncDisposable
     }
 
     /// <summary>
-    /// Inicializar conexión SignalR
+    /// Inicializar conexión SignalR con validación previa del servidor
     /// </summary>
     public async Task InicializarAsync()
     {
@@ -59,20 +59,32 @@ public class NotificacionesService : IAsyncDisposable
                 return;
             }
 
-            // Usar URL relativa para que funcione tanto en desarrollo como en producción
-            var hubUrl = "/notificacionesHub";
+            // Usar la URL base del HttpClient para construir la URL absoluta del hub
+            var baseAddress = _httpClient.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7030";
+            var hubUrl = $"{baseAddress}/notificacionesHub";
             
-            _logger.LogInformation("Inicializando conexión SignalR a: {HubUrl} con token: {TokenStart}...", 
-                hubUrl, token.Substring(0, Math.Min(token.Length, 20)));
+            _logger.LogInformation("Inicializando conexión SignalR a: {HubUrl}", hubUrl);
+
+            // Primero verificar si el servidor está disponible
+            if (!await VerificarServidorDisponibleAsync(baseAddress))
+            {
+                _logger.LogWarning("Servidor no está disponible, postergando inicialización de SignalR");
+                return;
+            }
 
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options =>
                 {
                     // Pasar token como query string ya que WebSockets no soporta headers
                     options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                    // Configurar transporte específico para WebAssembly
+                    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | 
+                                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+                    // Configurar headers adicionales
+                    options.Headers.Add("User-Agent", "SGA-Blazor-Client");
                 })
                 .WithAutomaticReconnect(new[] { TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(2), 
-                                               TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+                                               TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) })
                 .Build();
 
             // Configurar eventos del hub
@@ -95,9 +107,45 @@ public class NotificacionesService : IAsyncDisposable
             _logger.LogInformation("✅ Conexión SignalR establecida con ID: {ConnectionId}", 
                 _hubConnection.ConnectionId);
         }
+        catch (HttpRequestException httpEx)
+        {
+            _logger.LogError(httpEx, "❌ Error de conectividad SignalR - Servidor no disponible. La aplicación funcionará sin notificaciones en tiempo real.");
+            // No relanzar para permitir que la aplicación continue sin SignalR
+        }
+        catch (TaskCanceledException tcEx)
+        {
+            _logger.LogError(tcEx, "❌ Timeout en conexión SignalR. La aplicación funcionará sin notificaciones en tiempo real.");
+            // No relanzar para permitir que la aplicación continue sin SignalR
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Error al inicializar conexión SignalR");
+            _logger.LogError(ex, "❌ Error al inicializar conexión SignalR. La aplicación funcionará sin notificaciones en tiempo real.");
+            // No relanzar para permitir que la aplicación continue sin SignalR
+        }
+    }
+
+    /// <summary>
+    /// Verificar si el servidor API está disponible antes de intentar conectar SignalR
+    /// </summary>
+    private async Task<bool> VerificarServidorDisponibleAsync(string baseAddress)
+    {
+        try
+        {
+            _logger.LogInformation("Verificando disponibilidad del servidor: {BaseAddress}", baseAddress);
+            
+            // Usar el endpoint de salud para verificar disponibilidad
+            var response = await _httpClient.GetAsync($"{baseAddress}/api/health");
+            var isAvailable = response.IsSuccessStatusCode;
+            
+            _logger.LogInformation("Servidor {Estado}: {StatusCode}", 
+                isAvailable ? "DISPONIBLE" : "NO DISPONIBLE", response.StatusCode);
+                
+            return isAvailable;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo verificar disponibilidad del servidor");
+            return false;
         }
     }
 
@@ -299,6 +347,30 @@ public class NotificacionesService : IAsyncDisposable
     {
         _logger.LogWarning("❌ Conexión SignalR cerrada");
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Intentar reconectar SignalR si no está conectado
+    /// </summary>
+    public async Task IntentarReconectarAsync()
+    {
+        if (_hubConnection == null || _hubConnection.State == HubConnectionState.Disconnected)
+        {
+            _logger.LogInformation("Intentando reconectar SignalR...");
+            await InicializarAsync();
+        }
+        else
+        {
+            _logger.LogInformation("SignalR ya está conectado. Estado: {Estado}", _hubConnection.State);
+        }
+    }
+
+    /// <summary>
+    /// Verificar el estado de la conexión SignalR
+    /// </summary>
+    public HubConnectionState? ObtenerEstadoConexion()
+    {
+        return _hubConnection?.State;
     }
 
     public async ValueTask DisposeAsync()

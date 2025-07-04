@@ -28,15 +28,19 @@ builder.Services.AddScoped<IApiUrlService, ApiUrlService>();
 builder.Services.AddScoped<AuthorizationMessageHandler>();
 
 // Configure HttpClient with authorization handler
-builder.Services.AddHttpClient<HttpClient>(client =>
+builder.Services.AddHttpClient<HttpClient>("SGA.Api", client =>
 {
     client.BaseAddress = new Uri("https://localhost:7030/");
+    client.Timeout = TimeSpan.FromSeconds(30);
 })
 .AddHttpMessageHandler<AuthorizationMessageHandler>();
 
 // Register HttpClient as scoped
 builder.Services.AddScoped<HttpClient>(provider =>
-    provider.GetRequiredService<IHttpClientFactory>().CreateClient(typeof(HttpClient).Name));
+{
+    var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+    return httpClientFactory.CreateClient("SGA.Api");
+});
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IApiService, ApiService>();
