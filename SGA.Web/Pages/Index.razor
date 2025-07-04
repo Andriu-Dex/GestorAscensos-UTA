@@ -1,6 +1,7 @@
 @page "/"
 @attribute [Authorize]
 @using SGA.Web.Models
+@using System.Text.Json
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -686,6 +687,37 @@
                                 StateHasChanged();
                             }
                         }
+                    }
+                }
+                else
+                {
+                    // Manejar respuesta de error
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    try 
+                    {
+                        var errorResponse = System.Text.Json.JsonSerializer.Deserialize<ImportarDatosResponse>(errorContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        if (errorResponse != null && !string.IsNullOrEmpty(errorResponse.Mensaje))
+                        {
+                            await JSRuntime.InvokeVoidAsync("showToast", errorResponse.Mensaje, "warning");
+                        }
+                        else
+                        {
+                            await JSRuntime.InvokeVoidAsync("showToast", "No se pudieron importar los datos solicitados", "error");
+                        }
+                    }
+                    catch
+                    {
+                        // Si no se puede deserializar la respuesta, mostrar mensaje genérico
+                        string tipoImportacion = tipo switch
+                        {
+                            1 => "tiempo en rol",
+                            2 => "obras académicas", 
+                            3 => "evaluaciones docentes",
+                            4 => "capacitación",
+                            5 => "investigación",
+                            _ => "datos"
+                        };
+                        await JSRuntime.InvokeVoidAsync("showToast", $"No se pudieron importar los datos de {tipoImportacion}", "error");
                     }
                 }
             }

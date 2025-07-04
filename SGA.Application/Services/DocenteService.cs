@@ -133,10 +133,10 @@ public class DocenteService : IDocenteService
         try
         {
             var datosDAC = await _externalDataService.ImportarDatosDACAsync(cedula);
+            var docente = await _docenteRepository.GetByCedulaAsync(cedula);
             
             if (datosDAC != null)
             {
-                var docente = await _docenteRepository.GetByCedulaAsync(cedula);
                 if (docente != null)
                 {
                     docente.PromedioEvaluaciones = datosDAC.PromedioEvaluaciones;
@@ -170,11 +170,25 @@ public class DocenteService : IDocenteService
                     }
                 };
             }
+            else
+            {
+                // Cuando no hay evaluaciones válidas, actualizar el campo a 0
+                if (docente != null)
+                {
+                    docente.PromedioEvaluaciones = 0;
+                    docente.FechaUltimaImportacion = DateTime.UtcNow;
+                    await _docenteRepository.UpdateAsync(docente);
+                    
+                    await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_DAC", 
+                        docente.Id.ToString(), docente.Email, "Docente", null, 
+                        "Sin evaluaciones posteriores al inicio del cargo actual", null);
+                }
+            }
             
             return new ImportarDatosResponse
             {
                 Exitoso = false,
-                Mensaje = "No se encontraron evaluaciones docentes para la cédula proporcionada en DAC"
+                Mensaje = "No se encontraron evaluaciones docentes posteriores a la fecha de inicio del cargo actual para la cédula proporcionada en DAC. Solo se consideran evaluaciones realizadas después de asumir el cargo o rol actual."
             };
         }
         catch (Exception ex)
@@ -527,7 +541,7 @@ public class DocenteService : IDocenteService
         {
             TiempoRol = tiempoRol,
             NumeroObras = docente.NumeroObrasAcademicas ?? 0,
-            PuntajeEvaluacion = docente.PromedioEvaluaciones ?? 0,
+            PuntajeEvaluacion = datosDAC?.PromedioEvaluaciones ?? 0, // Solo usar datos DAC válidos
             HorasCapacitacion = docente.HorasCapacitacion ?? 0,
             TiempoInvestigacion = docente.MesesInvestigacion ?? 0,
             
@@ -535,7 +549,7 @@ public class DocenteService : IDocenteService
             PeriodosEvaluados = datosDAC?.PeriodosEvaluados ?? 0,
             FechaUltimaEvaluacion = datosDAC?.FechaUltimaEvaluacion,
             PeriodoEvaluado = datosDAC?.PeriodoEvaluado ?? string.Empty,
-            CumpleRequisitoEvaluacion = datosDAC?.CumpleRequisito ?? (docente.PromedioEvaluaciones >= 75m)
+            CumpleRequisitoEvaluacion = datosDAC?.CumpleRequisito ?? false // Solo cumple si hay datos DAC válidos
         };
     }
 

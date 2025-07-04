@@ -16,6 +16,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
     private readonly IExternalDataService _externalDataService;
     private readonly INotificationService _notificationService;
     private readonly IAuditoriaService _auditoriaService;
+    private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<ObrasAcademicasService> _logger;
 
     public ObrasAcademicasService(
@@ -25,6 +26,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
         IExternalDataService externalDataService,
         INotificationService notificationService,
         IAuditoriaService auditoriaService,
+        IPDFCompressionService pdfCompressionService,
         ILogger<ObrasAcademicasService> logger)
     {
         _docenteRepository = docenteRepository;
@@ -33,6 +35,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
         _externalDataService = externalDataService;
         _notificationService = notificationService;
         _auditoriaService = auditoriaService;
+        _pdfCompressionService = pdfCompressionService;
         _logger = logger;
     }
 
@@ -327,21 +330,28 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     _logger.LogDebug($"  ArchivoTamano: {nuevaSolicitud.ArchivoTamano}");
                     _logger.LogDebug($"  ComentariosSolicitud: '{nuevaSolicitud.ComentariosSolicitud}' (Longitud: {nuevaSolicitud.ComentariosSolicitud?.Length ?? 0})");
 
-                    // Manejar archivo si se proporciona
+                    // Manejar archivo si se proporciona - GUARDAR EN BASE DE DATOS
                     if (!string.IsNullOrEmpty(obra.ArchivoContenido))
                     {
                         _logger.LogDebug($"Procesando archivo: {obra.ArchivoNombre}");
                         try
                         {
-                            var archivoRuta = await GuardarArchivoAsync(obra.ArchivoContenido, obra.ArchivoNombre, nuevaSolicitud.Id);
-                            nuevaSolicitud.ArchivoRuta = archivoRuta;
-                            nuevaSolicitud.ArchivoTamano = Convert.FromBase64String(obra.ArchivoContenido).Length;
-                            _logger.LogDebug($"Archivo guardado en: {archivoRuta}, Tamaño: {nuevaSolicitud.ArchivoTamano} bytes");
+                            var contenidoBytes = Convert.FromBase64String(obra.ArchivoContenido);
+                            
+                            // Comprimir el archivo PDF antes de guardarlo en BD
+                            var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoBytes);
+                            
+                            // Guardar directamente en la base de datos
+                            nuevaSolicitud.ArchivoContenido = contenidoComprimido;
+                            nuevaSolicitud.ArchivoTamano = contenidoComprimido.Length;
+                            nuevaSolicitud.ArchivoRuta = null; // No usar rutas de archivo
+                            
+                            _logger.LogDebug($"Archivo comprimido y guardado en BD. Tamaño original: {contenidoBytes.Length} bytes, Tamaño comprimido: {contenidoComprimido.Length} bytes");
                         }
                         catch (Exception archivoEx)
                         {
-                            _logger.LogError(archivoEx, "Error al guardar archivo para obra: {Titulo}", obra.Titulo);
-                            throw new Exception($"Error al guardar archivo: {archivoEx.Message}", archivoEx);
+                            _logger.LogError(archivoEx, "Error al procesar archivo para obra: {Titulo}", obra.Titulo);
+                            throw new Exception($"Error al procesar archivo: {archivoEx.Message}", archivoEx);
                         }
                     }
 
@@ -511,7 +521,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     Autores = s.Autores,
                     Descripcion = s.Descripcion,
                     ArchivoNombre = s.ArchivoNombre,
-                    TieneArchivo = !string.IsNullOrEmpty(s.ArchivoRuta),
+                    TieneArchivo = s.ArchivoContenido != null && s.ArchivoContenido.Length > 0,
                     FechaCreacion = s.FechaCreacion,
                     Estado = s.Estado,
                     ComentariosRevision = s.ComentariosRevision,
@@ -562,7 +572,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     Autores = s.Autores,
                     Descripcion = s.Descripcion,
                     ArchivoNombre = s.ArchivoNombre,
-                    TieneArchivo = !string.IsNullOrEmpty(s.ArchivoRuta),
+                    TieneArchivo = s.ArchivoContenido != null && s.ArchivoContenido.Length > 0,
                     FechaCreacion = s.FechaCreacion,
                     Estado = s.Estado,
                     ComentariosRevision = s.ComentariosRevision,
@@ -739,7 +749,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
                     Autores = s.Autores,
                     Descripcion = s.Descripcion,
                     ArchivoNombre = s.ArchivoNombre,
-                    TieneArchivo = !string.IsNullOrEmpty(s.ArchivoRuta),
+                    TieneArchivo = s.ArchivoContenido != null && s.ArchivoContenido.Length > 0,
                     FechaCreacion = s.FechaCreacion
                 })
                 .ToList();
@@ -770,15 +780,12 @@ public class ObrasAcademicasService : IObrasAcademicasService
             var solicitudesAll = await _solicitudRepository.GetAllAsync();
             var solicitud = solicitudesAll.FirstOrDefault(s => s.Id == solicitudId);
             
-            if (solicitud == null || string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud == null || solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
                 return null;
 
-            if (File.Exists(solicitud.ArchivoRuta))
-            {
-                return await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
-            }
-
-            return null;
+            // Descomprimir el archivo desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {
@@ -821,30 +828,6 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 Exitoso = false,
                 Mensaje = $"Error al importar obras: {ex.Message}"
             };
-        }
-    }
-
-    private async Task<string> GuardarArchivoAsync(string archivoBase64, string? nombreArchivo, Guid solicitudId)
-    {
-        try
-        {
-            var bytes = Convert.FromBase64String(archivoBase64);
-            var carpetaObras = Path.Combine("uploads", "obras-academicas");
-            
-            if (!Directory.Exists(carpetaObras))
-                Directory.CreateDirectory(carpetaObras);
-
-            var extension = Path.GetExtension(nombreArchivo ?? "documento.pdf");
-            var nombreUnico = $"{solicitudId}{extension}";
-            var rutaCompleta = Path.Combine(carpetaObras, nombreUnico);
-
-            await File.WriteAllBytesAsync(rutaCompleta, bytes);
-            return rutaCompleta;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al guardar archivo para solicitud {SolicitudId}", solicitudId);
-            throw;
         }
     }
     
@@ -1034,24 +1017,24 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 return null;
             }
 
-            _logger.LogInformation("Solicitud encontrada. Ruta del archivo: {ArchivoRuta}", solicitud.ArchivoRuta);
+            _logger.LogInformation("Solicitud encontrada. Tiene archivo: {TieneArchivo}", solicitud.ArchivoContenido != null && solicitud.ArchivoContenido.Length > 0);
 
-            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 _logger.LogWarning("La solicitud {SolicitudId} no tiene archivo asociado", solicitudId);
                 return null;
             }
 
-            if (File.Exists(solicitud.ArchivoRuta))
+            try
             {
-                _logger.LogInformation("Archivo encontrado en: {ArchivoRuta}", solicitud.ArchivoRuta);
-                var bytes = await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
-                _logger.LogInformation("Archivo leído correctamente, tamaño: {Size} bytes", bytes.Length);
-                return bytes;
+                // Descomprimir el archivo desde la base de datos
+                var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+                _logger.LogInformation("Archivo descomprimido correctamente, tamaño: {Size} bytes", contenidoDescomprimido.Length);
+                return contenidoDescomprimido;
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning("El archivo no existe en la ruta: {ArchivoRuta}", solicitud.ArchivoRuta);
+                _logger.LogError(ex, "Error al descomprimir archivo de solicitud {SolicitudId}", solicitudId);
                 return null;
             }
         }
@@ -1320,19 +1303,17 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 };
             }
 
-            // Actualizar archivo
+            // Comprimir y actualizar archivo en base de datos
+            var contenidoComprimido = await _pdfCompressionService.ComprimirPDFAsync(contenidoArchivo);
+            
+            // Actualizar datos del archivo
             var nombreAnterior = solicitud.ArchivoNombre;
             solicitud.ArchivoNombre = archivo.ArchivoNombre;
-            solicitud.ArchivoRuta = $"uploads/obras/{solicitud.Id}_{archivo.ArchivoNombre}";
+            solicitud.ArchivoRuta = null; // No usar rutas de archivo
             solicitud.ArchivoTipo = archivo.ArchivoTipo;
-            solicitud.ArchivoTamano = contenidoArchivo.Length;
+            solicitud.ArchivoTamano = contenidoComprimido.Length;
+            solicitud.ArchivoContenido = contenidoComprimido; // Guardar en BD
             solicitud.FechaModificacion = DateTime.UtcNow;
-
-            // Guardar archivo en el sistema de archivos
-            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "obras");
-            Directory.CreateDirectory(uploadsPath);
-            var filePath = Path.Combine(uploadsPath, $"{solicitud.Id}_{archivo.ArchivoNombre}");
-            await System.IO.File.WriteAllBytesAsync(filePath, contenidoArchivo);
 
             await _solicitudRepository.UpdateAsync(solicitud);
 
@@ -1547,20 +1528,15 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 return null;
             }
 
-            if (string.IsNullOrEmpty(solicitud.ArchivoRuta))
+            if (solicitud.ArchivoContenido == null || solicitud.ArchivoContenido.Length == 0)
             {
                 _logger.LogWarning("Solicitud {SolicitudId} no tiene archivo asociado", solicitudId);
                 return null;
             }
 
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), solicitud.ArchivoRuta);
-            if (!System.IO.File.Exists(filePath))
-            {
-                _logger.LogWarning("Archivo físico no encontrado para solicitud {SolicitudId}: {FilePath}", solicitudId, filePath);
-                return null;
-            }
-
-            return await System.IO.File.ReadAllBytesAsync(filePath);
+            // Descomprimir el archivo desde la base de datos
+            var contenidoDescomprimido = await _pdfCompressionService.DescomprimirPDFAsync(solicitud.ArchivoContenido);
+            return contenidoDescomprimido;
         }
         catch (Exception ex)
         {

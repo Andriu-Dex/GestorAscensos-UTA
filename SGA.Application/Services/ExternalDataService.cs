@@ -147,22 +147,30 @@ public class ExternalDataService : IExternalDataService
         if (docenteExiste == 0)
             return null;
 
-        // Obtener datos del docente desde TTHH para determinar fecha de inicio en nivel actual (opcional)
-        DateTime fechaInicioNivel;
-        try 
+        // Obtener fecha de inicio del nivel actual desde la base de datos principal (SGA)
+        DateTime fechaInicioNivel = DateTime.Now.AddYears(-5); // Valor por defecto
+        
+        var sgaConnectionString = _configuration.GetConnectionString("DefaultConnection");
+        using var sgaConnection = new SqlConnection(sgaConnectionString);
+        await sgaConnection.OpenAsync();
+        
+        var fechaInicio = await sgaConnection.QueryFirstOrDefaultAsync<DateTime?>(@"
+            SELECT FechaInicioNivelActual 
+            FROM Docentes 
+            WHERE Cedula = @Cedula AND EstaActivo = 1", 
+            new { Cedula = cedula });
+            
+        if (fechaInicio.HasValue)
         {
-            var docenteTTHH = await ImportarDatosTTHHAsync(cedula);
-            fechaInicioNivel = docenteTTHH?.FechaIngresoNivelActual ?? docenteTTHH?.FechaNombramiento ?? DateTime.Now.AddYears(-5);
+            fechaInicioNivel = fechaInicio.Value;
+            Console.WriteLine($"[DAC DEBUG] Fecha inicio nivel actual desde SGA: {fechaInicioNivel:yyyy-MM-dd}");
         }
-        catch
+        else
         {
-            // Si no se puede obtener de TTHH, usar fecha por defecto (5 años atrás)
-            fechaInicioNivel = DateTime.Now.AddYears(-5);
+            Console.WriteLine($"[DAC DEBUG] No se encontró fecha de inicio de nivel actual, usando fecha por defecto");
         }
 
-        Console.WriteLine($"[DAC DEBUG] Fecha inicio nivel actual: {fechaInicioNivel:yyyy-MM-dd}");
-
-        // Consultar evaluaciones desde la fecha de inicio en el nivel actual
+        // Consultar SOLO evaluaciones posteriores a la fecha de inicio en el nivel actual
         var evaluaciones = await connection.QueryAsync<dynamic>(@"
             SELECT 
                 e.PuntajeTotal,
@@ -182,31 +190,13 @@ public class ExternalDataService : IExternalDataService
                 FechaInicio = fechaInicioNivel 
             });
 
-        Console.WriteLine($"[DAC DEBUG] Evaluaciones filtradas por fecha: {evaluaciones.Count()}");
+        Console.WriteLine($"[DAC DEBUG] Evaluaciones filtradas por fecha posterior al inicio del cargo: {evaluaciones.Count()}");
 
+        // Si no hay evaluaciones después de la fecha de inicio del cargo, retornar null
+        // No usar fallback a evaluaciones anteriores
         if (!evaluaciones.Any())
         {
-            // Si no hay evaluaciones desde la fecha de nivel actual, tomar las últimas 4
-            evaluaciones = await connection.QueryAsync<dynamic>(@"
-                SELECT TOP 4
-                    e.PuntajeTotal,
-                    e.PuntajeMaximo,
-                    (e.PuntajeTotal / e.PuntajeMaximo * 100) as Porcentaje,
-                    p.Nombre as PeriodoAcademico,
-                    e.FechaEvaluacion,
-                    p.FechaInicio,
-                    p.FechaFin
-                FROM Evaluaciones e 
-                INNER JOIN Periodos p ON e.PeriodoId = p.Id
-                WHERE e.Cedula = @Cedula 
-                ORDER BY e.FechaEvaluacion DESC", new { Cedula = cedula });
-            
-            Console.WriteLine($"[DAC DEBUG] Evaluaciones últimas 4: {evaluaciones.Count()}");
-        }
-
-        if (!evaluaciones.Any())
-        {
-            Console.WriteLine($"[DAC DEBUG] No se encontraron evaluaciones para la cédula {cedula}");
+            Console.WriteLine($"[DAC DEBUG] No se encontraron evaluaciones posteriores a la fecha de inicio del cargo actual ({fechaInicioNivel:yyyy-MM-dd}) para la cédula {cedula}");
             return null;
         }
 
@@ -231,8 +221,8 @@ public class ExternalDataService : IExternalDataService
             FechaUltimaEvaluacion = ultimaEvaluacion.FechaEvaluacion,
             CumpleRequisito = cumpleRequisito,
             RequisitoMinimo = requisitoMinimo,
-            PeriodoEvaluado = $"Desde {primeraEvaluacion.FechaEvaluacion:dd/MM/yyyy} hasta {ultimaEvaluacion.FechaEvaluacion:dd/MM/yyyy}",
-            Mensaje = $"Promedio de {totalPeriodos} evaluaciones: {promedioEvaluacion:F1}% " + 
+            PeriodoEvaluado = $"Desde {primeraEvaluacion.FechaEvaluacion:dd/MM/yyyy} hasta {ultimaEvaluacion.FechaEvaluacion:dd/MM/yyyy} (posterior al inicio del cargo actual: {fechaInicioNivel:dd/MM/yyyy})",
+            Mensaje = $"Promedio de {totalPeriodos} evaluaciones posteriores al inicio del cargo actual: {promedioEvaluacion:F1}% " + 
                      (cumpleRequisito ? "(Cumple requisito mínimo)" : "(NO cumple requisito mínimo)"),
             Evaluaciones = evaluaciones.Select(e => new DTOs.ExternalData.EvaluacionPeriodoDto
             {
