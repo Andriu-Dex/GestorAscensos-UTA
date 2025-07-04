@@ -1,15 +1,6 @@
 @page "/perfil"
-@using System.Net.Http
-@using System.Net.Http.Json
 @using System.Net.Http.Headers
-@using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.JSInterop
-@using SGA.Web.Services
-@using SGA.Web.Models
 @using System.Threading
-@using System.ComponentModel.DataAnnotations
 
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -364,8 +355,21 @@
                         
                         <div class="mb-3">
                             <label for="telefono" class="form-label">Teléfono de Contacto</label>
-                            <InputText id="telefono" class="form-control" @bind-Value="editUserModel.TelefonoContacto" />
+                            <div class="input-group">
+                                <span class="input-group-text">+593</span>
+                                <input id="telefono" 
+                                       class="form-control @(IsValidTelefono(editUserModel.TelefonoContacto) ? "is-valid" : "")" 
+                                       type="text" 
+                                       value="@editUserModel.TelefonoContacto" 
+                                       @oninput="@HandleTelefonoInput"
+                                       maxlength="10"
+                                       placeholder="0987654321" 
+                                       autocomplete="tel" />
+                            </div>
                             <ValidationMessage For="@(() => editUserModel.TelefonoContacto)" />
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> El número debe tener 10 dígitos y empezar con 09
+                            </small>
                         </div>
                         
                         <div class="modal-footer">
@@ -1311,6 +1315,64 @@
     public void Dispose()
     {
         DetenerTimer();
+    }
+    
+    // Métodos para manejar el input del teléfono
+    private void HandleTelefonoInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        var processedValue = ProcessTelefonoInput(input);
+        editUserModel.TelefonoContacto = processedValue;
+        StateHasChanged();
+    }
+    
+    private bool IsValidTelefono(string? telefono)
+    {
+        if (string.IsNullOrEmpty(telefono))
+            return false;
+            
+        return telefono.Length == 10 && telefono.StartsWith("09") && telefono.All(char.IsDigit);
+    }
+    
+    private string ProcessTelefonoInput(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return "09";
+            
+        // Remover todos los caracteres que no sean números
+        var digitsOnly = new string(input.Where(char.IsDigit).ToArray());
+        
+        // Si no hay dígitos o solo hay ceros/nueves sueltos, empezar con 09
+        if (string.IsNullOrEmpty(digitsOnly))
+            return "09";
+        
+        // Siempre asegurar que empiece con 09
+        if (!digitsOnly.StartsWith("09"))
+        {
+            // Si empieza con 9, agregar el 0
+            if (digitsOnly.StartsWith("9"))
+            {
+                digitsOnly = "0" + digitsOnly;
+            }
+            // Si empieza con 0 pero no es 09, forzar 09
+            else if (digitsOnly.StartsWith("0") && !digitsOnly.StartsWith("09"))
+            {
+                digitsOnly = "09" + digitsOnly.Substring(1);
+            }
+            // Si no empieza con 0 o 9, forzar 09 al inicio
+            else
+            {
+                digitsOnly = "09" + digitsOnly;
+            }
+        }
+        
+        // Limitar a exactamente 10 dígitos
+        if (digitsOnly.Length > 10)
+        {
+            digitsOnly = digitsOnly.Substring(0, 10);
+        }
+        
+        return digitsOnly;
     }
     
     public class EditUserModel
