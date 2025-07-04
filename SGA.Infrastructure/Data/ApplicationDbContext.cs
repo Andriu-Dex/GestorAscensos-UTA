@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<ObraAcademica> ObrasAcademicas { get; set; }
     public DbSet<SolicitudCertificadoCapacitacion> SolicitudesCertificadosCapacitacion { get; set; }
     public DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
+    public DbSet<Notificacion> Notificaciones { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -257,6 +258,25 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                   .WithMany()
                   .HasForeignKey(e => e.DocenteId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuración Notificacion
+        modelBuilder.Entity<Notificacion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Titulo).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Mensaje).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.Tipo).HasConversion<string>().IsRequired();
+            entity.Property(e => e.UrlAccion).HasMaxLength(500);
+            entity.Property(e => e.DatosAdicionales).HasColumnType("text");
+            
+            entity.HasOne(e => e.Usuario)
+                .WithMany(u => u.Notificaciones)
+                .HasForeignKey(e => e.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            entity.HasIndex(e => new { e.UsuarioId, e.Leida });
+            entity.HasIndex(e => e.FechaCreacion);
         });
 
         // Datos semilla

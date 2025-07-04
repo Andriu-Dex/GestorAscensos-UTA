@@ -57,6 +57,13 @@ public class UsuarioRepository : IUsuarioRepository
     {
         return await _context.Usuarios.AnyAsync(u => u.Id == id);
     }
+
+    public async Task<List<Usuario>> GetAdministradoresAsync()
+    {
+        return await _context.Usuarios
+            .Where(u => u.Rol == Domain.Enums.RolUsuario.Administrador && u.EstaActivo)
+            .ToListAsync();
+    }
 }
 
 public class DocenteRepository : IDocenteRepository

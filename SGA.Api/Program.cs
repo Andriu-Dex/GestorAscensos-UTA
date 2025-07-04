@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using SGA.Application;
 using SGA.Infrastructure;
 using SGA.Api.Configuration;
 using SGA.Api.Middleware;
+using SGA.Api.Hubs;
 using System.Text;
 using DotNetEnv;
 
@@ -100,6 +102,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configurar SignalR para notificaciones en tiempo real
+builder.Services.AddSignalR();
+
 // Configurar autenticación JWT con variables de entorno
 var jwtSettings = builder.Configuration.GetSection("JWT");
 var secretKey = Environment.GetEnvironmentVariable("SGA_JWT_SECRET_KEY") 
@@ -124,11 +129,35 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
+    
+    // Configurar SignalR para usar el token desde query string
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            
+            // Si la request es para nuestro hub
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && 
+                (path.StartsWithSegments("/notificacionesHub")))
+            {
+                // Leer el token desde query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Registrar capas de la aplicación
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Corregir la inyección del Hub para NotificacionTiempoRealService
+// Registramos explícitamente el IHubContext<Hub> para que use el IHubContext<NotificacionesHub>
+builder.Services.AddScoped<IHubContext<Hub>>(provider => 
+    provider.GetRequiredService<IHubContext<SGA.Api.Hubs.NotificacionesHub>>());
 
 var app = builder.Build();
 
@@ -153,6 +182,9 @@ app.UseMiddleware<QueryStringAuthenticationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Configurar hub de SignalR
+app.MapHub<SGA.Api.Hubs.NotificacionesHub>("/notificacionesHub");
 
 // Inicializar base de datos
 using (var scope = app.Services.CreateScope())

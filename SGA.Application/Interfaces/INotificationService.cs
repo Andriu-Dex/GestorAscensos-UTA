@@ -12,6 +12,9 @@ public interface INotificationService
     Task NotificarAprobacionCertificadoAsync(string emailDocente, string nombreCurso, string comentarios);
     Task NotificarRechazoCertificadoAsync(string emailDocente, string nombreCurso, string motivo);
     
+    // Notificaciones para evidencias de investigación
+    Task NotificarNuevaSolicitudEvidenciasAsync(string nombreDocente, int cantidadEvidencias);
+    
     // Notificaciones generales
     Task NotificarCambioEstadoSolicitudAsync(string emailDocente, string tipoSolicitud, string nuevoEstado);
     

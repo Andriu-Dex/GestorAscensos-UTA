@@ -29,6 +29,9 @@ public static class DependencyInjection
         // Servicio de email
         services.AddScoped<IEmailService, EmailService>();
         
+        // Servicios de notificaciones en tiempo real
+        services.AddScoped<INotificacionTiempoRealService, NotificacionTiempoRealService>();
+        
         // Servicios para certificados de capacitación
         services.AddScoped<ICertificadosCapacitacionService, CertificadosCapacitacionService>();
         

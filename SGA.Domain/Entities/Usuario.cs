@@ -15,4 +15,7 @@ public class Usuario : BaseEntity
     
     // Relación con Docente
     public virtual Docente? Docente { get; set; }
+    
+    // Relación con Notificaciones
+    public virtual ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
 }

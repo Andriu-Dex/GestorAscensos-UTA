@@ -1,0 +1,191 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using SGA.Web.Services
+@inject NotificacionesService NotificacionesService
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IAsyncDisposable
+
+<div class="notifications-container">
+    <button class="btn btn-link notification-bell" @onclick="ToggleNotifications" title="Notificaciones">
+        <i class="bi bi-bell-fill"></i>
+        @if (_contadorNoLeidas > 0)
+        {
+            <span class="notification-badge">@_contadorNoLeidas</span>
+        }
+    </button>
+
+    @if (_mostrarNotificaciones)
+    {
+        <div class="notifications-dropdown">
+            <div class="notifications-header">
+                <h6 class="mb-0">Notificaciones</h6>
+                @if (_notificaciones.Any(n => !n.Leida))
+                {
+                    <button class="btn btn-sm btn-link text-primary" @onclick="MarcarTodasComoLeidas">
+                        Marcar todas como leídas
+                    </button>
+                }
+            </div>
+            
+            <div class="notifications-body">
+                @if (_notificaciones.Any())
+                {
+                    @foreach (var notificacion in _notificaciones.Take(10))
+                    {
+                        <div class="notification-item @(notificacion.Leida ? "read" : "unread")" 
+                             @onclick="() => MarcarComoLeida(notificacion.Id)">
+                            <div class="notification-icon">
+                                <i class="bi @GetIconoTipo(notificacion.Tipo ?? "Sistema")"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-title">@notificacion.Titulo</div>
+                                <div class="notification-message">@notificacion.Mensaje</div>
+                                <div class="notification-date">@notificacion.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="notification-empty">
+                        <i class="bi bi-bell-slash text-muted"></i>
+                        <p class="text-muted mb-0">No hay notificaciones</p>
+                    </div>
+                }
+            </div>
+            
+            @if (_notificaciones.Count > 10)
+            {
+                <div class="notifications-footer">
+                    <button class="btn btn-sm btn-outline-primary w-100">
+                        Ver todas las notificaciones
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<SGA.Web.Services.NotificacionDto> _notificaciones = new();
+    private bool _mostrarNotificaciones = false;
+    private int _contadorNoLeidas = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User?.Identity?.IsAuthenticated == true)
+        {
+            // Inicializar servicio de notificaciones
+            await NotificacionesService.InicializarAsync();
+            
+            // Cargar notificaciones existentes
+            await CargarNotificaciones();
+            
+            // Suscribirse a eventos
+            NotificacionesService.NotificacionRecibida += OnNotificacionRecibida;
+            NotificacionesService.ContadorActualizado += OnContadorActualizado;
+        }
+    }
+
+    private async Task CargarNotificaciones()
+    {
+        try
+        {
+            _notificaciones = await NotificacionesService.ObtenerNotificacionesAsync();
+            ActualizarContador();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar notificaciones: {ex.Message}");
+        }
+    }
+
+    private void OnNotificacionRecibida(SGA.Web.Services.NotificacionDto notificacion)
+    {
+        // Agregar nueva notificación al inicio de la lista
+        _notificaciones.Insert(0, notificacion);
+        ActualizarContador();
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnContadorActualizado(int contador)
+    {
+        _contadorNoLeidas = contador;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ActualizarContador()
+    {
+        _contadorNoLeidas = _notificaciones.Count(n => !n.Leida);
+    }
+
+    private void ToggleNotifications()
+    {
+        _mostrarNotificaciones = !_mostrarNotificaciones;
+    }
+
+    private async Task MarcarComoLeida(Guid notificacionId)
+    {
+        try
+        {
+            await NotificacionesService.MarcarComoLeidaAsync(notificacionId);
+            
+            var notificacion = _notificaciones.FirstOrDefault(n => n.Id == notificacionId);
+            if (notificacion != null)
+            {
+                notificacion.Leida = true;
+                ActualizarContador();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al marcar notificación como leída: {ex.Message}");
+        }
+    }
+
+    private async Task MarcarTodasComoLeidas()
+    {
+        try
+        {
+            await NotificacionesService.MarcarTodasComoLeidasAsync();
+            
+            foreach (var notificacion in _notificaciones)
+            {
+                notificacion.Leida = true;
+            }
+            
+            ActualizarContador();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al marcar todas las notificaciones como leídas: {ex.Message}");
+        }
+    }
+
+    private string GetIconoTipo(string tipo)
+    {
+        return tipo switch
+        {
+            "Aprobacion" => "bi-check-circle-fill text-success",
+            "Rechazo" => "bi-x-circle-fill text-danger",
+            "Comentario" => "bi-chat-fill text-info",
+            "Recordatorio" => "bi-clock-fill text-warning",
+            "Sistema" => "bi-gear-fill text-secondary",
+            _ => "bi-info-circle-fill text-primary"
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (NotificacionesService != null)
+        {
+            NotificacionesService.NotificacionRecibida -= OnNotificacionRecibida;
+            NotificacionesService.ContadorActualizado -= OnContadorActualizado;
+            await NotificacionesService.DisposeAsync();
+        }
+    }
+}

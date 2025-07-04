@@ -200,6 +200,10 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
 
             _logger.LogInformation("Total de evidencias creadas: {Count}", evidenciasCreadas.Count);
 
+            // Enviar notificación a administradores
+            _logger.LogInformation("Enviando notificación a administradores");
+            await _notificationService.NotificarNuevaSolicitudEvidenciasAsync(docente.NombreCompleto, evidenciasCreadas.Count);
+
             return new ResponseEvidenciasInvestigacionDto
             {
                 Exitoso = true,

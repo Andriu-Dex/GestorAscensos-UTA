@@ -24,6 +24,10 @@
     
     <!-- Notificaciones -->
     <PackageReference Include="Blazored.Toast" Version="4.2.1" />
+    
+    <!-- SignalR para notificaciones en tiempo real -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
+
   </ItemGroup>
 
 </Project>

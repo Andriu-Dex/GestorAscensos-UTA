@@ -10,6 +10,7 @@ public interface IUsuarioRepository
     Task<Usuario> UpdateAsync(Usuario usuario);
     Task<bool> DeleteAsync(Guid id);
     Task<bool> ExistsAsync(Guid id);
+    Task<List<Usuario>> GetAdministradoresAsync();
 }
 
 public interface IDocenteRepository
