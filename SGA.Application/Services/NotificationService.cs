@@ -6,10 +6,12 @@ namespace SGA.Application.Services;
 public class NotificationService : INotificationService
 {
     private readonly ILogger<NotificationService> _logger;
+    private readonly IEmailService _emailService;
 
-    public NotificationService(ILogger<NotificationService> logger)
+    public NotificationService(ILogger<NotificationService> logger, IEmailService emailService)
     {
         _logger = logger;
+        _emailService = emailService;
     }
 
     // Notificaciones para obras académicas
@@ -136,12 +138,18 @@ public class NotificationService : INotificationService
             _logger.LogInformation("🎉 Ascenso aprobado para {EmailDocente}: {NivelAnterior} -> {NivelNuevo}", 
                 emailDocente, nivelAnterior, nivelNuevo);
             
-            // TODO: Enviar email de felicitación al docente
-            // El mensaje podría ser algo como:
-            // "¡Felicitaciones! Su solicitud de ascenso ha sido aprobada. 
-            //  Ha sido promovido de {nivelAnterior} a {nivelNuevo}."
+            // Enviar email de felicitación al docente
+            var emailEnviado = await _emailService.EnviarCorreoFelicitacionAscensoAsync(
+                emailDocente, nombreDocente, nivelAnterior, nivelNuevo);
             
-            await Task.CompletedTask;
+            if (emailEnviado)
+            {
+                _logger.LogInformation("✅ Email de felicitación enviado exitosamente a {EmailDocente}", emailDocente);
+            }
+            else
+            {
+                _logger.LogWarning("⚠️ No se pudo enviar el email de felicitación a {EmailDocente}", emailDocente);
+            }
         }
         catch (Exception ex)
         {
@@ -156,10 +164,18 @@ public class NotificationService : INotificationService
             _logger.LogInformation("❌ Ascenso rechazado para {EmailDocente}: {NivelSolicitado}, Motivo: {Motivo}", 
                 emailDocente, nivelSolicitado, motivo);
             
-            // TODO: Enviar email al docente notificando el rechazo
-            // El mensaje podría incluir el motivo y pasos a seguir
+            // Enviar email al docente notificando el rechazo
+            var emailEnviado = await _emailService.EnviarCorreoRechazoAscensoAsync(
+                emailDocente, nombreDocente, nivelSolicitado, motivo);
             
-            await Task.CompletedTask;
+            if (emailEnviado)
+            {
+                _logger.LogInformation("✅ Email de rechazo enviado exitosamente a {EmailDocente}", emailDocente);
+            }
+            else
+            {
+                _logger.LogWarning("⚠️ No se pudo enviar el email de rechazo a {EmailDocente}", emailDocente);
+            }
         }
         catch (Exception ex)
         {

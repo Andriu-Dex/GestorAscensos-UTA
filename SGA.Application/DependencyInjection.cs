@@ -26,6 +26,9 @@ public static class DependencyInjection
         services.AddScoped<IObrasAcademicasService, ObrasAcademicasService>();
         services.AddScoped<INotificationService, NotificationService>();
         
+        // Servicio de email
+        services.AddScoped<IEmailService, EmailService>();
+        
         // Servicios para certificados de capacitación
         services.AddScoped<ICertificadosCapacitacionService, CertificadosCapacitacionService>();
         
