@@ -1,4 +1,9 @@
 @page "/reportes"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
+@using SGA.Web.Services
+@using Blazored.Toast.Services
 @attribute [Authorize]
 @inject IApiService ApiService
 @inject IJSRuntime JSRuntime
@@ -276,7 +281,7 @@
 <!-- Modal para Reportes por Proceso -->
 @if (mostrarModalProcesos)
 {
-    <ReportesPorProcesoDialog DocenteId="@usuarioId" OnClose="CerrarModalProcesos" />
+    <ReportesPorProcesoDialog OnClose="CerrarModalProcesos" />
 }
 
 <!-- Modal para Vista Previa -->

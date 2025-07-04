@@ -240,3 +240,168 @@ window.downloadFromDataUrl = (dataUrl, fileName) => {
     }
   }
 };
+
+// Función para mostrar vista previa de reportes HTML en modal
+window.showReportPreview = (
+  htmlContent,
+  title = "Vista Previa del Reporte"
+) => {
+  try {
+    // Crear un div para el modal
+    const modalDiv = document.createElement("div");
+    modalDiv.className = "report-preview-modal";
+    modalDiv.style.position = "fixed";
+    modalDiv.style.top = "0";
+    modalDiv.style.left = "0";
+    modalDiv.style.width = "100%";
+    modalDiv.style.height = "100%";
+    modalDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    modalDiv.style.zIndex = "9999";
+    modalDiv.style.display = "flex";
+    modalDiv.style.justifyContent = "center";
+    modalDiv.style.alignItems = "center";
+
+    // Crear el contenido del modal
+    const modalContent = document.createElement("div");
+    modalContent.style.backgroundColor = "white";
+    modalContent.style.width = "90%";
+    modalContent.style.height = "90%";
+    modalContent.style.borderRadius = "8px";
+    modalContent.style.display = "flex";
+    modalContent.style.flexDirection = "column";
+    modalContent.style.overflow = "hidden";
+    modalContent.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.3)";
+
+    // Crear la barra de título
+    const titleBar = document.createElement("div");
+    titleBar.style.backgroundColor = "#8a1538";
+    titleBar.style.color = "white";
+    titleBar.style.padding = "15px 20px";
+    titleBar.style.display = "flex";
+    titleBar.style.justifyContent = "space-between";
+    titleBar.style.alignItems = "center";
+    titleBar.style.fontSize = "18px";
+    titleBar.style.fontWeight = "600";
+
+    const titleText = document.createElement("span");
+    titleText.textContent = title;
+    titleBar.appendChild(titleText);
+
+    // Crear botón de cerrar
+    const closeBtn = document.createElement("button");
+    closeBtn.innerHTML = "&times;";
+    closeBtn.style.background = "none";
+    closeBtn.style.border = "none";
+    closeBtn.style.color = "white";
+    closeBtn.style.fontSize = "24px";
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.padding = "0";
+    closeBtn.style.width = "30px";
+    closeBtn.style.height = "30px";
+    closeBtn.style.display = "flex";
+    closeBtn.style.alignItems = "center";
+    closeBtn.style.justifyContent = "center";
+    closeBtn.style.borderRadius = "50%";
+    closeBtn.style.transition = "background-color 0.2s";
+
+    closeBtn.addEventListener("mouseenter", () => {
+      closeBtn.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+    });
+
+    closeBtn.addEventListener("mouseleave", () => {
+      closeBtn.style.backgroundColor = "transparent";
+    });
+
+    closeBtn.addEventListener("click", () => {
+      document.body.removeChild(modalDiv);
+    });
+
+    titleBar.appendChild(closeBtn);
+
+    // Crear contenedor del contenido HTML
+    const contentContainer = document.createElement("div");
+    contentContainer.style.flex = "1";
+    contentContainer.style.overflow = "auto";
+    contentContainer.style.padding = "20px";
+
+    // Insertar el contenido HTML
+    contentContainer.innerHTML = htmlContent;
+
+    // Aplicar estilos básicos al contenido
+    const style = document.createElement("style");
+    style.textContent = `
+      .report-preview-modal h1, .report-preview-modal h2, .report-preview-modal h3 {
+        color: #8a1538;
+        margin-bottom: 15px;
+      }
+      .report-preview-modal table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .report-preview-modal th, .report-preview-modal td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .report-preview-modal th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+      }
+      .report-preview-modal .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .report-preview-modal .badge.bg-success {
+        background-color: #198754 !important;
+        color: white;
+      }
+      .report-preview-modal .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: black;
+      }
+      .report-preview-modal .badge.bg-danger {
+        background-color: #dc3545 !important;
+        color: white;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Ensamblar el modal
+    modalContent.appendChild(titleBar);
+    modalContent.appendChild(contentContainer);
+    modalDiv.appendChild(modalContent);
+
+    // Cerrar modal al hacer clic en el fondo
+    modalDiv.addEventListener("click", (e) => {
+      if (e.target === modalDiv) {
+        document.body.removeChild(modalDiv);
+      }
+    });
+
+    // Cerrar modal con Escape
+    document.addEventListener("keydown", function escapeHandler(e) {
+      if (e.key === "Escape") {
+        document.body.removeChild(modalDiv);
+        document.removeEventListener("keydown", escapeHandler);
+      }
+    });
+
+    // Agregar el modal al DOM
+    document.body.appendChild(modalDiv);
+
+    // Agregar animación de entrada
+    modalDiv.style.opacity = "0";
+    setTimeout(() => {
+      modalDiv.style.transition = "opacity 0.3s ease";
+      modalDiv.style.opacity = "1";
+    }, 10);
+  } catch (error) {
+    console.error("Error al mostrar vista previa del reporte:", error);
+    if (typeof showToast === "function") {
+      showToast("Error al mostrar la vista previa: " + error.message, "error");
+    }
+  }
+};

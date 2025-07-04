@@ -1,3 +1,6 @@
+@using Microsoft.JSInterop
+@using SGA.Web.Services
+@using Blazored.Toast.Services
 @inject IApiService ApiService
 @inject IJSRuntime JSRuntime
 @inject IToastService ToastService
@@ -44,10 +47,10 @@
                                                         Solicitud #@proceso.Id
                                                     </h6>
                                                     <p class="card-text mb-1">
-                                                        <strong>Cargo Actual:</strong> @proceso.CargoActual
+                                                        <strong>Nivel Actual:</strong> @proceso.NivelActual
                                                     </p>
                                                     <p class="card-text mb-1">
-                                                        <strong>Cargo Solicitado:</strong> @proceso.CargoSolicitado
+                                                        <strong>Nivel Solicitado:</strong> @proceso.NivelSolicitado
                                                     </p>
                                                     <p class="card-text mb-2">
                                                         <strong>Fecha:</strong> @proceso.FechaSolicitud.ToString("dd/MM/yyyy")
@@ -154,7 +157,6 @@
 </style>
 
 @code {
-    [Parameter] public string? DocenteId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     private bool cargando = true;
@@ -164,14 +166,13 @@
 
     public class ProcesoAscensoDto
     {
-        public int Id { get; set; }
-        public string CargoActual { get; set; } = string.Empty;
-        public string CargoSolicitado { get; set; } = string.Empty;
+        public Guid Id { get; set; }
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
         public DateTime FechaSolicitud { get; set; }
         public string Estado { get; set; } = string.Empty;
         public string DocenteNombre { get; set; } = string.Empty;
         public string DocenteCedula { get; set; } = string.Empty;
-        public string Facultad { get; set; } = string.Empty;
     }
 
     protected override async Task OnInitializedAsync()
@@ -186,13 +187,14 @@
             cargando = true;
             StateHasChanged();
 
-            // Obtener procesos del docente
-            var endpoint = $"api/solicitudes/docente/{DocenteId}";
+            // Obtener procesos del docente autenticado
+            var endpoint = "api/solicitudascenso/mis-solicitudes";
             procesos = await ApiService.GetAsync<List<ProcesoAscensoDto>>(endpoint);
         }
         catch (Exception ex)
         {
             ToastService.ShowError($"Error al cargar procesos: {ex.Message}");
+            Console.WriteLine($"Error al cargar procesos: {ex}");
         }
         finally
         {
@@ -201,7 +203,7 @@
         }
     }
 
-    private async Task VerReporteProceso(int procesoId)
+    private async Task VerReporteProceso(Guid procesoId)
     {
         try
         {
@@ -209,13 +211,13 @@
             mensajeCarga = "Cargando vista previa del reporte...";
             StateHasChanged();
 
-            var endpoint = $"api/reportes/vista/proceso/{procesoId}";
-            var htmlContent = await ApiService.GetAsync<string>(endpoint);
+            var endpoint = $"api/reportes/vista/solicitud/{procesoId}";
+            var htmlContent = await ApiService.GetHtmlAsync(endpoint);
             
             if (!string.IsNullOrEmpty(htmlContent))
             {
                 // Mostrar el contenido HTML en un modal usando JavaScript
-                await JSRuntime.InvokeVoidAsync("showReportPreview", htmlContent, "Reporte del Proceso");
+                await JSRuntime.InvokeVoidAsync("showReportPreview", htmlContent, "Reporte de la Solicitud");
                 ToastService.ShowSuccess("Vista previa cargada exitosamente");
             }
             else
@@ -226,6 +228,7 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Error al mostrar vista previa: {ex.Message}");
+            Console.WriteLine($"Error al mostrar vista previa: {ex}");
         }
         finally
         {
@@ -234,20 +237,20 @@
         }
     }
 
-    private async Task DescargarReporteProceso(int procesoId)
+    private async Task DescargarReporteProceso(Guid procesoId)
     {
         try
         {
             cargandoReporte = true;
-            mensajeCarga = "Generando reporte del proceso...";
+            mensajeCarga = "Generando reporte de la solicitud...";
             StateHasChanged();
 
-            var endpoint = $"api/reportes/proceso/{procesoId}";
-            var response = await ApiService.GetAsync<byte[]>(endpoint);
+            var endpoint = $"api/reportes/solicitud/{procesoId}";
+            var response = await ApiService.GetBytesAsync(endpoint);
             
             if (response != null)
             {
-                var nombreArchivo = $"ReporteProceso_{procesoId}.pdf";
+                var nombreArchivo = $"ReporteSolicitud_{procesoId}.pdf";
                 await DescargarArchivo(response, nombreArchivo);
                 ToastService.ShowSuccess("Reporte descargado exitosamente");
             }
@@ -259,6 +262,7 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Error al descargar reporte: {ex.Message}");
+            Console.WriteLine($"Error al descargar reporte: {ex}");
         }
         finally
         {
@@ -267,20 +271,20 @@
         }
     }
 
-    private async Task DescargarCertificadoAscenso(int procesoId)
+    private async Task DescargarCertificadoAscenso(Guid procesoId)
     {
         try
         {
             cargandoReporte = true;
-            mensajeCarga = "Generando certificado de ascenso...";
+            mensajeCarga = "Generando certificado de estado...";
             StateHasChanged();
 
-            var endpoint = $"api/reportes/certificado-ascenso/{procesoId}";
-            var response = await ApiService.GetAsync<byte[]>(endpoint);
+            var endpoint = $"api/reportes/certificado-estado";
+            var response = await ApiService.GetBytesAsync(endpoint);
             
             if (response != null)
             {
-                var nombreArchivo = $"CertificadoAscenso_{procesoId}.pdf";
+                var nombreArchivo = $"CertificadoEstado_{procesoId}.pdf";
                 await DescargarArchivo(response, nombreArchivo);
                 ToastService.ShowSuccess("Certificado descargado exitosamente");
             }
@@ -292,6 +296,7 @@
         catch (Exception ex)
         {
             ToastService.ShowError($"Error al descargar certificado: {ex.Message}");
+            Console.WriteLine($"Error al descargar certificado: {ex}");
         }
         finally
         {
