@@ -1,0 +1,412 @@
+@using SGA.Web.Services
+@using Microsoft.JSInterop
+@inject NotificacionesService NotificacionesService
+@inject IJSRuntime JSRuntime
+
+<div class="modal fade @(_isVisible ? "show" : "")" 
+     id="notificationsModal" 
+     tabindex="-1" 
+     style="display: @(_isVisible ? "block" : "none")"
+     @onclick="CloseModal"
+     @onclick:stopPropagation="false">
+    
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" @onclick:stopPropagation="true">
+        <div class="modal-content notifications-modal">
+            <div class="modal-header notifications-modal-header">
+                <div class="header-info">
+                    <h5 class="modal-title">
+                        <i class="bi bi-bell-fill me-2"></i>
+                        Centro de Notificaciones
+                    </h5>
+                    <span class="notifications-count">@_totalNotificaciones notificación@(_totalNotificaciones != 1 ? "es" : "")</span>
+                </div>
+                <div class="header-actions">
+                    @if (_notificaciones.Any(n => !n.Leida))
+                    {
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-primary me-2" 
+                                @onclick="MarcarTodasComoLeidas"
+                                disabled="@_cargando">
+                            <i class="bi bi-check2-all me-1"></i>
+                            Marcar todas como leídas
+                        </button>
+                    }
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+            </div>
+            
+            <div class="modal-body notifications-modal-body">
+                @if (_cargando)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-3 text-muted-nm">Cargando notificaciones...</p>
+                    </div>
+                }
+                else if (_notificaciones.Any())
+                {
+                    <!-- Filtros -->
+                    <div class="notifications-filters mb-4">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" @bind="_filtroTipo" @bind:after="FiltrarNotificaciones">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="SolicitudAprobada">Aprobaciones</option>
+                                    <option value="SolicitudRechazada">Rechazos</option>
+                                    <option value="NuevaSolicitud">Nuevas solicitudes</option>
+                                    <option value="Info">Información</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" @bind="_filtroEstado" @bind:after="FiltrarNotificaciones">
+                                    <option value="">Todas</option>
+                                    <option value="unread">No leídas</option>
+                                    <option value="read">Leídas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           placeholder="Buscar notificaciones..." 
+                                           @bind="_textoBusqueda" 
+                                           @bind:after="FiltrarNotificaciones">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de notificaciones -->
+                    <div class="notifications-list">
+                        @foreach (var notificacion in _notificacionesFiltradas.Skip(_paginaActual * _itemsPorPagina).Take(_itemsPorPagina))
+                        {
+                            <div class="notification-card @(notificacion.Leida ? "read" : "unread")" 
+                                 @onclick="() => ToggleNotificacion(notificacion.Id)">
+                                
+                                <div class="notification-card-header">
+                                    <div class="notification-icon-large @GetColorTipo(notificacion.Tipo ?? "Info")">
+                                        <i class="bi @GetIconoTipo(notificacion.Tipo ?? "Info")"></i>
+                                    </div>
+                                    <div class="notification-card-info">
+                                        <h6 class="notification-card-title">@notificacion.Titulo</h6>
+                                        <div class="notification-card-meta">
+                                            <span class="notification-card-type @GetColorTipo(notificacion.Tipo ?? "Info")">
+                                                @FormatearTipo(notificacion.Tipo ?? "Info")
+                                            </span>
+                                            <span class="notification-card-date">
+                                                @FormatearFechaCompleta(notificacion.FechaCreacion)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="notification-card-actions">
+                                        @if (!notificacion.Leida)
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => MarcarComoLeida(notificacion.Id)"
+                                                    @onclick:stopPropagation="true"
+                                                    title="Marcar como leída">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                        }
+                                        @if (!string.IsNullOrEmpty(notificacion.UrlAccion))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => IrAAccion(notificacion.UrlAccion!)"
+                                                    @onclick:stopPropagation="true"
+                                                    title="Ver detalles">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                <div class="notification-card-body">
+                                    <p class="notification-card-message">@notificacion.Mensaje</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Paginación -->
+                    @if (_notificacionesFiltradas.Count > _itemsPorPagina)
+                    {
+                        <div class="notifications-pagination">
+                            <nav>
+                                <ul class="pagination pagination-sm justify-content-center">
+                                    <li class="page-item @(_paginaActual == 0 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PaginaAnterior" disabled="@(_paginaActual == 0)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = 0; i < TotalPaginas; i++)
+                                    {
+                                        var pagina = i;
+                                        <li class="page-item @(_paginaActual == i ? "active" : "")">
+                                            <button class="page-link" @onclick="() => IrAPagina(pagina)">
+                                                @(i + 1)
+                                            </button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(_paginaActual >= TotalPaginas - 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="PaginaSiguiente" disabled="@(_paginaActual >= TotalPaginas - 1)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="notifications-empty">
+                        <div class="empty-state">
+                            <i class="bi bi-bell-slash display-4 text-muted-nm"></i>
+                            <h6 class="mt-3">No hay notificaciones</h6>
+                            <p class="text-muted-nm">Cuando recibas notificaciones aparecerán aquí.</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_isVisible)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public EventCallback OnNotificationRead { get; set; }
+
+    private bool _isVisible;
+    private bool _cargando = true;
+    private List<NotificacionDto> _notificaciones = new();
+    private List<NotificacionDto> _notificacionesFiltradas = new();
+    private int _totalNotificaciones;
+    private int _paginaActual = 0;
+    private const int _itemsPorPagina = 10;
+    
+    // Filtros
+    private string _filtroTipo = "";
+    private string _filtroEstado = "";
+    private string _textoBusqueda = "";
+
+    private int TotalPaginas => (int)Math.Ceiling((double)_notificacionesFiltradas.Count / _itemsPorPagina);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible != _isVisible)
+        {
+            _isVisible = IsVisible;
+            if (_isVisible)
+            {
+                await CargarNotificaciones();
+            }
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Componente inicializado
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarNotificaciones()
+    {
+        _cargando = true;
+        StateHasChanged();
+
+        try
+        {
+            _notificaciones = await NotificacionesService.ObtenerNotificacionesAsync(100); // Cargar más notificaciones
+            _totalNotificaciones = _notificaciones.Count;
+            FiltrarNotificaciones();
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Error", "No se pudieron cargar las notificaciones", "danger");
+        }
+        finally
+        {
+            _cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FiltrarNotificaciones()
+    {
+        _notificacionesFiltradas = _notificaciones.Where(n =>
+        {
+            // Filtro por tipo
+            if (!string.IsNullOrEmpty(_filtroTipo) && n.Tipo != _filtroTipo)
+                return false;
+
+            // Filtro por estado
+            if (!string.IsNullOrEmpty(_filtroEstado))
+            {
+                if (_filtroEstado == "read" && !n.Leida)
+                    return false;
+                if (_filtroEstado == "unread" && n.Leida)
+                    return false;
+            }
+
+            // Filtro por texto
+            if (!string.IsNullOrEmpty(_textoBusqueda))
+            {
+                var busqueda = _textoBusqueda.ToLower();
+                return n.Titulo.ToLower().Contains(busqueda) || 
+                       n.Mensaje.ToLower().Contains(busqueda);
+            }
+
+            return true;
+        }).ToList();
+
+        _paginaActual = 0; // Resetear paginación
+        StateHasChanged();
+    }
+
+    private async Task MarcarComoLeida(Guid notificacionId)
+    {
+        try
+        {
+            await NotificacionesService.MarcarComoLeidaAsync(notificacionId);
+            var notificacion = _notificaciones.FirstOrDefault(n => n.Id == notificacionId);
+            if (notificacion != null)
+            {
+                notificacion.Leida = true;
+                FiltrarNotificaciones();
+                await OnNotificationRead.InvokeAsync();
+            }
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Error", "No se pudo marcar la notificación como leída", "danger");
+        }
+    }
+
+    private async Task MarcarTodasComoLeidas()
+    {
+        try
+        {
+            await NotificacionesService.MarcarTodasComoLeidasAsync();
+            foreach (var notificacion in _notificaciones)
+            {
+                notificacion.Leida = true;
+            }
+            FiltrarNotificaciones();
+            await OnNotificationRead.InvokeAsync();
+            await JSRuntime.InvokeVoidAsync("showToast", "Éxito", "Todas las notificaciones han sido marcadas como leídas", "success");
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Error", "No se pudieron marcar las notificaciones como leídas", "danger");
+        }
+    }
+
+    private async Task ToggleNotificacion(Guid notificacionId)
+    {
+        var notificacion = _notificaciones.FirstOrDefault(n => n.Id == notificacionId);
+        if (notificacion != null && !notificacion.Leida)
+        {
+            await MarcarComoLeida(notificacionId);
+        }
+    }
+
+    private async Task IrAAccion(string url)
+    {
+        await CloseModal();
+        // Aquí podrías navegar a la URL especificada
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private void PaginaAnterior()
+    {
+        if (_paginaActual > 0)
+        {
+            _paginaActual--;
+            StateHasChanged();
+        }
+    }
+
+    private void PaginaSiguiente()
+    {
+        if (_paginaActual < TotalPaginas - 1)
+        {
+            _paginaActual++;
+            StateHasChanged();
+        }
+    }
+
+    private void IrAPagina(int pagina)
+    {
+        _paginaActual = pagina;
+        StateHasChanged();
+    }
+
+    private async Task CloseModal()
+    {
+        _isVisible = false;
+        await IsVisibleChanged.InvokeAsync(_isVisible);
+    }
+
+    private string GetIconoTipo(string tipo) => tipo switch
+    {
+        "SolicitudAprobada" or "AscensoAprobado" or "CertificadoAprobado" or "ObraAprobada" or "EvidenciaAprobada" => "bi-check-circle-fill",
+        "SolicitudRechazada" or "AscensoRechazado" or "CertificadoRechazado" or "ObraRechazada" or "EvidenciaRechazada" => "bi-x-circle-fill",
+        "NuevaSolicitud" => "bi-file-earmark-plus-fill",
+        "Advertencia" => "bi-exclamation-triangle-fill",
+        "Error" => "bi-exclamation-circle-fill",
+        "Exito" => "bi-check-circle-fill",
+        "Info" => "bi-info-circle-fill",
+        _ => "bi-bell-fill"
+    };
+
+    private string GetColorTipo(string tipo) => tipo switch
+    {
+        "SolicitudAprobada" or "AscensoAprobado" or "CertificadoAprobado" or "ObraAprobada" or "EvidenciaAprobada" or "Exito" => "success",
+        "SolicitudRechazada" or "AscensoRechazado" or "CertificadoRechazado" or "ObraRechazada" or "EvidenciaRechazada" or "Error" => "danger",
+        "NuevaSolicitud" => "primary",
+        "Advertencia" => "warning",
+        "Info" => "info",
+        _ => "secondary"
+    };
+
+    private string FormatearTipo(string tipo) => tipo switch
+    {
+        "SolicitudAprobada" => "Aprobada",
+        "SolicitudRechazada" => "Rechazada",
+        "NuevaSolicitud" => "Nueva Solicitud",
+        "AscensoAprobado" => "Ascenso Aprobado",
+        "AscensoRechazado" => "Ascenso Rechazado",
+        "CertificadoAprobado" => "Certificado Aprobado",
+        "CertificadoRechazado" => "Certificado Rechazado",
+        "ObraAprobada" => "Obra Aprobada",
+        "ObraRechazada" => "Obra Rechazada",
+        "EvidenciaAprobada" => "Evidencia Aprobada",
+        "EvidenciaRechazada" => "Evidencia Rechazada",
+        "Advertencia" => "Advertencia",
+        "Error" => "Error",
+        "Exito" => "Éxito",
+        "Info" => "Información",
+        _ => "Sistema"
+    };
+
+    private string FormatearFechaCompleta(DateTime fecha)
+    {
+        return fecha.ToString("dd 'de' MMMM 'de' yyyy 'a las' HH:mm", new System.Globalization.CultureInfo("es-ES"));
+    }
+}

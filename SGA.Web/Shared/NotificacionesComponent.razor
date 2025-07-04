@@ -2,44 +2,91 @@
 @using SGA.Web.Services
 @inject NotificacionesService NotificacionesService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <div class="notifications-container">
-    <button class="btn btn-link notification-bell" @onclick="ToggleNotifications" title="Notificaciones">
-        <i class="bi bi-bell-fill"></i>
+    <button class="btn notification-bell" @onclick="ToggleNotifications" title="Notificaciones">
+        <i class="bi bi-bell-fill notification-icon-bell"></i>
         @if (_contadorNoLeidas > 0)
         {
-            <span class="notification-badge">@_contadorNoLeidas</span>
+            <span class="notification-badge animate-pulse">
+                @(_contadorNoLeidas > 99 ? "99+" : _contadorNoLeidas.ToString())
+            </span>
         }
     </button>
 
     @if (_mostrarNotificaciones)
     {
-        <div class="notifications-dropdown">
+        <div class="notifications-overlay" @onclick="CerrarNotificaciones"></div>
+        <div class="notifications-dropdown animate-fadeIn">
             <div class="notifications-header">
-                <h6 class="mb-0">Notificaciones</h6>
-                @if (_notificaciones.Any(n => !n.Leida))
+                <div class="header-content">
+                    <div class="header-title">
+                        <i class="bi bi-bell-fill me-2"></i>
+                        <span>Notificaciones</span>
+                    </div>
+                    <div class="header-actions">
+                        @if (_notificaciones.Any(n => !n.Leida))
+                        {
+                            <button class="btn btn-sm btn-link mark-all-btn" 
+                                    @onclick="MarcarTodasComoLeidas" 
+                                    title="Marcar todas como leídas">
+                                <i class="bi bi-check2-all me-1"></i>
+                                <span class="d-none d-md-inline">Marcar todas</span>
+                            </button>
+                        }
+                        <button class="btn btn-sm btn-link close-btn" 
+                                @onclick="CerrarNotificaciones" 
+                                title="Cerrar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                @if (_contadorNoLeidas > 0)
                 {
-                    <button class="btn btn-sm btn-link text-primary" @onclick="MarcarTodasComoLeidas">
-                        Marcar todas como leídas
-                    </button>
+                    <div class="notifications-counter">
+                        <small class="text-muted-nc">
+                            @_contadorNoLeidas notificación@(_contadorNoLeidas != 1 ? "es" : "") sin leer
+                        </small>
+                    </div>
                 }
             </div>
             
             <div class="notifications-body">
                 @if (_notificaciones.Any())
                 {
-                    @foreach (var notificacion in _notificaciones.Take(10))
+                    @foreach (var notificacion in _notificaciones.Take(8))
                     {
-                        <div class="notification-item @(notificacion.Leida ? "read" : "unread")" 
-                             @onclick="() => MarcarComoLeida(notificacion.Id)">
-                            <div class="notification-icon">
-                                <i class="bi @GetIconoTipo(notificacion.Tipo ?? "Sistema")"></i>
+                        <div class="notification-item @(notificacion.Leida ? "read" : "unread") @GetEstadoClase(notificacion)" 
+                             @onclick="() => MarcarComoLeida(notificacion.Id)"
+                             @onclick:stopPropagation="true">
+                            
+                            <div class="notification-indicator @(notificacion.Leida ? "" : "active")"></div>
+                            
+                            <div class="notification-icon-container">
+                                <div class="notification-icon @GetColorTipo(notificacion.Tipo ?? "Info")">
+                                    <i class="bi @GetIconoTipo(notificacion.Tipo ?? "Info")"></i>
+                                </div>
                             </div>
+                            
                             <div class="notification-content">
-                                <div class="notification-title">@notificacion.Titulo</div>
-                                <div class="notification-message">@notificacion.Mensaje</div>
-                                <div class="notification-date">@notificacion.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</div>
+                                <div class="notification-header-item">
+                                    <h6 class="notification-title">@notificacion.Titulo</h6>
+                                    <span class="notification-time" title="@notificacion.FechaCreacion.ToString("dd/MM/yyyy HH:mm:ss")">
+                                        @FormatearTiempo(notificacion.FechaCreacion)
+                                    </span>
+                                </div>
+                                <p class="notification-message">@notificacion.Mensaje</p>
+                                <div class="notification-metadata">
+                                    <span class="notification-type-badge @GetColorTipo(notificacion.Tipo ?? "Info")">
+                                        @FormatearTipo(notificacion.Tipo ?? "Info")
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(notificacion.UrlAccion))
+                                    {
+                                        <i class="bi bi-arrow-right-circle ms-auto notification-action-icon"></i>
+                                    }
+                                </div>
                             </div>
                         </div>
                     }
@@ -47,17 +94,21 @@
                 else
                 {
                     <div class="notification-empty">
-                        <i class="bi bi-bell-slash text-muted"></i>
-                        <p class="text-muted mb-0">No hay notificaciones</p>
+                        <div class="empty-icon">
+                            <i class="bi bi-bell-slash"></i>
+                        </div>
+                        <h6 class="empty-title">¡Todo al día!</h6>
+                        <p class="empty-message">No tienes notificaciones pendientes</p>
                     </div>
                 }
             </div>
             
-            @if (_notificaciones.Count > 10)
+            @if (_notificaciones.Count > 8)
             {
                 <div class="notifications-footer">
-                    <button class="btn btn-sm btn-outline-primary w-100">
-                        Ver todas las notificaciones
+                    <button class="btn btn-primary btn-sm w-100 view-all-btn" @onclick="VerTodasNotificaciones">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Ver todas las notificaciones (@_notificaciones.Count)
                     </button>
                 </div>
             }
@@ -65,9 +116,15 @@
     }
 </div>
 
+<!-- Modal completo de notificaciones -->
+<NotificationsModal IsVisible="_mostrarModal" 
+                   IsVisibleChanged="OnModalVisibilityChanged"
+                   OnNotificationRead="OnNotificationReadFromModal" />
+
 @code {
     private List<SGA.Web.Services.NotificacionDto> _notificaciones = new();
     private bool _mostrarNotificaciones = false;
+    private bool _mostrarModal = false;
     private int _contadorNoLeidas = 0;
 
     protected override async Task OnInitializedAsync()
@@ -107,6 +164,20 @@
         _notificaciones.Insert(0, notificacion);
         ActualizarContador();
         
+        // Mostrar toast de notificación
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            await InvokeAsync(async () =>
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", 
+                    notificacion.Titulo, 
+                    notificacion.Mensaje, 
+                    GetColorTipo(notificacion.Tipo ?? "Info"));
+                StateHasChanged();
+            });
+        });
+        
         InvokeAsync(StateHasChanged);
     }
 
@@ -124,6 +195,11 @@
     private void ToggleNotifications()
     {
         _mostrarNotificaciones = !_mostrarNotificaciones;
+    }
+
+    private void CerrarNotificaciones()
+    {
+        _mostrarNotificaciones = false;
     }
 
     private async Task MarcarComoLeida(Guid notificacionId)
@@ -166,17 +242,103 @@
         }
     }
 
+    private void VerTodasNotificaciones()
+    {
+        _mostrarModal = true;
+        CerrarNotificaciones();
+    }
+
+    private async Task OnModalVisibilityChanged(bool isVisible)
+    {
+        _mostrarModal = isVisible;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnNotificationReadFromModal()
+    {
+        // Recargar notificaciones cuando se lean desde el modal
+        await CargarNotificaciones();
+    }
+
+    private string GetEstadoClase(SGA.Web.Services.NotificacionDto notificacion)
+    {
+        var clases = new List<string>();
+        
+        if (!notificacion.Leida)
+        {
+            clases.Add("nueva");
+        }
+        
+        clases.Add($"tipo-{GetColorTipo(notificacion.Tipo ?? "Info")}");
+        
+        return string.Join(" ", clases);
+    }
+
     private string GetIconoTipo(string tipo)
     {
         return tipo switch
         {
-            "Aprobacion" => "bi-check-circle-fill text-success",
-            "Rechazo" => "bi-x-circle-fill text-danger",
-            "Comentario" => "bi-chat-fill text-info",
-            "Recordatorio" => "bi-clock-fill text-warning",
-            "Sistema" => "bi-gear-fill text-secondary",
-            _ => "bi-info-circle-fill text-primary"
+            "SolicitudAprobada" or "AscensoAprobado" or "CertificadoAprobado" or "ObraAprobada" or "EvidenciaAprobada" => "bi-check-circle-fill",
+            "SolicitudRechazada" or "AscensoRechazado" or "CertificadoRechazado" or "ObraRechazada" or "EvidenciaRechazada" => "bi-x-circle-fill",
+            "NuevaSolicitud" => "bi-file-earmark-plus-fill",
+            "Advertencia" => "bi-exclamation-triangle-fill",
+            "Error" => "bi-exclamation-circle-fill",
+            "Exito" => "bi-check-circle-fill",
+            "Info" => "bi-info-circle-fill",
+            _ => "bi-bell-fill"
         };
+    }
+
+    private string GetColorTipo(string tipo)
+    {
+        return tipo switch
+        {
+            "SolicitudAprobada" or "AscensoAprobado" or "CertificadoAprobado" or "ObraAprobada" or "EvidenciaAprobada" or "Exito" => "success",
+            "SolicitudRechazada" or "AscensoRechazado" or "CertificadoRechazado" or "ObraRechazada" or "EvidenciaRechazada" or "Error" => "danger",
+            "NuevaSolicitud" => "primary",
+            "Advertencia" => "warning",
+            "Info" => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string FormatearTipo(string tipo)
+    {
+        return tipo switch
+        {
+            "SolicitudAprobada" => "Aprobada",
+            "SolicitudRechazada" => "Rechazada",
+            "NuevaSolicitud" => "Nueva",
+            "AscensoAprobado" => "Ascenso Aprobado",
+            "AscensoRechazado" => "Ascenso Rechazado",
+            "CertificadoAprobado" => "Certificado Aprobado",
+            "CertificadoRechazado" => "Certificado Rechazado",
+            "ObraAprobada" => "Obra Aprobada",
+            "ObraRechazada" => "Obra Rechazada",
+            "EvidenciaAprobada" => "Evidencia Aprobada",
+            "EvidenciaRechazada" => "Evidencia Rechazada",
+            "Advertencia" => "Advertencia",
+            "Error" => "Error",
+            "Exito" => "Éxito",
+            "Info" => "Información",
+            _ => "Sistema"
+        };
+    }
+
+    private string FormatearTiempo(DateTime fecha)
+    {
+        var diferencia = DateTime.Now - fecha;
+        
+        if (diferencia.TotalMinutes < 1)
+            return "Ahora";
+        else if (diferencia.TotalMinutes < 60)
+            return $"{(int)diferencia.TotalMinutes}m";
+        else if (diferencia.TotalHours < 24)
+            return $"{(int)diferencia.TotalHours}h";
+        else if (diferencia.TotalDays < 7)
+            return $"{(int)diferencia.TotalDays}d";
+        else
+            return fecha.ToString("dd/MM");
     }
 
     public async ValueTask DisposeAsync()

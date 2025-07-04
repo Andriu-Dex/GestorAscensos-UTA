@@ -194,28 +194,21 @@ public class NotificacionesService : IAsyncDisposable
 
             if (notificacion != null)
             {
-                // Mostrar toast
-                var tipoToast = notificacion.Tipo?.ToLower() switch
-                {
-                    "exito" or "solicitudaprobada" or "ascensoaprobado" or "certificadoaprobado" or "obraaprobada" or "evidenciaaprobada" => Blazored.Toast.Services.ToastLevel.Success,
-                    "error" or "solicitudrechazada" or "ascensorechazado" or "certificadorechazado" or "obrarechazada" or "evidenciarechazada" => Blazored.Toast.Services.ToastLevel.Error,
-                    "advertencia" => Blazored.Toast.Services.ToastLevel.Warning,
-                    _ => Blazored.Toast.Services.ToastLevel.Info
-                };
+                _logger.LogInformation("📨 Nueva notificación recibida: {Titulo}", notificacion.Titulo);
 
-                _toastService.ShowToast(tipoToast, notificacion.Mensaje);
-
-                // Notificar a componentes suscritos
+                // Notificar a componentes suscritos primero
                 NotificacionRecibida?.Invoke(notificacion);
                 
                 // Actualizar contador
                 var nuevoContador = await ObtenerContadorNoLeidasAsync();
                 ContadorActualizado?.Invoke(nuevoContador);
+
+                _logger.LogInformation("✅ Notificación procesada correctamente");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al procesar notificación recibida");
+            _logger.LogError(ex, "❌ Error al procesar notificación recibida");
         }
     }
 
