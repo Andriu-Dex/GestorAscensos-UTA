@@ -14,6 +14,10 @@ namespace SGA.Web.Services
         Task<DatosTTHH?> ObtenerDatosTTHH(string cedula);
         Task<bool> ValidarCorreoUnico(string email);
         Task<bool> ValidarCedulaUnica(string cedula);
+        
+        // Nuevos métodos para contenido no-JSON
+        Task<string?> GetHtmlAsync(string endpoint);
+        Task<byte[]?> GetBytesAsync(string endpoint);
     }
 
     public class ApiService : IApiService
@@ -145,6 +149,36 @@ namespace SGA.Web.Services
             {
                 Console.Error.WriteLine($"Error al validar cédula {cedula}: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<string?> GetHtmlAsync(string endpoint)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(endpoint);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error en solicitud GET HTML a {endpoint}: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<byte[]?> GetBytesAsync(string endpoint)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync(endpoint);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error en solicitud GET bytes a {endpoint}: {ex.Message}");
+                throw;
             }
         }
     }

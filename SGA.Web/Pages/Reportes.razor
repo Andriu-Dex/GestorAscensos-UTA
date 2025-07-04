@@ -1,207 +1,535 @@
 @page "/reportes"
-@using SGA.Web.Services
-@using SGA.Web.Models
 @attribute [Authorize]
 @inject IApiService ApiService
 @inject IJSRuntime JSRuntime
-@inject Blazored.Toast.Services.IToastService ToastService
+@inject IToastService ToastService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<div class="container mt-4">
-    <h2 class="mb-4">Reportes del Sistema</h2>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4 text-primary">
+                <i class="fas fa-chart-line me-2"></i>
+                Mis Reportes
+            </h2>
+        </div>
+    </div>
 
     <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Reporte de Estado Docente</h4>
+        <!-- Reportes Personales -->
+        <div class="col-lg-9">
+            <div class="card shadow mb-4">
+                <div class="card-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Reportes Personales
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <p>
-                        Este reporte muestra el estado actual del docente, incluyendo:
-                    </p>
-                    <ul>
-                        <li>Información personal y de facultad</li>
-                        <li>Nivel actual y tiempo en el nivel</li>
-                        <li>Estado de los indicadores para ascenso</li>
-                        <li>Historial de solicitudes realizadas</li>
-                    </ul>
-                    <button @onclick="DescargarReporteDocente" class="btn btn-primary mt-3" disabled="@descargando">
-                        @if (descargando)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            <span> Generando reporte...</span>
-                        }
-                        else
-                        {
-                            <i class="fas fa-file-pdf me-2"></i>
-                            <span>Descargar Reporte</span>
-                        }
-                    </button>
+                    <p class="text-muted mb-4">Genere y visualice sus reportes personales de estado docente y proceso de ascenso.</p>
+                    
+                    <div class="row g-4">
+                        <!-- Hoja de Vida -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-user fa-3x text-primary"></i>
+                                    </div>
+                                    <h6 class="card-title">Hoja de Vida</h6>
+                                    <p class="card-text small text-muted">Información personal y académica completa</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.HojaVida)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.HojaVida)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado de Requisitos -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-tasks fa-3x text-primary"></i>
+                                    </div>
+                                    <h6 class="card-title">Estado Requisitos</h6>
+                                    <p class="card-text small text-muted">Cumplimiento de requisitos para ascenso</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.EstadoRequisitos)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.EstadoRequisitos)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Historial de Ascensos -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-chart-line fa-3x text-primary"></i>
+                                    </div>
+                                    <h6 class="card-title">Historial Ascensos</h6>
+                                    <p class="card-text small text-muted">Historial completo de solicitudes</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.HistorialAscensos)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-primary btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.HistorialAscensos)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Capacitaciones -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-graduation-cap fa-3x text-success"></i>
+                                    </div>
+                                    <h6 class="card-title">Capacitaciones</h6>
+                                    <p class="card-text small text-muted">Reporte de horas de capacitación</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.Capacitaciones)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-success btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.Capacitaciones)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Obras Académicas -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-book fa-3x text-warning"></i>
+                                    </div>
+                                    <h6 class="card-title">Obras Académicas</h6>
+                                    <p class="card-text small text-muted">Producción académica y de investigación</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.ObrasAcademicas)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-warning btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.ObrasAcademicas)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reporte Completo -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-file-contract fa-3x text-info"></i>
+                                    </div>
+                                    <h6 class="card-title">Reporte Completo</h6>
+                                    <p class="card-text small text-muted">Documento integral de ascenso</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.ReporteCompleto)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-info btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.ReporteCompleto)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Certificado de Estado -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-certificate fa-3x text-danger"></i>
+                                    </div>
+                                    <h6 class="card-title">Certificado Estado</h6>
+                                    <p class="card-text small text-muted">Certificado oficial de estado docente</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-outline-info btn-sm" 
+                                                @onclick="() => VerVistaPrevia(TipoReporte.CertificadoEstado)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" 
+                                                @onclick="() => DescargarReporte(TipoReporte.CertificadoEstado)"
+                                                disabled="@cargando">
+                                            <i class="fas fa-download me-1"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reportes por Proceso -->
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm report-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-clipboard-list fa-3x" style="color: #8a1538;"></i>
+                                    </div>
+                                    <h6 class="card-title">Por Proceso</h6>
+                                    <p class="card-text small text-muted">Reportes específicos por solicitud</p>
+                                    <div class="d-flex justify-content-center">
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                @onclick="MostrarReportesPorProceso"
+                                                disabled="@cargando">
+                                            <i class="fas fa-eye me-1"></i>Ver Procesos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            @if (esAdmin)
-            {
-                <div class="card mt-4">
-                    <div class="card-header bg-info text-white">
-                        <h4 class="mb-0">Reportes Administrativos</h4>
-                    </div>
-                    <div class="card-body">
-                        <p>
-                            Como administrador, puede generar reportes adicionales:
-                        </p>
-
-                        <div class="mt-3">
-                            <label class="form-label">Reporte por Docente:</label>
-                            <div class="input-group mb-3">
-                                <input type="number" class="form-control" @bind="docenteIdSeleccionado" 
-                                       placeholder="Ingrese ID del docente" />
-                                <button class="btn btn-info" @onclick="DescargarReporteDocenteEspecifico" disabled="@descargando">
-                                    <i class="fas fa-download me-2"></i>Generar
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="form-label">Reporte de Solicitud:</label>
-                            <div class="input-group mb-3">
-                                <input type="number" class="form-control" @bind="solicitudIdSeleccionada" 
-                                       placeholder="Ingrese ID de la solicitud" />
-                                <button class="btn btn-info" @onclick="DescargarReporteSolicitud" disabled="@descargando">
-                                    <i class="fas fa-download me-2"></i>Generar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
         </div>
 
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">
-                    <h4 class="mb-0">Ayuda</h4>
+        <!-- Panel de Información -->
+        <div class="col-lg-3">
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <p>
-                        Los reportes se generan en formato PDF y contienen información actualizada 
-                        sobre el estado del docente y sus procesos de ascenso.
-                    </p>
-                    <p>
-                        Los reportes generados son documentos oficiales que pueden ser utilizados
-                        para verificar el estado actual de los requisitos de ascenso.
-                    </p>
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Nota:</strong> Puede guardar los reportes generados para 
-                        referencia futura o imprimirlos si es necesario.
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>Vista Previa:</strong> Use el botón "Ver" para visualizar reportes antes de descargar.
+                        </small>
                     </div>
+
+                    <div class="alert alert-success">
+                        <small>
+                            <strong>Descarga:</strong> Los PDFs se generan con información actualizada en tiempo real.
+                        </small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <small>
+                            <strong>Importante:</strong> Asegúrese de importar datos actualizados antes de generar reportes.
+                        </small>
+                    </div>
+
+                    @if (cargando)
+                    {
+                        <div class="text-center mt-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">@mensajeCarga</small>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal para Reportes por Proceso -->
+@if (mostrarModalProcesos)
+{
+    <ReportesPorProcesoDialog DocenteId="@usuarioId" OnClose="CerrarModalProcesos" />
+}
+
+<!-- Modal para Vista Previa -->
+@if (mostrarModalPreview)
+{
+    <div class="modal fade show" id="previewModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);" @onclick="@(() => CerrarModalPreview())">
+        <div class="modal-dialog modal-xl" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Vista Previa - @tituloPreview</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalPreview"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(htmlPreview))
+                    {
+                        @((MarkupString)htmlPreview)
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalPreview">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .report-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        cursor: pointer;
+    }
+
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .text-primary {
+        color: #8a1538 !important;
+    }
+
+    .btn-primary {
+        background-color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .btn-primary:hover {
+        background-color: #6b1029;
+        border-color: #6b1029;
+    }
+
+    .btn-outline-info {
+        color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .btn-outline-info:hover {
+        background-color: #8a1538;
+        border-color: #8a1538;
+        color: white;
+    }
+
+    .btn-outline-secondary {
+        color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #8a1538;
+        border-color: #8a1538;
+        color: white;
+    }
+</style>
+
 @code {
-    private bool descargando = false;
-    private bool esAdmin = false;
-    private int docenteIdSeleccionado;
-    private int solicitudIdSeleccionada;
+    private bool cargando = false;
+    private string mensajeCarga = "";
+    private string? usuarioId;
+    private bool mostrarModalProcesos = false;
+    private bool mostrarModalPreview = false;
+    private string htmlPreview = "";
+    private string tituloPreview = "";
+
+    public enum TipoReporte
+    {
+        HojaVida,
+        EstadoRequisitos,
+        HistorialAscensos,
+        Capacitaciones,
+        ObrasAcademicas,
+        ReporteCompleto,
+        CertificadoEstado,
+        PorProceso
+    }
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user.Identity.IsAuthenticated)
-        {
-            esAdmin = user.IsInRole("Administrador");
-        }
+        usuarioId = authState.User?.FindFirst("sub")?.Value ?? 
+                   authState.User?.FindFirst("id")?.Value ??
+                   authState.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     }
 
-    private async Task DescargarReporteDocente()
+    private async Task DescargarReporte(TipoReporte tipo)
     {
         try
         {
-            descargando = true;
-            
-            // Obtener el reporte del docente actual
-            var response = await ApiService.GetAsync<byte[]>("api/reportes/hoja-vida");
-            
+            cargando = true;
+            mensajeCarga = "Generando reporte PDF...";
+            StateHasChanged();
+
+            string endpoint = tipo switch
+            {
+                TipoReporte.HojaVida => "api/reportes/hoja-vida",
+                TipoReporte.EstadoRequisitos => "api/reportes/estado-requisitos",
+                TipoReporte.HistorialAscensos => "api/reportes/historial-ascensos",
+                TipoReporte.Capacitaciones => "api/reportes/capacitaciones",
+                TipoReporte.ObrasAcademicas => "api/reportes/obras-academicas",
+                TipoReporte.ReporteCompleto => "api/reportes/completo-ascenso",
+                TipoReporte.CertificadoEstado => "api/reportes/certificado-estado",
+                _ => throw new ArgumentException("Tipo de reporte no válido")
+            };
+
+            string nombreArchivo = tipo switch
+            {
+                TipoReporte.HojaVida => "HojaVida.pdf",
+                TipoReporte.EstadoRequisitos => "EstadoRequisitos.pdf",
+                TipoReporte.HistorialAscensos => "HistorialAscensos.pdf",
+                TipoReporte.Capacitaciones => "Capacitaciones.pdf",
+                TipoReporte.ObrasAcademicas => "ObrasAcademicas.pdf",
+                TipoReporte.ReporteCompleto => "ReporteCompleto.pdf",
+                TipoReporte.CertificadoEstado => "CertificadoEstado.pdf",
+                _ => "Reporte.pdf"
+            };
+
+            var response = await ApiService.GetBytesAsync(endpoint);
             if (response != null)
             {
-                // Convertir el arreglo de bytes a un Blob en JavaScript
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", "MiReporte.pdf", response);
+                await DescargarArchivo(response, nombreArchivo);
+                ToastService.ShowSuccess($"Reporte {GetNombreReporte(tipo)} descargado exitosamente");
+            }
+            else
+            {
+                ToastService.ShowError("Error al generar el reporte");
             }
         }
         catch (Exception ex)
         {
-            // Error al generar reporte
+            ToastService.ShowError($"Error al descargar reporte: {ex.Message}");
         }
         finally
         {
-            descargando = false;
+            cargando = false;
+            StateHasChanged();
         }
     }
 
-    private async Task DescargarReporteDocenteEspecifico()
+    private async Task VerVistaPrevia(TipoReporte tipo)
     {
-        if (docenteIdSeleccionado <= 0)
-        {
-            ToastService.ShowWarning("Debe ingresar un ID de docente válido");
-            return;
-        }
-
         try
         {
-            descargando = true;
-            
-            // Obtener el reporte de un docente específico
-            var response = await ApiService.GetAsync<byte[]>($"api/reportes/hoja-vida");
-            
-            if (response != null)
+            cargando = true;
+            mensajeCarga = "Cargando vista previa...";
+            StateHasChanged();
+
+            string endpoint = tipo switch
             {
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", $"ReporteDocente_{docenteIdSeleccionado}.pdf", response);
+                TipoReporte.HojaVida => "api/reportes/vista/hoja-vida",
+                TipoReporte.EstadoRequisitos => "api/reportes/vista/estado-requisitos",
+                TipoReporte.HistorialAscensos => "api/reportes/vista/historial-ascensos",
+                TipoReporte.Capacitaciones => "api/reportes/vista/capacitaciones",
+                TipoReporte.ObrasAcademicas => "api/reportes/vista/obras-academicas",
+                TipoReporte.ReporteCompleto => "api/reportes/vista/reporte-completo",
+                TipoReporte.CertificadoEstado => "api/reportes/vista/certificado-estado",
+                _ => throw new ArgumentException("Vista previa no disponible para este tipo de reporte")
+            };
+
+            var htmlContent = await ApiService.GetHtmlAsync(endpoint);
+            if (!string.IsNullOrEmpty(htmlContent))
+            {
+                htmlPreview = htmlContent;
+                tituloPreview = GetNombreReporte(tipo);
+                mostrarModalPreview = true;
+            }
+            else
+            {
+                ToastService.ShowError("Error al cargar la vista previa");
             }
         }
         catch (Exception ex)
         {
-            // Error al generar reporte docente
+            ToastService.ShowError($"Error al mostrar vista previa: {ex.Message}");
         }
         finally
         {
-            descargando = false;
+            cargando = false;
+            StateHasChanged();
         }
     }
 
-    private async Task DescargarReporteSolicitud()
+    private void MostrarReportesPorProceso()
     {
-        if (solicitudIdSeleccionada <= 0)
-        {
-            ToastService.ShowWarning("Debe ingresar un ID de solicitud válido");
-            return;
-        }
+        mostrarModalProcesos = true;
+        StateHasChanged();
+    }
 
-        try
+    private void CerrarModalProcesos()
+    {
+        mostrarModalProcesos = false;
+        StateHasChanged();
+    }
+
+    private void CerrarModalPreview()
+    {
+        mostrarModalPreview = false;
+        htmlPreview = "";
+        tituloPreview = "";
+        StateHasChanged();
+    }
+
+    private async Task DescargarArchivo(byte[] contenido, string nombreArchivo)
+    {
+        var base64 = Convert.ToBase64String(contenido);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", base64, nombreArchivo);
+    }
+
+    private string GetNombreReporte(TipoReporte tipo)
+    {
+        return tipo switch
         {
-            descargando = true;
-            
-            // Obtener el reporte de una solicitud específica
-            var response = await ApiService.GetAsync<byte[]>($"api/reportes/solicitud/{solicitudIdSeleccionada}");
-            
-            if (response != null)
-            {
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", $"ReporteSolicitud_{solicitudIdSeleccionada}.pdf", response);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Error al generar reporte solicitud
-        }
-        finally
-        {
-            descargando = false;
-        }
+            TipoReporte.HojaVida => "Hoja de Vida",
+            TipoReporte.EstadoRequisitos => "Estado de Requisitos",
+            TipoReporte.HistorialAscensos => "Historial de Ascensos",
+            TipoReporte.Capacitaciones => "Capacitaciones",
+            TipoReporte.ObrasAcademicas => "Obras Académicas",
+            TipoReporte.ReporteCompleto => "Reporte Completo",
+            TipoReporte.CertificadoEstado => "Certificado de Estado",
+            TipoReporte.PorProceso => "Reportes por Proceso",
+            _ => "Reporte"
+        };
     }
 }

@@ -1,0 +1,326 @@
+@inject IApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject IToastService ToastService
+
+<!-- Modal -->
+<div class="modal fade show" id="reportesPorProcesoModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);" @onclick="@(() => Cancel())">
+    <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #8a1538; color: white;">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    Reportes por Proceso de Ascenso
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="Cancel"></button>
+            </div>
+            <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                @if (cargando)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <div class="mt-2">
+                            <p class="text-muted">Cargando procesos...</p>
+                        </div>
+                    </div>
+                }
+                else if (procesos?.Any() == true)
+                {
+                    <p class="mb-4 text-muted">
+                        Seleccione un proceso para generar reportes específicos:
+                    </p>
+
+                    <div class="row g-3">
+                        @foreach (var proceso in procesos)
+                        {
+                            <div class="col-12">
+                                <div class="card proceso-card border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <div class="d-flex flex-column gap-2">
+                                                    <h6 class="card-title mb-1">
+                                                        Solicitud #@proceso.Id
+                                                    </h6>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Cargo Actual:</strong> @proceso.CargoActual
+                                                    </p>
+                                                    <p class="card-text mb-1">
+                                                        <strong>Cargo Solicitado:</strong> @proceso.CargoSolicitado
+                                                    </p>
+                                                    <p class="card-text mb-2">
+                                                        <strong>Fecha:</strong> @proceso.FechaSolicitud.ToString("dd/MM/yyyy")
+                                                    </p>
+                                                    <span class="badge @GetBadgeClassEstado(proceso.Estado)">
+                                                        @proceso.Estado
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="d-flex flex-column gap-2">
+                                                    <button class="btn btn-outline-info btn-sm" 
+                                                            @onclick="() => VerReporteProceso(proceso.Id)"
+                                                            disabled="@cargandoReporte">
+                                                        <i class="fas fa-eye me-1"></i>
+                                                        Ver Reporte
+                                                    </button>
+                                                    <button class="btn btn-primary btn-sm" 
+                                                            @onclick="() => DescargarReporteProceso(proceso.Id)"
+                                                            disabled="@cargandoReporte">
+                                                        <i class="fas fa-download me-1"></i>
+                                                        Descargar PDF
+                                                    </button>
+                                                    @if (proceso.Estado == "Aprobado" || proceso.Estado == "Finalizado")
+                                                    {
+                                                        <button class="btn btn-success btn-sm" 
+                                                                @onclick="() => DescargarCertificadoAscenso(proceso.Id)"
+                                                                disabled="@cargandoReporte">
+                                                            <i class="fas fa-certificate me-1"></i>
+                                                            Certificado
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No se encontraron procesos de ascenso para generar reportes.
+                    </div>
+                }
+
+                @if (cargandoReporte)
+                {
+                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                         style="background: rgba(0,0,0,0.7); z-index: 1050;">
+                        <div class="text-center text-white">
+                            <div class="spinner-border text-light mb-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mb-0">@mensajeCarga</p>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .proceso-card {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .proceso-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .text-primary {
+        color: #8a1538 !important;
+    }
+
+    .btn-primary {
+        background-color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .btn-primary:hover {
+        background-color: #6b1029;
+        border-color: #6b1029;
+    }
+
+    .btn-outline-info {
+        color: #8a1538;
+        border-color: #8a1538;
+    }
+
+    .btn-outline-info:hover {
+        background-color: #8a1538;
+        border-color: #8a1538;
+        color: white;
+    }
+</style>
+
+@code {
+    [Parameter] public string? DocenteId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool cargando = true;
+    private bool cargandoReporte = false;
+    private string mensajeCarga = "";
+    private List<ProcesoAscensoDto>? procesos;
+
+    public class ProcesoAscensoDto
+    {
+        public int Id { get; set; }
+        public string CargoActual { get; set; } = string.Empty;
+        public string CargoSolicitado { get; set; } = string.Empty;
+        public DateTime FechaSolicitud { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public string DocenteNombre { get; set; } = string.Empty;
+        public string DocenteCedula { get; set; } = string.Empty;
+        public string Facultad { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProcesos();
+    }
+
+    private async Task CargarProcesos()
+    {
+        try
+        {
+            cargando = true;
+            StateHasChanged();
+
+            // Obtener procesos del docente
+            var endpoint = $"api/solicitudes/docente/{DocenteId}";
+            procesos = await ApiService.GetAsync<List<ProcesoAscensoDto>>(endpoint);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar procesos: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerReporteProceso(int procesoId)
+    {
+        try
+        {
+            cargandoReporte = true;
+            mensajeCarga = "Cargando vista previa del reporte...";
+            StateHasChanged();
+
+            var endpoint = $"api/reportes/vista/proceso/{procesoId}";
+            var htmlContent = await ApiService.GetAsync<string>(endpoint);
+            
+            if (!string.IsNullOrEmpty(htmlContent))
+            {
+                // Mostrar el contenido HTML en un modal usando JavaScript
+                await JSRuntime.InvokeVoidAsync("showReportPreview", htmlContent, "Reporte del Proceso");
+                ToastService.ShowSuccess("Vista previa cargada exitosamente");
+            }
+            else
+            {
+                ToastService.ShowError("Error al cargar la vista previa");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al mostrar vista previa: {ex.Message}");
+        }
+        finally
+        {
+            cargandoReporte = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarReporteProceso(int procesoId)
+    {
+        try
+        {
+            cargandoReporte = true;
+            mensajeCarga = "Generando reporte del proceso...";
+            StateHasChanged();
+
+            var endpoint = $"api/reportes/proceso/{procesoId}";
+            var response = await ApiService.GetAsync<byte[]>(endpoint);
+            
+            if (response != null)
+            {
+                var nombreArchivo = $"ReporteProceso_{procesoId}.pdf";
+                await DescargarArchivo(response, nombreArchivo);
+                ToastService.ShowSuccess("Reporte descargado exitosamente");
+            }
+            else
+            {
+                ToastService.ShowError("Error al generar el reporte");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar reporte: {ex.Message}");
+        }
+        finally
+        {
+            cargandoReporte = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarCertificadoAscenso(int procesoId)
+    {
+        try
+        {
+            cargandoReporte = true;
+            mensajeCarga = "Generando certificado de ascenso...";
+            StateHasChanged();
+
+            var endpoint = $"api/reportes/certificado-ascenso/{procesoId}";
+            var response = await ApiService.GetAsync<byte[]>(endpoint);
+            
+            if (response != null)
+            {
+                var nombreArchivo = $"CertificadoAscenso_{procesoId}.pdf";
+                await DescargarArchivo(response, nombreArchivo);
+                ToastService.ShowSuccess("Certificado descargado exitosamente");
+            }
+            else
+            {
+                ToastService.ShowError("Error al generar el certificado");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar certificado: {ex.Message}");
+        }
+        finally
+        {
+            cargandoReporte = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarArchivo(byte[] contenido, string nombreArchivo)
+    {
+        var base64 = Convert.ToBase64String(contenido);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", base64, nombreArchivo);
+    }
+
+    private string GetBadgeClassEstado(string estado)
+    {
+        return estado switch
+        {
+            "Pendiente" => "bg-warning text-dark",
+            "En Revision" => "bg-info",
+            "Aprobado" => "bg-success",
+            "Rechazado" => "bg-danger",
+            "Finalizado" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private async Task Cancel()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

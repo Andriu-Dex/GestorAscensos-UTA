@@ -25,9 +25,9 @@ window.downloadFileFromStream = (fileName, contentBytes) => {
 };
 
 // Función para descargar archivos usando base64
-window.downloadFile = (
-  fileName,
+window.downloadFileFromBase64 = (
   base64String,
+  fileName,
   contentType = "application/pdf"
 ) => {
   try {
@@ -47,41 +47,48 @@ window.downloadFile = (
 
     // Verificar que el string base64 sea válido
     if (!cleanBase64 || cleanBase64.length % 4 !== 0) {
-      console.error(
-        "String base64 inválido:",
-        cleanBase64.substring(0, 50) + "..."
-      );
-      throw new Error("El archivo no está correctamente codificado");
+      console.error("String base64 inválido");
+      return;
     }
 
-    // Decodificar base64 a bytes
+    // Convertir base64 a bytes
     const byteCharacters = atob(cleanBase64);
     const byteNumbers = new Array(byteCharacters.length);
+
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
+
     const byteArray = new Uint8Array(byteNumbers);
 
     // Crear blob
     const blob = new Blob([byteArray], { type: contentType });
 
-    // Crear URL y descargar
+    // Crear URL para el blob
     const url = URL.createObjectURL(blob);
+
+    // Crear elemento <a> temporal para descargar
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
+
+    // Agregar al DOM, hacer clic y limpiar
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Error al descargar archivo:", error);
-    if (typeof showToast === "function") {
-      showToast("Error al descargar el archivo: " + error.message, "error");
-    } else {
-      console.error("Error al descargar el archivo: " + error.message);
-    }
   }
+};
+
+// Función legacy para compatibilidad
+window.downloadFile = (
+  fileName,
+  base64String,
+  contentType = "application/pdf"
+) => {
+  window.downloadFileFromBase64(base64String, fileName, contentType);
 };
 
 // Función para visualizar PDF en un modal
@@ -103,10 +110,7 @@ window.showPdfInModal = (base64String, title = "Visualizar PDF") => {
 
     // Verificar que el string base64 sea válido
     if (!cleanBase64 || cleanBase64.length % 4 !== 0) {
-      console.error(
-        "String base64 inválido para visualización:",
-        cleanBase64.substring(0, 50) + "..."
-      );
+      console.error("String base64 inválido para visualización");
       throw new Error("El archivo no está correctamente codificado");
     }
 
@@ -195,11 +199,6 @@ window.showPdfInModal = (base64String, title = "Visualizar PDF") => {
     };
   } catch (error) {
     console.error("Error al mostrar PDF en modal:", error);
-    if (typeof showToast === "function") {
-      showToast("Error al visualizar el archivo: " + error.message, "error");
-    } else {
-      console.error("Error al visualizar el archivo: " + error.message);
-    }
   }
 };
 

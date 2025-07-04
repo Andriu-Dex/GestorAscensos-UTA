@@ -1,0 +1,43 @@
+@using MudBlazor
+@inject IJSRuntime JSRuntime
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">@Titulo</h5>
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      StartIcon="Icons.Material.Filled.Download"
+                      OnClick="DescargarReporte">
+                Descargar PDF
+            </MudButton>
+        </div>
+        
+        <div class="border rounded p-3" style="max-height: 70vh; overflow-y: auto; background-color: white;">
+            @((MarkupString)HtmlContent)
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] 
+    public string HtmlContent { get; set; } = string.Empty;
+
+    [Parameter] 
+    public string Titulo { get; set; } = string.Empty;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task DescargarReporte()
+    {
+        // Aquí podrías implementar la lógica para descargar el PDF correspondiente
+        // Por ahora, cerramos el modal
+        MudDialog.Close();
+    }
+}
