@@ -14,10 +14,14 @@
 <div class="container mt-4">
     <h3>Gestión de Documentos</h3>
     
-    <!-- Componente de Obras Académicas -->
-    <ObrasAcademicasComponent 
-        solicitudesPendientes="todasSolicitudesObras"
-        isLoadingObras="isLoadingObras"
+    <!-- Componente Acordeón de Documentos -->
+    <SGA.Web.Pages.Components.DocumentosAccordion 
+        SolicitudesObras="todasSolicitudesObras"
+        IsLoadingObras="isLoadingObras"
+        SolicitudesCertificados="todasSolicitudesCertificados"
+        IsLoadingCertificados="isLoadingCertificados"
+        SolicitudesEvidencias="todasSolicitudesEvidencias"
+        IsLoadingEvidencias="isLoadingEvidencias"
         OnShowObrasModal="ShowObrasModal"
         OnVisualizarDocumento="VisualizarDocumento"
         OnDescargarDocumento="DescargarDocumento"
@@ -26,24 +30,16 @@
         OnMostrarMotivoRechazo="MostrarMotivoRechazo"
         OnAgregarComentario="MostrarAgregarComentario"
         OnReenviarSolicitud="MostrarConfirmarReenvio"
-        OnEliminarSolicitud="MostrarConfirmarEliminarSolicitud" />
-
-    <!-- Componente de Certificados de Capacitación -->
-    <CertificadosCapacitacionComponent 
-        solicitudesCertificados="todasSolicitudesCertificados"
-        isLoadingCertificados="isLoadingCertificados"
+        OnEliminarSolicitud="MostrarConfirmarEliminarSolicitud"
         OnShowCertificadosModal="ShowCertificadosModal"
         OnVisualizarCertificado="VisualizarCertificado"
         OnDescargarCertificado="DescargarCertificado"
         OnEditarCertificado="EditarCertificado"
         OnReemplazarArchivoCertificado="ReemplazarArchivoCertificado"
         OnVerMotivoRechazoCertificado="VerMotivoRechazoCertificado"
-        OnEliminarCertificado="MostrarConfirmarEliminarCertificado" />
-
-    <!-- Componente de Evidencias de Investigación -->
-    <EvidenciasInvestigacionComponent 
-        ShowComponent="true"
-        OnEvidenciasChanged="@(async () => await InvokeAsync(StateHasChanged))" />
+        OnEliminarCertificado="MostrarConfirmarEliminarCertificado"
+        OnEvidenciasChanged="@(async () => await InvokeAsync(StateHasChanged))"
+        OnEliminarEvidencia="MostrarConfirmarEliminarEvidencia" />
 </div>
 
 <!-- Modales principales -->
@@ -281,7 +277,7 @@
                     }
                     else
                     {
-                        <iframe src="@pdfUrl" style="width: 100%; height: 600px; border: none;"></iframe>
+                        <iframe src="@pdfUrl" style="width: 100%; height: 460px; border: none;"></iframe>
                     }
                 </div>
                 <div class="modal-footer">
@@ -518,6 +514,121 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal de Confirmación para Eliminar Evidencia -->
+@if (showConfirmarEliminarEvidenciaModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-trash"></i> Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarEliminarEvidencia"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>¿Está seguro de que desea eliminar esta evidencia de investigación?</strong>
+                    </div>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer. La evidencia será eliminada permanentemente.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarEliminarEvidencia">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminarEvidencia" 
+                            disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash"></i>
+                        }
+                        Eliminar Evidencia
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal para Reemplazar Archivo de Certificado -->
+@if (showReemplazarArchivoCertificadoModal && certificadoSeleccionado != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Reemplazar Archivo del Certificado</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showReemplazarArchivoCertificadoModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar nuevo archivo (PDF, máximo 10MB)</label>
+                        <InputFile class="form-control" @ref="inputFileReemplazoCertificado" OnChange="OnFileChangeReemplazoCertificado" accept=".pdf" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(archivoReemplazoCertificadoNombre))
+                    {
+                        <div class="alert alert-info">
+                            <strong>Archivo seleccionado:</strong> @archivoReemplazoCertificadoNombre
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showReemplazarArchivoCertificadoModal = false">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="EjecutarReemplazarArchivoCertificado" 
+                            disabled="@(isProcessing || string.IsNullOrEmpty(archivoReemplazoCertificadoContenido))">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Reemplazar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal para Ver Motivo de Rechazo de Certificados -->
+@if (showMotivoRechazoCertificadoModal && certificadoSeleccionado != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">Motivo de Rechazo - Certificado</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showMotivoRechazoCertificadoModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <strong>Motivo del rechazo:</strong>
+                        <p class="mt-2">@GetMotivoRechazo(certificadoSeleccionado.MotivoRechazo)</p>
+                    </div>
+                    @if (!string.IsNullOrEmpty(GetComentariosAdicionales(certificadoSeleccionado.MotivoRechazo, certificadoSeleccionado.ComentariosRevision)))
+                    {
+                        <div class="alert alert-info">
+                            <strong>Comentarios adicionales:</strong>
+                            <p class="mt-2">@GetComentariosAdicionales(certificadoSeleccionado.MotivoRechazo, certificadoSeleccionado.ComentariosRevision)</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showMotivoRechazoCertificadoModal = false">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     // Referencias a los componentes modales
     private ObrasAcademicasModal? obrasModal;
@@ -534,10 +645,15 @@
     private bool isLoadingCertificados = false;
     private bool showCertificadosModal = false;
     
+    // Variables para evidencias de investigación
+    private List<EvidenciaInvestigacionViewModel>? todasSolicitudesEvidencias;
+    private bool isLoadingEvidencias = true;
+    
     // Variables para gestión de documentos
     private ObraAcademicaDetalleDto? solicitudSeleccionada;
     private CertificadoCapacitacionDetalleDto? certificadoSeleccionado = null;
     private bool showMotivoRechazoModal = false;
+    private bool showMotivoRechazoCertificadoModal = false;
     private bool showEditarMetadatosModal = false;
     private bool showReemplazarArchivoModal = false;
     private bool showAgregarComentarioModal = false;
@@ -564,13 +680,19 @@
     // Variables adicionales para certificados
     private bool showEditarCertificadoModal = false;
     private EditarMetadatosCertificadoDto? editarCertificadoDto = null;
+    private bool showReemplazarArchivoCertificadoModal = false;
+    private InputFile? inputFileReemplazoCertificado;
+    private string archivoReemplazoCertificadoNombre = string.Empty;
+    private string archivoReemplazoCertificadoContenido = string.Empty;
 
     // Variables para modales de confirmación (reemplazar alerts)
     private bool showConfirmarReenvioModal = false;
     private bool showConfirmarEliminarSolicitudModal = false;
     private bool showConfirmarEliminarCertificadoModal = false;
+    private bool showConfirmarEliminarEvidenciaModal = false;
     private Guid solicitudIdParaAccion = Guid.Empty;
     private Guid certificadoIdParaEliminar = Guid.Empty;
+    private Guid evidenciaIdParaEliminar = Guid.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -581,7 +703,8 @@
     {
         await Task.WhenAll(
             LoadTodasSolicitudesObras(),
-            LoadTodasSolicitudesCertificados()
+            LoadTodasSolicitudesCertificados(),
+            LoadTodasSolicitudesEvidencias()
         );
     }
 
@@ -737,6 +860,20 @@
         }
     }
 
+    // Métodos para Evidencias de Investigación
+    private async Task LoadTodasSolicitudesEvidencias()
+    {
+        try
+        {
+            isLoadingEvidencias = true;
+            todasSolicitudesEvidencias = await DocumentosService.LoadTodasSolicitudesEvidenciasAsync();
+        }
+        finally
+        {
+            isLoadingEvidencias = false;
+        }
+    }
+
     // Event handlers para los componentes
     private async Task VisualizarDocumento(Guid solicitudId)
     {
@@ -750,13 +887,18 @@
             if (result.Success)
             {
                 pdfUrl = result.PdfUrl;
-                pdfNombreArchivo = result.FileName;
                 showVisualizarPDFModal = true;
             }
             else
             {
                 errorPDF = result.ErrorMessage;
+                ToastService.ShowError($"Error al visualizar: {result.ErrorMessage}");
             }
+        }
+        catch (Exception ex)
+        {
+            errorPDF = $"Error inesperado: {ex.Message}";
+            ToastService.ShowError($"Error inesperado: {ex.Message}");
         }
         finally
         {
@@ -787,6 +929,7 @@
             Autores = solicitud.Autores
         };
         showEditarMetadatosModal = true;
+        StateHasChanged();
     }
 
     private void MostrarReemplazarArchivo(ObraAcademicaDetalleDto solicitud)
@@ -795,12 +938,14 @@
         archivoReemplazoNombre = string.Empty;
         archivoReemplazoContenido = string.Empty;
         showReemplazarArchivoModal = true;
+        StateHasChanged();
     }
 
     private void MostrarMotivoRechazo(ObraAcademicaDetalleDto solicitud)
     {
         solicitudSeleccionada = solicitud;
         showMotivoRechazoModal = true;
+        StateHasChanged();
     }
 
     private void MostrarAgregarComentario(ObraAcademicaDetalleDto solicitud)
@@ -808,6 +953,7 @@
         solicitudSeleccionada = solicitud;
         nuevoComentario = string.Empty;
         showAgregarComentarioModal = true;
+        StateHasChanged();
     }
 
     // ✅ MÉTODOS CORREGIDOS - YA NO USAN ALERTS, USAN MODALES
@@ -816,12 +962,14 @@
     {
         solicitudIdParaAccion = solicitudId;
         showConfirmarReenvioModal = true;
+        StateHasChanged();
     }
 
     private void CancelarReenvio()
     {
         showConfirmarReenvioModal = false;
         solicitudIdParaAccion = Guid.Empty;
+        StateHasChanged();
     }
 
     private async Task ConfirmarReenvio()
@@ -859,12 +1007,14 @@
     {
         solicitudIdParaAccion = solicitudId;
         showConfirmarEliminarSolicitudModal = true;
+        StateHasChanged();
     }
 
     private void CancelarEliminarSolicitud()
     {
         showConfirmarEliminarSolicitudModal = false;
         solicitudIdParaAccion = Guid.Empty;
+        StateHasChanged();
     }
 
     private async Task ConfirmarEliminarSolicitud()
@@ -952,14 +1102,17 @@
     private void ReemplazarArchivoCertificado(CertificadoCapacitacionDetalleDto certificado)
     {
         certificadoSeleccionado = certificado;
-        showEditarCertificadoModal = true; // Reutilizar modal de edición
+        archivoReemplazoCertificadoNombre = string.Empty;
+        archivoReemplazoCertificadoContenido = string.Empty;
+        showReemplazarArchivoCertificadoModal = true;
+        StateHasChanged();
     }
 
     private void VerMotivoRechazoCertificado(CertificadoCapacitacionDetalleDto certificado)
     {
         certificadoSeleccionado = certificado;
-        // Mostrar información del rechazo
-        ToastService.ShowInfo($"Motivo de rechazo: {certificado.MotivoRechazo ?? "No especificado"}");
+        showMotivoRechazoCertificadoModal = true;
+        StateHasChanged();
     }
 
     private void MostrarConfirmarEliminarCertificado(Guid certificadoId)
@@ -1002,6 +1155,51 @@
         {
             isProcessing = false;
             CancelarEliminarCertificado();
+        }
+    }
+
+    // Métodos para Eliminar Evidencias de Investigación
+    private void MostrarConfirmarEliminarEvidencia(Guid evidenciaId)
+    {
+        evidenciaIdParaEliminar = evidenciaId;
+        showConfirmarEliminarEvidenciaModal = true;
+        StateHasChanged();
+    }
+
+    private void CancelarEliminarEvidencia()
+    {
+        showConfirmarEliminarEvidenciaModal = false;
+        evidenciaIdParaEliminar = Guid.Empty;
+    }
+
+    private async Task ConfirmarEliminarEvidencia()
+    {
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.DeleteAsync($"api/evidencias-investigacion/eliminar/{evidenciaIdParaEliminar}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Evidencia eliminada correctamente");
+                await LoadTodasSolicitudesEvidencias();
+            }
+            else
+            {
+                ToastService.ShowError("Error al eliminar la evidencia");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            CancelarEliminarEvidencia();
         }
     }
 
@@ -1191,5 +1389,114 @@
         {
             isProcessing = false;
         }
+    }
+
+    // Métodos para reemplazar archivo de certificados
+    private async Task OnFileChangeReemplazoCertificado(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null && file.Size <= 10 * 1024 * 1024) // 10MB max
+        {
+            try
+            {
+                archivoReemplazoCertificadoNombre = file.Name;
+                using var stream = file.OpenReadStream(10 * 1024 * 1024);
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                archivoReemplazoCertificadoContenido = Convert.ToBase64String(memoryStream.ToArray());
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Error al leer el archivo: {ex.Message}");
+                archivoReemplazoCertificadoNombre = string.Empty;
+                archivoReemplazoCertificadoContenido = string.Empty;
+            }
+        }
+        else
+        {
+            ToastService.ShowError("El archivo debe ser menor a 10MB");
+        }
+    }
+    
+    private async Task EjecutarReemplazarArchivoCertificado()
+    {
+        if (certificadoSeleccionado == null || string.IsNullOrEmpty(archivoReemplazoCertificadoContenido)) return;
+        
+        try
+        {
+            isProcessing = true;
+            
+            var reemplazarDto = new ReemplazarArchivoDto
+            {
+                ArchivoNombre = archivoReemplazoCertificadoNombre,
+                ArchivoContenido = archivoReemplazoCertificadoContenido,
+                ArchivoTipo = "application/pdf"
+            };
+            
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsJsonAsync($"api/certificados-capacitacion/reemplazar-archivo/{certificadoSeleccionado.Id}", reemplazarDto);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Archivo de certificado reemplazado correctamente");
+                showReemplazarArchivoCertificadoModal = false;
+                await LoadTodasSolicitudesCertificados();
+            }
+            else
+            {
+                ToastService.ShowError("Error al reemplazar el archivo del certificado");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    // Métodos auxiliares para procesar motivo de rechazo y comentarios
+    private string GetMotivoRechazo(string? motivoRechazoCompleto)
+    {
+        if (string.IsNullOrEmpty(motivoRechazoCompleto))
+            return "No especificado";
+
+        // Si el texto contiene "Comentarios adicionales:", separar solo el motivo
+        if (motivoRechazoCompleto.Contains("\n\nComentarios adicionales:"))
+        {
+            var partes = motivoRechazoCompleto.Split(new[] { "\n\nComentarios adicionales:" }, StringSplitOptions.None);
+            if (partes.Length >= 1)
+            {
+                return partes[0].Trim();
+            }
+        }
+
+        return motivoRechazoCompleto;
+    }
+
+    private string GetComentariosAdicionales(string? motivoRechazoCompleto, string? comentariosRevision)
+    {
+        // Primero verificar si está en el formato concatenado
+        if (!string.IsNullOrEmpty(motivoRechazoCompleto) && motivoRechazoCompleto.Contains("\n\nComentarios adicionales:"))
+        {
+            var partes = motivoRechazoCompleto.Split(new[] { "\n\nComentarios adicionales:" }, StringSplitOptions.None);
+            if (partes.Length == 2)
+            {
+                return partes[1].Trim();
+            }
+        }
+
+        // Si no está en formato concatenado, usar comentariosRevision directamente
+        // pero solo si no contiene el texto "Comentarios adicionales:" para evitar duplicación
+        if (!string.IsNullOrEmpty(comentariosRevision) && !comentariosRevision.Contains("Comentarios adicionales:"))
+        {
+            return comentariosRevision;
+        }
+
+        return string.Empty;
     }
 }

@@ -1,0 +1,264 @@
+@using SGA.Web.Models
+@using SGA.Web.Pages.Components
+
+<div class="accordion accordion-flush" id="documentos-accordion-da">
+    <!-- Sección de Obras Académicas -->
+    <div class="accordion-item obras-section">
+        <h2 class="accordion-header" id="obras-heading-da">
+            <button class="accordion-button @(GetCollapsedClass(ObrasSection))" 
+                    type="button" 
+                    @onclick="@(() => ToggleAccordion(ObrasSection))"
+                    aria-expanded="@(!collapsedSections[ObrasSection])" 
+                    aria-controls="obras-collapse-da">
+                <i class="bi bi-book me-2" style="color: #28a745;"></i>
+                <strong>Obras Académicas</strong>
+                @if (obrasCount > 0)
+                {
+                    <span class="badge bg-success ms-2">@obrasCount</span>
+                }
+            </button>
+        </h2>
+        <div id="obras-collapse-da" 
+             class="accordion-collapse collapse @(GetShowClass(ObrasSection))" 
+             aria-labelledby="obras-heading-da">
+            <div class="accordion-body">
+                @if (ShowObrasAcademicas)
+                {
+                    <SGA.Web.Pages.Components.ObrasAcademicasComponent 
+                        solicitudesPendientes="SolicitudesObras"
+                        isLoadingObras="IsLoadingObras"
+                        OnShowObrasModal="OnShowObrasModal"
+                        OnVisualizarDocumento="OnVisualizarDocumento"
+                        OnDescargarDocumento="OnDescargarDocumento"
+                        OnEditarMetadatos="OnEditarMetadatos"
+                        OnReemplazarArchivo="OnReemplazarArchivo"
+                        OnMostrarMotivoRechazo="OnMostrarMotivoRechazo"
+                        OnAgregarComentario="OnAgregarComentario"
+                        OnReenviarSolicitud="OnReenviarSolicitud"
+                        OnEliminarSolicitud="OnEliminarSolicitud" />
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Certificados de Capacitación -->
+    <div class="accordion-item certificados-section">
+        <h2 class="accordion-header" id="certificados-heading-da">
+            <button class="accordion-button @(GetCollapsedClass(CertificadosSection))" 
+                    type="button" 
+                    @onclick="@(() => ToggleAccordion(CertificadosSection))"
+                    aria-expanded="@(!collapsedSections[CertificadosSection])" 
+                    aria-controls="certificados-collapse-da">
+                <i class="bi bi-award me-2" style="color: #8a1538;"></i>
+                <strong>Certificados de Capacitación</strong>
+                @if (certificadosCount > 0)
+                {
+                    <span class="badge ms-2" style="background-color: #8a1538;">@certificadosCount</span>
+                }
+            </button>
+        </h2>
+        <div id="certificados-collapse-da" 
+             class="accordion-collapse collapse @(GetShowClass(CertificadosSection))" 
+             aria-labelledby="certificados-heading-da">
+            <div class="accordion-body">
+                @if (ShowCertificados)
+                {
+                    <SGA.Web.Pages.Components.CertificadosCapacitacionComponent 
+                        solicitudesCertificados="SolicitudesCertificados"
+                        isLoadingCertificados="IsLoadingCertificados"
+                        OnShowCertificadosModal="OnShowCertificadosModal"
+                        OnVisualizarCertificado="OnVisualizarCertificado"
+                        OnDescargarCertificado="OnDescargarCertificado"
+                        OnEditarCertificado="OnEditarCertificado"
+                        OnReemplazarArchivoCertificado="OnReemplazarArchivoCertificado"
+                        OnVerMotivoRechazoCertificado="OnVerMotivoRechazoCertificado"
+                        OnEliminarCertificado="OnEliminarCertificado" />
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Evidencias de Investigación -->
+    <div class="accordion-item evidencias-section">
+        <h2 class="accordion-header" id="evidencias-heading-da">
+            <button class="accordion-button @(GetCollapsedClass(EvidenciasSection))" 
+                    type="button" 
+                    @onclick="@(() => ToggleAccordion(EvidenciasSection))"
+                    aria-expanded="@(!collapsedSections[EvidenciasSection])" 
+                    aria-controls="evidencias-collapse-da">
+                <i class="bi bi-search me-2" style="color: #1633b7;"></i>
+                <strong>Evidencias de Investigación</strong>
+                @if (evidenciasCount > 0)
+                {
+                    <span class="badge ms-2" style="background-color: #1633b7;">@evidenciasCount</span>
+                }
+            </button>
+        </h2>
+        <div id="evidencias-collapse-da" 
+             class="accordion-collapse collapse @(GetShowClass(EvidenciasSection))" 
+             aria-labelledby="evidencias-heading-da">
+            <div class="accordion-body">
+                @if (ShowEvidencias)
+                {
+                    <SGA.Web.Pages.Components.EvidenciasInvestigacionComponent 
+                        ShowComponent="true"
+                        solicitudesEvidencias="SolicitudesEvidencias"
+                        isLoadingEvidenciasParam="IsLoadingEvidencias"
+                        OnEvidenciasChanged="OnEvidenciasChanged"
+                        OnEliminarEvidencia="OnEliminarEvidencia" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Constantes para las secciones
+    private const string ObrasSection = "obras";
+    private const string CertificadosSection = "certificados";
+    private const string EvidenciasSection = "evidencias";
+    
+    [Parameter] public List<ObraAcademicaDetalleDto>? SolicitudesObras { get; set; }
+    [Parameter] public bool IsLoadingObras { get; set; }
+    [Parameter] public List<CertificadoCapacitacionDetalleDto>? SolicitudesCertificados { get; set; }
+    [Parameter] public bool IsLoadingCertificados { get; set; }
+    [Parameter] public List<EvidenciaInvestigacionViewModel>? SolicitudesEvidencias { get; set; }
+    [Parameter] public bool IsLoadingEvidencias { get; set; }
+    
+    // Eventos para Obras Académicas
+    [Parameter] public EventCallback OnShowObrasModal { get; set; }
+    [Parameter] public EventCallback<Guid> OnVisualizarDocumento { get; set; }
+    [Parameter] public EventCallback<Guid> OnDescargarDocumento { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnEditarMetadatos { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnReemplazarArchivo { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnMostrarMotivoRechazo { get; set; }
+    [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnAgregarComentario { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarSolicitud { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarSolicitud { get; set; }
+    
+    // Eventos para Certificados
+    [Parameter] public EventCallback OnShowCertificadosModal { get; set; }
+    [Parameter] public EventCallback<Guid> OnVisualizarCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnDescargarCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnEditarCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnReemplazarArchivoCertificado { get; set; }
+    [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnVerMotivoRechazoCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarCertificado { get; set; }
+    
+    // Eventos para Evidencias
+    [Parameter] public EventCallback OnEvidenciasChanged { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
+
+    private Dictionary<string, bool> collapsedSections = new()
+    {
+        { ObrasSection, true },         // Obras Académicas cerrado por defecto
+        { CertificadosSection, true },  // Certificados cerrado por defecto
+        { EvidenciasSection, true }     // Evidencias cerrado por defecto
+    };
+
+    private bool ShowObrasAcademicas => !collapsedSections[ObrasSection];
+    private bool ShowCertificados => !collapsedSections[CertificadosSection];
+    private bool ShowEvidencias => !collapsedSections[EvidenciasSection];
+
+    private int obrasCount => SolicitudesObras?.Count ?? 0;
+    private int certificadosCount => SolicitudesCertificados?.Count ?? 0;
+    private int evidenciasCount => SolicitudesEvidencias?.Count ?? 0;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    private void ToggleAccordion(string section)
+    {
+        collapsedSections[section] = !collapsedSections[section];
+        StateHasChanged();
+    }
+
+    private string GetCollapsedClass(string section)
+    {
+        return collapsedSections[section] ? "collapsed" : "";
+    }
+
+    private string GetShowClass(string section)
+    {
+        return collapsedSections[section] ? "" : "show";
+    }
+}
+
+<style>
+    /* Estilos específicos para el componente DocumentosAccordion */
+    .accordion-da .accordion-button {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        font-weight: 500;
+        padding: 1rem 1.25rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .accordion-da .accordion-button:not(.collapsed) {
+        background-color: #e9ecef;
+        border-color: #8a1538;
+        box-shadow: inset 0 calc(-1 * var(--bs-accordion-border-width)) 0 var(--bs-accordion-border-color);
+    }
+
+    .accordion-da .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(138, 21, 56, 0.25);
+    }
+
+    .accordion-da .accordion-button:hover {
+        background-color: #e9ecef;
+    }
+
+    .accordion-da .accordion-item {
+        border: 1px solid #dee2e6;
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem;
+        overflow: hidden;
+    }
+
+    .accordion-da .accordion-body {
+        padding: 0;
+        border: none;
+    }
+
+    .accordion-da .accordion-collapse {
+        border-top: 1px solid #dee2e6;
+        transition: height 0.35s ease;
+    }
+
+    .accordion-da .accordion-button::after {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    /* Estados específicos para cada sección */
+    .accordion-da .obras-section .accordion-button:not(.collapsed) {
+        border-left: 4px solid #28a745;
+    }
+
+    .accordion-da .certificados-section .accordion-button:not(.collapsed) {
+        border-left: 4px solid #8a1538;
+    }
+
+    .accordion-da .evidencias-section .accordion-button:not(.collapsed) {
+        border-left: 4px solid #8a1538;
+    }
+
+    /* Estilos para mejorar la accesibilidad */
+    .accordion-da .accordion-button:focus-visible {
+        outline: 2px solid #8a1538;
+        outline-offset: 2px;
+    }
+
+    /* Responsivo */
+    @@media (max-width: 768px) {
+        .accordion-da .accordion-button {
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .accordion-da .accordion-button .badge {
+            font-size: 0.75rem;
+        }
+    }
+</style>

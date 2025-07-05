@@ -4,15 +4,16 @@
 @inject IToastService ToastService
 @inject IJSRuntime JSRuntime
 
-<div class="card mb-4">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Obras Académicas</h5>
-        <button class="btn btn-light" @onclick="() => ShowObrasModal()">
+<!-- Contenido sin encabezado de tarjeta -->
+<div class="px-3 py-2">
+    <!-- Botón Agregar Obras -->
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-success" @onclick="() => ShowObrasModal()">
             <i class="bi bi-plus-circle"></i> Agregar Obras
         </button>
     </div>
-    <div class="card-body">
-        <!-- Filtros por Estado -->
+    
+    <!-- Filtros por Estado -->
         <div class="row mb-3">
             <div class="col-md-6">
                 <label class="form-label">Filtrar por Estado:</label>
@@ -116,7 +117,7 @@
                                         {
                                             <button class="btn btn-sm btn-outline-primary" 
                                                     @onclick="() => VisualizarDocumento(solicitud.SolicitudId.Value)"
-                                                    title="Visualizar">
+                                                    title="Visualizar PDF">
                                                 <i class="bi bi-eye"></i>
                                             </button>
                                         }
@@ -191,7 +192,6 @@
                 </table>
             </div>
         }
-    </div>
 </div>
 
 @code {

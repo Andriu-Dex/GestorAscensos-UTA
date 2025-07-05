@@ -12,6 +12,9 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
 {
     [Parameter] public bool ShowComponent { get; set; } = true;
     [Parameter] public EventCallback OnEvidenciasChanged { get; set; }
+    [Parameter] public List<EvidenciaInvestigacionViewModel>? solicitudesEvidencias { get; set; }
+    [Parameter] public bool isLoadingEvidenciasParam { get; set; }
+    [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
 
     private List<EvidenciaInvestigacionViewModel>? evidencias;
     private List<EvidenciaInvestigacionViewModel>? evidenciasFiltradas;
@@ -32,7 +35,43 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarEvidencias();
+        if (solicitudesEvidencias != null)
+        {
+            // Usar las evidencias pasadas como parámetro
+            evidencias = solicitudesEvidencias;
+            isLoadingEvidencias = isLoadingEvidenciasParam;
+            AplicarFiltros();
+        }
+        else
+        {
+            // Cargar evidencias internamente si no se pasan como parámetro
+            await CargarEvidencias();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (solicitudesEvidencias != null)
+        {
+            // Actualizar evidencias cuando cambien los parámetros
+            evidencias = solicitudesEvidencias;
+            isLoadingEvidencias = isLoadingEvidenciasParam;
+            AplicarFiltros();
+            StateHasChanged();
+        }
+        
+        await base.OnParametersSetAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (solicitudesEvidencias != null)
+        {
+            evidencias = solicitudesEvidencias;
+            isLoadingEvidencias = isLoadingEvidenciasParam;
+            AplicarFiltros();
+            StateHasChanged();
+        }
     }
 
     private async Task CargarEvidencias()
@@ -400,31 +439,8 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
 
     private async Task EliminarEvidencia(EvidenciaInvestigacionViewModel evidencia)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", $"¿Está seguro de que desea eliminar la evidencia '{evidencia.TituloProyecto}'?"))
-        {
-            try
-            {
-                var token = await LocalStorage.GetItemAsync<string>("authToken");
-                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-                var response = await Http.DeleteAsync($"api/evidencias-investigacion/eliminar/{evidencia.Id}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    await CargarEvidencias();
-                    await OnEvidenciasChanged.InvokeAsync();
-                    ToastService.ShowSuccess("Evidencia eliminada exitosamente.");
-                }
-                else
-                {
-                    ToastService.ShowError("Error al eliminar la evidencia.");
-                }
-            }
-            catch (Exception ex)
-            {
-                ToastService.ShowError($"Error: {ex.Message}");
-            }
-        }
+        // Invocar el callback del componente padre para mostrar el modal de confirmación
+        await OnEliminarEvidencia.InvokeAsync(evidencia.Id);
     }
 
     // Permission checks

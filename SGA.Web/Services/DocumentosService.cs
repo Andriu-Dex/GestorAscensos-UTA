@@ -252,5 +252,27 @@ namespace SGA.Web.Services
                 _toastService.ShowError($"Error al descargar documento: {ex.Message}");
             }
         }
+
+        // Evidencias de Investigación
+        public async Task<List<EvidenciaInvestigacionViewModel>?> LoadTodasSolicitudesEvidenciasAsync()
+        {
+            try
+            {
+                await SetAuthorizationHeader();
+                var response = await _http.GetAsync("api/evidencias-investigacion/mis-evidencias");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<ResponseEvidenciasInvestigacionDto>();
+                    return result?.Exitoso == true ? result.Evidencias : null;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError($"Error al cargar evidencias: {ex.Message}");
+                return null;
+            }
+        }
     }
 }
