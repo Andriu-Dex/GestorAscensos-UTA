@@ -33,6 +33,7 @@ public class ExternalDataService : IExternalDataService
                 e.FechaNombramiento,
                 e.NivelAcademico,
                 e.Facultad,
+                e.Departamento,
                 e.CorreoInstitucional as Email,
                 e.EstaActivo as Activo
             FROM EmpleadosTTHH e 

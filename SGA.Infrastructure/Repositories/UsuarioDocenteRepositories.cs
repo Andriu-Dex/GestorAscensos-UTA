@@ -80,6 +80,9 @@ public class DocenteRepository : IDocenteRepository
         return await _context.Docentes
             .Include(d => d.Usuario)
             .Include(d => d.SolicitudesAscenso)
+            .Include(d => d.Departamento)
+                .ThenInclude(dep => dep!.Facultad)
+            .Include(d => d.ObrasAcademicas)
             .FirstOrDefaultAsync(d => d.Id == id);
     }
 
@@ -88,6 +91,9 @@ public class DocenteRepository : IDocenteRepository
         return await _context.Docentes
             .Include(d => d.Usuario)
             .Include(d => d.SolicitudesAscenso)
+            .Include(d => d.Departamento)
+                .ThenInclude(dep => dep!.Facultad)
+            .Include(d => d.ObrasAcademicas)
             .FirstOrDefaultAsync(d => d.Cedula == cedula);
     }
 
@@ -96,6 +102,9 @@ public class DocenteRepository : IDocenteRepository
         return await _context.Docentes
             .Include(d => d.Usuario)
             .Include(d => d.SolicitudesAscenso)
+            .Include(d => d.Departamento)
+                .ThenInclude(dep => dep!.Facultad)
+            .Include(d => d.ObrasAcademicas)
             .FirstOrDefaultAsync(d => d.UsuarioId == usuarioId);
     }
 

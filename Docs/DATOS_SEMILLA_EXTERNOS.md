@@ -29,24 +29,24 @@ INSERT INTO Empleados (
     Facultad,
     Departamento
 ) VALUES (
-    '1800123456',
+    '1801000000',
     'Steven',
     'Paredes',
     'sparedes@uta.edu.ec',
     1,
     'Titular Auxiliar',
-    'Titular1',
+    'Titular2',
     730, -- Aproximadamente 2 años (730 días)
     '2021-06-01 08:00:00',
-    'Docente Titular Auxiliar 1',
+    'Docente Titular Auxiliar 2',
     '2023-06-29 08:00:00',
     '2023-06-29 08:00:00',
-    'Facultad de Ingeniería',
-    'Departamento de Sistemas'
+    'Facultad de Ingeniería en Sistemas, Electrónica e Industrial',
+    'Departamento de Sistemas y Computación'
 );
 
 -- Verificar inserción
-SELECT * FROM Empleados WHERE Cedula = '1800123456';
+SELECT * FROM Empleados WHERE Cedula = '1801000000';
 ```
 
 ## Base de Datos DAC (Evaluación Docente)
@@ -63,13 +63,13 @@ INSERT INTO EvaluacionesDocentes (
     Fecha,
     EstudiantesEvaluaron
 ) VALUES
-('1800123456', '2023-1', 78.5, '2023-07-15', 45),
-('1800123456', '2023-2', 82.3, '2023-12-20', 52),
-('1800123456', '2024-1', 79.8, '2024-07-15', 48),
-('1800123456', '2024-2', 81.2, '2024-12-20', 50);
+('1801000000', '2023-1', 78.5, '2023-07-15', 45),
+('1801000000', '2023-2', 82.3, '2023-12-20', 52),
+('1801000000', '2024-1', 79.8, '2024-07-15', 48),
+('1801000000', '2024-2', 81.2, '2024-12-20', 50);
 
 -- Verificar inserción
-SELECT * FROM EvaluacionesDocentes WHERE CedulaDocente = '1800123456' ORDER BY Fecha;
+SELECT * FROM EvaluacionesDocentes WHERE CedulaDocente = '1801000000' ORDER BY Fecha;
 ```
 
 ## Base de Datos DITIC (Capacitación)
@@ -88,13 +88,13 @@ INSERT INTO ParticipacionCursos (
     HorasDuracion,
     Completado
 ) VALUES
-('1800123456', 'CAP001', 'Metodologías de Enseñanza Activa', '2023-08-01', '2023-08-15', 40, 1),
-('1800123456', 'CAP002', 'Tecnologías Educativas Digitales', '2023-11-10', '2023-11-25', 32, 1),
-('1800123456', 'CAP003', 'Evaluación por Competencias', '2024-03-15', '2024-03-30', 35, 1),
-('1800123456', 'CAP004', 'Investigación Pedagógica', '2024-09-05', '2024-09-20', 28, 1);
+('1801000000', 'CAP001', 'Metodologías de Enseñanza Activa', '2023-08-01', '2023-08-15', 40, 1),
+('1801000000', 'CAP002', 'Tecnologías Educativas Digitales', '2023-11-10', '2023-11-25', 32, 1),
+('1801000000', 'CAP003', 'Evaluación por Competencias', '2024-03-15', '2024-03-30', 35, 1),
+('1801000000', 'CAP004', 'Investigación Pedagógica', '2024-09-05', '2024-09-20', 28, 1);
 
 -- Verificar inserción
-SELECT * FROM ParticipacionCursos WHERE CedulaDocente = '1800123456' ORDER BY FechaInicio;
+SELECT * FROM ParticipacionCursos WHERE CedulaDocente = '1801000000' ORDER BY FechaInicio;
 ```
 
 ## Base de Datos DIR INV (Investigación)

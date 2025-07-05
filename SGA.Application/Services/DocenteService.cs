@@ -91,12 +91,15 @@ public class DocenteService : IDocenteService
                 if (docente != null)
                 {
                     docente.FechaNombramiento = datosTTHH.FechaNombramiento;
+                    // Guardar datos organizacionales importados de TTHH
+                    docente.FacultadTTHH = datosTTHH.Facultad;
+                    docente.DepartamentoTTHH = datosTTHH.Departamento;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     
                     await _auditoriaService.RegistrarAccionAsync("IMPORTAR_DATOS_TTHH", 
                         docente.Id.ToString(), docente.Email, "Docente", null, 
-                        $"Fecha nombramiento: {datosTTHH.FechaNombramiento}", null);
+                        $"Fecha nombramiento: {datosTTHH.FechaNombramiento}, Facultad: {datosTTHH.Facultad}, Departamento: {datosTTHH.Departamento}", null);
                 }
                 
                 return new ImportarDatosResponse
@@ -671,6 +674,9 @@ public class DocenteService : IDocenteService
                         docente.FechaInicioNivelActual = datosTTHH.FechaNombramiento.Value;
                     }
                     
+                    // Guardar datos organizacionales importados de TTHH
+                    docente.FacultadTTHH = datosTTHH.Facultad;
+                    docente.DepartamentoTTHH = datosTTHH.Departamento;
                     docente.FechaUltimaImportacion = DateTime.UtcNow;
                     await _docenteRepository.UpdateAsync(docente);
                     

@@ -68,23 +68,71 @@ public class ReporteService : IReporteService
             .SetItalic()
             .SetTextAlignment(iText.Layout.Properties.TextAlignment.RIGHT);
 
-        // Encabezado con logotipo (simulado con texto)
-        var headerTable = new iText.Layout.Element.Table(new float[] { 1, 3 })
+        // Encabezado con logotipo y foto de perfil
+        var headerTable = new iText.Layout.Element.Table(new float[] { 1, 3, 1 })
             .UseAllAvailableWidth();
             
-        var cell1 = new iText.Layout.Element.Cell()
+        var logoCell = new iText.Layout.Element.Cell()
             .Add(new Paragraph("UTA").SetFontSize(36).SetBold())
             .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
             .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE);
             
-        var cell2 = new iText.Layout.Element.Cell()
+        var titleCell = new iText.Layout.Element.Cell()
             .Add(new Paragraph("UNIVERSIDAD TÉCNICA DE AMBATO\nSISTEMA DE GESTIÓN DE ASCENSOS")
-                .SetTextAlignment(iText.Layout.Properties.TextAlignment.RIGHT))
+                .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER))
             .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
             .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE);
+
+        var photoCell = new iText.Layout.Element.Cell()
+            .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+            .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE)
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.RIGHT)
+            .SetPaddingRight(10); // Añadir padding a la derecha
+
+        // Agregar foto de perfil si existe
+        if (docente.FotoPerfil != null && docente.FotoPerfil.Length > 0)
+        {
+            try
+            {
+                var imageData = iText.IO.Image.ImageDataFactory.Create(docente.FotoPerfil);
+                var image = new iText.Layout.Element.Image(imageData)
+                    .SetWidth(80)
+                    .SetHeight(80)
+                    .SetBorder(new iText.Layout.Borders.SolidBorder(new iText.Kernel.Colors.DeviceRgb(138, 21, 56), 2)) // Color institucional
+                    .SetBorderRadius(new iText.Layout.Properties.BorderRadius(40))
+                    .SetMarginRight(10); // Añadir margen derecho
+                
+                photoCell.Add(image);
+            }
+            catch (Exception)
+            {
+                // Si hay error con la imagen, mostrar placeholder
+                photoCell.Add(new Paragraph("Foto\nPerfil")
+                    .SetFontSize(8)
+                    .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER)
+                    .SetBorder(new iText.Layout.Borders.SolidBorder(new iText.Kernel.Colors.DeviceRgb(138, 21, 56), 1))
+                    .SetWidth(80)
+                    .SetHeight(80)
+                    .SetPaddingTop(25)
+                    .SetMarginRight(10));
+            }
+        }
+        else
+        {
+            // Placeholder cuando no hay foto
+            photoCell.Add(new Paragraph("Sin\nFoto")
+                .SetFontSize(8)
+                .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER)
+                .SetBorder(new iText.Layout.Borders.SolidBorder(new iText.Kernel.Colors.DeviceRgb(138, 21, 56), 1))
+                .SetWidth(80)
+                .SetHeight(80)
+                .SetPaddingTop(25)
+                .SetMarginRight(10));
+        }
             
-        headerTable.AddCell(cell1);
-        headerTable.AddCell(cell2);
+        headerTable.AddCell(logoCell);
+        headerTable.AddCell(titleCell);
+        headerTable.AddCell(photoCell);
         document.Add(headerTable);
         
         // Línea separadora
@@ -117,6 +165,13 @@ public class ReporteService : IReporteService
         
         datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph("Email:").AddStyle(etiquetaEstilo)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
         datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(docente.Email)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+        
+        // Añadir información de facultad y departamento (priorizando datos TTHH)
+        datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph("Facultad:").AddStyle(etiquetaEstilo)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+        datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(docente.FacultadParaReporte)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+        
+        datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph("Departamento:").AddStyle(etiquetaEstilo)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+        datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(docente.DepartamentoParaReporte)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
         
         datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph("Nivel Actual:").AddStyle(etiquetaEstilo)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
         datosPersonalesTable.AddCell(new iText.Layout.Element.Cell().Add(new Paragraph(docente.NivelActual.ToString())).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
@@ -771,17 +826,80 @@ public class ReporteService : IReporteService
         var colorPrimario = new DeviceRgb(138, 21, 56);
         document.SetMargins(50, 50, 50, 50);
 
-        // Encabezado oficial
-        document.Add(new Paragraph("UNIVERSIDAD TÉCNICA DE AMBATO")
-            .SetFontSize(18)
-            .SetBold()
-            .SetTextAlignment(TextAlignment.CENTER)
-            .SetMarginBottom(10));
+        // Encabezado oficial con foto de perfil
+        var headerTable = new iText.Layout.Element.Table(new float[] { 1, 2, 1 })
+            .UseAllAvailableWidth();
 
-        document.Add(new Paragraph("VICERRECTORADO ACADÉMICO")
-            .SetFontSize(14)
-            .SetTextAlignment(TextAlignment.CENTER)
-            .SetMarginBottom(30));
+        // Logo o espacio izquierdo
+        var logoCell = new iText.Layout.Element.Cell()
+            .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+            .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE);
+
+        // Información institucional
+        var institutionCell = new iText.Layout.Element.Cell()
+            .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+            .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE)
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER);
+
+        institutionCell.Add(new Paragraph("UNIVERSIDAD TÉCNICA DE AMBATO")
+            .SetFontSize(18)
+            .SetBold());
+        institutionCell.Add(new Paragraph("VICERRECTORADO ACADÉMICO")
+            .SetFontSize(14));
+
+        // Foto de perfil
+        var photoCell = new iText.Layout.Element.Cell()
+            .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+            .SetVerticalAlignment(iText.Layout.Properties.VerticalAlignment.MIDDLE)
+            .SetTextAlignment(iText.Layout.Properties.TextAlignment.RIGHT)
+            .SetPaddingRight(15); // Añadir padding a la derecha
+
+        if (docente.FotoPerfil != null && docente.FotoPerfil.Length > 0)
+        {
+            try
+            {
+                var imageData = iText.IO.Image.ImageDataFactory.Create(docente.FotoPerfil);
+                var image = new iText.Layout.Element.Image(imageData)
+                    .SetWidth(60)
+                    .SetHeight(60)
+                    .SetBorder(new iText.Layout.Borders.SolidBorder(colorPrimario, 2))
+                    .SetBorderRadius(new iText.Layout.Properties.BorderRadius(30))
+                    .SetMarginRight(15); // Añadir margen derecho
+                
+                photoCell.Add(image);
+            }
+            catch (Exception)
+            {
+                // Si hay error con la imagen, mostrar placeholder pequeño
+                photoCell.Add(new Paragraph("Foto\nPerfil")
+                    .SetFontSize(6)
+                    .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER)
+                    .SetBorder(new iText.Layout.Borders.SolidBorder(colorPrimario, 1))
+                    .SetWidth(60)
+                    .SetHeight(60)
+                    .SetPaddingTop(20)
+                    .SetMarginRight(15));
+            }
+        }
+        else
+        {
+            // Placeholder cuando no hay foto
+            photoCell.Add(new Paragraph("Sin\nFoto")
+                .SetFontSize(6)
+                .SetTextAlignment(iText.Layout.Properties.TextAlignment.CENTER)
+                .SetBorder(new iText.Layout.Borders.SolidBorder(colorPrimario, 1))
+                .SetWidth(60)
+                .SetHeight(60)
+                .SetPaddingTop(20)
+                .SetMarginRight(15));
+        }
+
+        headerTable.AddCell(logoCell);
+        headerTable.AddCell(institutionCell);
+        headerTable.AddCell(photoCell);
+        document.Add(headerTable);
+
+        document.Add(new Paragraph("\n"));
 
         // Título del certificado
         document.Add(new Paragraph("CERTIFICADO DE ESTADO DOCENTE")
@@ -791,11 +909,15 @@ public class ReporteService : IReporteService
             .SetTextAlignment(TextAlignment.CENTER)
             .SetMarginBottom(30));
 
-        // Cuerpo del certificado
+        // Cuerpo del certificado (usando datos priorizados de TTHH)
+        var facultadInfo = docente.FacultadParaReporte;
+        var departamentoInfo = docente.DepartamentoParaReporte;
+        
         var texto = $"El suscrito Vicerrector Académico de la Universidad Técnica de Ambato, " +
                    $"CERTIFICA que el/la docente {docente.Nombres} {docente.Apellidos}, " +
                    $"con número de cédula {docente.Cedula}, se encuentra registrado/a en el " +
-                   $"sistema de gestión de ascensos con el nivel de {docente.NivelActual.GetDescription()}.";
+                   $"sistema de gestión de ascensos con el nivel de {docente.NivelActual.GetDescription()}, " +
+                   $"perteneciente a la {facultadInfo}, {departamentoInfo}.";
 
         document.Add(new Paragraph(texto)
             .SetTextAlignment(TextAlignment.JUSTIFIED)
@@ -843,7 +965,10 @@ public class ReporteService : IReporteService
         html.AppendLine("<style>");
         html.AppendLine(@"
             .reporte-container { font-family: Arial, sans-serif; }
-            .reporte-title { color: #8a1538; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; }
+            .reporte-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+            .profile-photo { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #8a1538; object-fit: cover; margin-right: 15px; }
+            .photo-placeholder { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #8a1538; display: flex; align-items: center; justify-content: center; background-color: #f5f5f5; color: #8a1538; font-size: 12px; text-align: center; margin-right: 15px; }
+            .reporte-title { color: #8a1538; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; flex: 1; }
             .seccion-title { color: #8a1538; font-size: 18px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; border-bottom: 2px solid #8a1538; }
             .info-table { width: 100%; margin-bottom: 15px; }
             .info-table td { padding: 8px; border-bottom: 1px solid #eee; }
@@ -853,7 +978,23 @@ public class ReporteService : IReporteService
         ");
         html.AppendLine("</style>");
 
+        // Header con foto de perfil
+        html.AppendLine("<div class='reporte-header'>");
+        html.AppendLine("<div style='width: 100px;'></div>"); // Spacer izquierdo
         html.AppendLine("<h1 class='reporte-title'>HOJA DE VIDA ACADÉMICA</h1>");
+        
+        // Foto de perfil o placeholder
+        if (docente.FotoPerfil != null && docente.FotoPerfil.Length > 0)
+        {
+            var fotoBase64 = Convert.ToBase64String(docente.FotoPerfil);
+            html.AppendLine($"<img src='data:image/jpeg;base64,{fotoBase64}' alt='Foto de perfil' class='profile-photo' />");
+        }
+        else
+        {
+            html.AppendLine("<div class='photo-placeholder'>Sin<br/>Foto</div>");
+        }
+        
+        html.AppendLine("</div>");
 
         html.AppendLine("<div class='seccion-title'>DATOS PERSONALES</div>");
         html.AppendLine("<table class='info-table'>");
@@ -861,6 +1002,11 @@ public class ReporteService : IReporteService
         html.AppendLine($"<tr><td class='label'>Apellidos:</td><td>{docente.Apellidos}</td></tr>");
         html.AppendLine($"<tr><td class='label'>Cédula:</td><td>{docente.Cedula}</td></tr>");
         html.AppendLine($"<tr><td class='label'>Email:</td><td>{docente.Email}</td></tr>");
+        
+        // Añadir información de facultad y departamento (priorizando datos TTHH)
+        html.AppendLine($"<tr><td class='label'>Facultad:</td><td>{docente.FacultadParaReporte}</td></tr>");
+        html.AppendLine($"<tr><td class='label'>Departamento:</td><td>{docente.DepartamentoParaReporte}</td></tr>");
+        
         html.AppendLine($"<tr><td class='label'>Nivel Actual:</td><td>{docente.NivelActual.GetDescription()}</td></tr>");
         if (docente.FechaNombramiento.HasValue)
             html.AppendLine($"<tr><td class='label'>Fecha Nombramiento:</td><td>{docente.FechaNombramiento.Value:dd/MM/yyyy}</td></tr>");
@@ -1301,14 +1447,31 @@ public class ReporteService : IReporteService
             .certificado-title { color: #8a1538; font-size: 24px; font-weight: bold; margin: 30px 0; }
             .contenido { text-align: justify; margin: 20px 0; line-height: 1.6; }
             .firma-seccion { margin-top: 50px; }
-            .membrete { background-color: #8a1538; color: white; padding: 15px; margin-bottom: 20px; }
+            .membrete { background-color: #8a1538; color: white; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .membrete-content { flex: 1; }
+            .profile-photo-cert { width: 80px; height: 80px; border-radius: 50%; border: 3px solid white; object-fit: cover; }
+            .photo-placeholder-cert { width: 80px; height: 80px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.2); color: white; font-size: 10px; text-align: center; }
         ");
         html.AppendLine("</style>");
 
         html.AppendLine("<div class='membrete'>");
+        html.AppendLine("<div class='membrete-content'>");
         html.AppendLine("<h2>UNIVERSIDAD TÉCNICA DE AMBATO</h2>");
         html.AppendLine("<h3>VICERRECTORADO ACADÉMICO</h3>");
         html.AppendLine("<p>SISTEMA DE GESTIÓN DE ASCENSOS DOCENTES</p>");
+        html.AppendLine("</div>");
+        
+        // Agregar foto de perfil en el membrete
+        if (docente.FotoPerfil != null && docente.FotoPerfil.Length > 0)
+        {
+            var fotoBase64 = Convert.ToBase64String(docente.FotoPerfil);
+            html.AppendLine($"<img src='data:image/jpeg;base64,{fotoBase64}' alt='Foto de perfil' class='profile-photo-cert' />");
+        }
+        else
+        {
+            html.AppendLine("<div class='photo-placeholder-cert'>Sin<br/>Foto</div>");
+        }
+        
         html.AppendLine("</div>");
 
         html.AppendLine("<h1 class='certificado-title'>CERTIFICADO DE ESTADO DOCENTE</h1>");
@@ -1320,7 +1483,9 @@ public class ReporteService : IReporteService
         html.AppendLine($"<p>Que el/la docente <strong>{docente.Nombres} {docente.Apellidos}</strong>, ");
         html.AppendLine($"con cédula de ciudadanía N° <strong>{docente.Cedula}</strong>, ");
         html.AppendLine($"se encuentra actualmente en el nivel <strong>{docente.NivelActual.GetDescription()}</strong> ");
-        html.AppendLine("del escalafón docente de la Universidad Técnica de Ambato.");
+        html.AppendLine($"del escalafón docente de la Universidad Técnica de Ambato, ");
+        html.AppendLine($"perteneciente a la <strong>{docente.FacultadParaReporte}</strong>, ");
+        html.AppendLine($"<strong>{docente.DepartamentoParaReporte}</strong>.</p>");
 
         if (docente.FechaInicioNivelActual != default)
         {

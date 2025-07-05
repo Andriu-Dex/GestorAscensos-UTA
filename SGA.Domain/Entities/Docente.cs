@@ -26,6 +26,10 @@ public class Docente : BaseEntity
     public int? MesesInvestigacion { get; set; }
     public DateTime? FechaUltimaImportacion { get; set; }
     
+    // Datos organizacionales importados de TTHH
+    public string? FacultadTTHH { get; set; }
+    public string? DepartamentoTTHH { get; set; }
+    
     // Foto de perfil
     [Column(TypeName = "varbinary(max)")]
     public byte[]? FotoPerfil { get; set; }
@@ -52,6 +56,17 @@ public class Docente : BaseEntity
     public string NivelDescripcion => NivelActual.GetDescription();
     public bool PuedeAscender => !NivelActual.EsNivelMaximo();
     public NivelTitular? SiguienteNivel => NivelActual.GetSiguienteNivel();
+    
+    // Propiedades para mostrar en reportes (priorizan datos de TTHH)
+    [NotMapped]
+    public string FacultadParaReporte => !string.IsNullOrWhiteSpace(FacultadTTHH) 
+        ? FacultadTTHH 
+        : Departamento?.Facultad?.Nombre ?? "Facultad no asignada";
+    
+    [NotMapped]
+    public string DepartamentoParaReporte => !string.IsNullOrWhiteSpace(DepartamentoTTHH)
+        ? DepartamentoTTHH
+        : Departamento?.Nombre ?? "Departamento no asignado";
     
     // Métodos de validación usando las extensiones de enum
     public bool CumpleRequisitosParaNivel(NivelTitular nivelObjetivo)

@@ -13,6 +13,7 @@ public class EmpleadoTTHH
     public DateTime FechaNombramiento { get; set; }
     public string CargoActual { get; set; } = string.Empty;
     public string Facultad { get; set; } = string.Empty;
+    public string Departamento { get; set; } = string.Empty;
     public string NivelAcademico { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public DateTime FechaNacimiento { get; set; }
