@@ -2,8 +2,6 @@
 @attribute [Authorize]
 @using SGA.Web.Models
 @using SGA.Web.Pages.Components
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.AspNetCore.Components.Authorization
 @inject DocumentosService DocumentosService
 @inject DocumentVisualizationService DocumentVisualizationService
 @inject HttpClient Http
@@ -25,8 +23,8 @@
         OnReemplazarArchivo="MostrarReemplazarArchivo"
         OnMostrarMotivoRechazo="MostrarMotivoRechazo"
         OnAgregarComentario="MostrarAgregarComentario"
-        OnReenviarSolicitud="MostrarConfirmarReenvio"
-        OnEliminarSolicitud="MostrarConfirmarEliminarSolicitud" />
+        OnReenviarSolicitud="ReenviarSolicitud"
+        OnEliminarSolicitud="EliminarSolicitud" />
 
     <!-- Componente de Certificados de Capacitación -->
     <CertificadosCapacitacionComponent 
@@ -38,7 +36,7 @@
         OnEditarCertificado="EditarCertificado"
         OnReemplazarArchivoCertificado="ReemplazarArchivoCertificado"
         OnVerMotivoRechazoCertificado="VerMotivoRechazoCertificado"
-        OnEliminarCertificado="MostrarConfirmarEliminarCertificado" />
+        OnEliminarCertificado="EliminarCertificado" />
 
     <!-- Componente de Evidencias de Investigación -->
     <EvidenciasInvestigacionComponent 
@@ -758,360 +756,313 @@
                 errorPDF = result.ErrorMessage;
             }
         }
-        finally
+        finallyarReenvioModal = true;
         {
             isLoadingPDF = false;
-        }
+        }te async Task ConfirmarReenvio()
     }
 
     private async Task DescargarDocumento(Guid solicitudId)
     {
-        await DocumentVisualizationService.DescargarObraAcademica(solicitudId);
+        await DocumentVisualizationService.DescargarObraAcademica(solicitudId);isProcessing = true;
     }
-
-    private void MostrarEditarMetadatos(ObraAcademicaDetalleDto solicitud)
+ar token = await LocalStorage.GetItemAsync<string>("authToken");
+    private void MostrarEditarMetadatos(ObraAcademicaDetalleDto solicitud)ders.AuthenticationHeaderValue("Bearer", token);
     {
-        solicitudSeleccionada = solicitud;
+        solicitudSeleccionada = solicitud;ar response = await Http.PutAsync($"api/obraacademicas/reenviar/{solicitudIdParaAccion}", null);
         metadatosEdicion = new EditarMetadatosSolicitudDto
-        {
+        {f (response.IsSuccessStatusCode)
             Titulo = solicitud.Titulo,
-            Descripcion = solicitud.Descripcion,
-            TipoObra = solicitud.TipoObra,
+            Descripcion = solicitud.Descripcion,   ToastService.ShowSuccess("Solicitud reenviada correctamente");
+            TipoObra = solicitud.TipoObra,       await LoadTodasSolicitudesObras();
             FechaPublicacion = solicitud.FechaPublicacion,
-            Editorial = solicitud.Editorial,
+            Editorial = solicitud.Editorial,   else
             Revista = solicitud.Revista,
-            ISBN_ISSN = solicitud.ISBN_ISSN,
-            DOI = solicitud.DOI,
-            EsIndexada = solicitud.EsIndexada,
+            ISBN_ISSN = solicitud.ISBN_ISSN,       ToastService.ShowError("Error al reenviar la solicitud");
+            DOI = solicitud.DOI,       }
+            EsIndexada = solicitud.EsIndexada,        }
             IndiceIndexacion = solicitud.IndiceIndexacion,
             Autores = solicitud.Autores
         };
-        showEditarMetadatosModal = true;
+        showEditarMetadatosModal = true;arEliminarSolicitudModal = true;
     }
 
-    private void MostrarReemplazarArchivo(ObraAcademicaDetalleDto solicitud)
+    private void MostrarReemplazarArchivo(ObraAcademicaDetalleDto solicitud)te async Task ConfirmarEliminarSolicitud()
     {
         solicitudSeleccionada = solicitud;
         archivoReemplazoNombre = string.Empty;
         archivoReemplazoContenido = string.Empty;
-        showReemplazarArchivoModal = true;
+        showReemplazarArchivoModal = true;isProcessing = true;
     }
-
-    private void MostrarMotivoRechazo(ObraAcademicaDetalleDto solicitud)
+ar token = await LocalStorage.GetItemAsync<string>("authToken");
+    private void MostrarMotivoRechazo(ObraAcademicaDetalleDto solicitud)ders.AuthenticationHeaderValue("Bearer", token);
     {
-        solicitudSeleccionada = solicitud;
+        solicitudSeleccionada = solicitud;ar response = await Http.DeleteAsync($"api/obraacademicas/eliminar/{solicitudIdParaAccion}");
         showMotivoRechazoModal = true;
-    }
+    }f (response.IsSuccessStatusCode)
 
-    private void MostrarAgregarComentario(ObraAcademicaDetalleDto solicitud)
-    {
+    private void MostrarAgregarComentario(ObraAcademicaDetalleDto solicitud)   ToastService.ShowSuccess("Solicitud eliminada correctamente");
+    {       await LoadTodasSolicitudesObras();
         solicitudSeleccionada = solicitud;
-        nuevoComentario = string.Empty;
+        nuevoComentario = string.Empty;   else
         showAgregarComentarioModal = true;
-    }
-
-    // ✅ MÉTODOS CORREGIDOS - YA NO USAN ALERTS, USAN MODALES
-    
-    private void MostrarConfirmarReenvio(Guid solicitudId)
+    }       ToastService.ShowError("Error al eliminar la solicitud");
+       }
+    private async Task ReenviarSolicitud(Guid solicitudId)        }
     {
-        solicitudIdParaAccion = solicitudId;
-        showConfirmarReenvioModal = true;
-    }
-
-    private void CancelarReenvio()
-    {
-        showConfirmarReenvioModal = false;
-        solicitudIdParaAccion = Guid.Empty;
-    }
-
-    private async Task ConfirmarReenvio()
-    {
-        try
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea reenviar esta solicitud para revisión?"))
+            return;       ToastService.ShowError($"Error: {ex.Message}");
+        
+        tryinally
         {
-            isProcessing = true;
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var token = await LocalStorage.GetItemAsync<string>("authToken");alse;
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);solicitudIdParaAccion = Guid.Empty;
             
-            var response = await Http.PutAsync($"api/obraacademicas/reenviar/{solicitudIdParaAccion}", null);
+            var response = await Http.PutAsync($"api/obraacademicas/reenviar/{solicitudId}", null);
             
-            if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)oid CancelarEliminarSolicitud()
             {
-                ToastService.ShowSuccess("Solicitud reenviada correctamente");
+                ToastService.ShowSuccess("Solicitud reenviada correctamente");;
                 await LoadTodasSolicitudesObras();
             }
-            else
+            elseresponse = await Http.DeleteAsync($"api/obraacademicas/eliminar/{solicitudId}");
             {
                 ToastService.ShowError("Error al reenviar la solicitud");
             }
-        }
-        catch (Exception ex)
-        {
+        }       ToastService.ShowSuccess("Solicitud eliminada correctamente");
+        catch (Exception ex) await LoadTodasSolicitudesObras();
+        {   }
             ToastService.ShowError($"Error: {ex.Message}");
-        }
-        finally
-        {
-            isProcessing = false;
-            CancelarReenvio();
-        }
-    }
-
-    private void MostrarConfirmarEliminarSolicitud(Guid solicitudId)
-    {
-        solicitudIdParaAccion = solicitudId;
-        showConfirmarEliminarSolicitudModal = true;
-    }
-
-    private void CancelarEliminarSolicitud()
-    {
-        showConfirmarEliminarSolicitudModal = false;
-        solicitudIdParaAccion = Guid.Empty;
-    }
-
-    private async Task ConfirmarEliminarSolicitud()
-    {
+        }   {
+    }           ToastService.ShowError("Error al eliminar la solicitud");
+            }
+    private async Task EliminarSolicitud(Guid solicitudId)
+    {   catch (Exception ex)
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro que desea eliminar esta solicitud? Esta acción no se puede deshacer."))
+            return;       ToastService.ShowError($"Error: {ex.Message}");
+                }
         try
         {
-            isProcessing = true;
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.DeleteAsync($"api/obraacademicas/eliminar/{solicitudIdParaAccion}");
+            var response = await Http.DeleteAsync($"api/obraacademicas/eliminar/{solicitudId}");
             
             if (response.IsSuccessStatusCode)
             {
                 ToastService.ShowSuccess("Solicitud eliminada correctamente");
-                await LoadTodasSolicitudesObras();
+                await LoadTodasSolicitudesObras();rvice.VisualizarCertificado(certificadoId);
             }
             else
             {
                 ToastService.ShowError("Error al eliminar la solicitud");
-            }
-        }
-        catch (Exception ex)
-        {
+            }      pdfNombreArchivo = result.FileName;
+        }rue;
+        catch (Exception ex)       }
+        {            else
             ToastService.ShowError($"Error: {ex.Message}");
-        }
-        finally
-        {
-            isProcessing = false;
-            CancelarEliminarSolicitud();
-        }
+        }           errorPDF = result.ErrorMessage;
     }
 
-    // Event handlers para certificados
-    private async Task VisualizarCertificado(Guid certificadoId)
+    // Event handlers para certificados   finally
+    private async Task VisualizarCertificado(Guid certificadoId)        {
     {
-        try
+        try   }
         {
             isLoadingPDF = true;
             errorPDF = null;
             
-            var result = await DocumentVisualizationService.VisualizarCertificado(certificadoId);
+            var result = await DocumentVisualizationService.VisualizarCertificado(certificadoId);        await DocumentVisualizationService.DescargarCertificado(certificadoId);
             
             if (result.Success)
             {
-                pdfUrl = result.PdfUrl;
+                pdfUrl = result.PdfUrl;arEliminarCertificadoModal = true;
                 pdfNombreArchivo = result.FileName;
                 showVisualizarPDFModal = true;
-            }
+            }te async Task ConfirmarEliminarCertificado()
             else
             {
                 errorPDF = result.ErrorMessage;
             }
-        }
+        }isProcessing = true;
         finally
-        {
-            isLoadingPDF = false;
+        {ar token = await LocalStorage.GetItemAsync<string>("authToken");
+            isLoadingPDF = false;rs.AuthenticationHeaderValue("Bearer", token);
         }
-    }
+    }ar response = await Http.DeleteAsync($"api/certificados-capacitacion/eliminar/{certificadoIdParaEliminar}");
 
-    private async Task DescargarCertificado(Guid certificadoId)
+    private async Task DescargarCertificado(Guid certificadoId)f (response.IsSuccessStatusCode)
     {
-        await DocumentVisualizationService.DescargarCertificado(certificadoId);
-    }
+        await DocumentVisualizationService.DescargarCertificado(certificadoId);   ToastService.ShowSuccess("Certificado eliminado correctamente");
+    }       await LoadTodasSolicitudesCertificados();
 
-    private void EditarCertificado(CertificadoCapacitacionDetalleDto certificado)
+    private void EditarCertificado(CertificadoCapacitacionDetalleDto certificado)   else
     {
-        certificadoSeleccionado = certificado;
-        editarCertificadoDto = new EditarMetadatosCertificadoDto
-        {
+        certificadoSeleccionado = certificado;       ToastService.ShowError("Error al eliminar el certificado");
+        editarCertificadoDto = new EditarMetadatosCertificadoDto       }
+        {        }
             NombreCurso = certificado.NombreCurso,
             InstitucionOfertante = certificado.InstitucionOfertante,
-            TipoCapacitacion = certificado.TipoCapacitacion,
+            TipoCapacitacion = certificado.TipoCapacitacion,       ToastService.ShowError($"Error: {ex.Message}");
             FechaInicio = certificado.FechaInicio,
             FechaFin = certificado.FechaFin,
             HorasDuracion = certificado.HorasDuracion,
-            Modalidad = certificado.Modalidad,
-            NumeroRegistro = certificado.NumeroRegistro,
-            AreaTematica = certificado.AreaTematica,
+            Modalidad = certificado.Modalidad, = false;
+            NumeroRegistro = certificado.NumeroRegistro,       certificadoIdParaEliminar = Guid.Empty;
+            AreaTematica = certificado.AreaTematica,        }
             Descripcion = certificado.Descripcion
         };
         showEditarCertificadoModal = true;
     }
-
-    private void ReemplazarArchivoCertificado(CertificadoCapacitacionDetalleDto certificado)
+wConfirmarEliminarCertificadoModal = false;
+    private void ReemplazarArchivoCertificado(CertificadoCapacitacionDetalleDto certificado)ertificadoIdParaEliminar = Guid.Empty;
     {
-        certificadoSeleccionado = certificado;
+        certificadoSeleccionado = certificado;void VerMotivoRechazoCertificado(CertificadoCapacitacionDetalleDto certificado)
         showEditarCertificadoModal = true; // Reutilizar modal de edición
     }
-
+ostrar información del rechazo
     private void VerMotivoRechazoCertificado(CertificadoCapacitacionDetalleDto certificado)
     {
         certificadoSeleccionado = certificado;
-        // Mostrar información del rechazo
+        // Mostrar información del rechazosync Task EliminarCertificado(Guid certificadoId)
         ToastService.ShowInfo($"Motivo de rechazo: {certificado.MotivoRechazo ?? "No especificado"}");
-    }
+    }onfirm", "¿Está seguro de que desea eliminar este certificado?"))
 
-    private void MostrarConfirmarEliminarCertificado(Guid certificadoId)
+    private async Task EliminarCertificado(Guid certificadoId)
     {
-        certificadoIdParaEliminar = certificadoId;
-        showConfirmarEliminarCertificadoModal = true;
-    }
-
-    private void CancelarEliminarCertificado()
-    {
-        showConfirmarEliminarCertificadoModal = false;
-        certificadoIdParaEliminar = Guid.Empty;
-    }
-
-    private async Task ConfirmarEliminarCertificado()
-    {
-        try
-        {
-            isProcessing = true;
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Está seguro de que desea eliminar este certificado?"))
+            return;;
+        ttp.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        try   
+        {wait Http.DeleteAsync($"api/certificados-capacitacion/eliminar/{certificadoId}");
+            var token = await LocalStorage.GetItemAsync<string>("authToken");   
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.DeleteAsync($"api/certificados-capacitacion/eliminar/{certificadoIdParaEliminar}");
-            
+               {
+            var response = await Http.DeleteAsync($"api/certificados-capacitacion/eliminar/{certificadoId}"); ToastService.ShowSuccess("Certificado eliminado correctamente");
+                   await LoadTodasSolicitudesCertificados();
             if (response.IsSuccessStatusCode)
-            {
-                ToastService.ShowSuccess("Certificado eliminado correctamente");
-                await LoadTodasSolicitudesCertificados();
+            {   else
+                ToastService.ShowSuccess("Certificado eliminado correctamente");       {
+                await LoadTodasSolicitudesCertificados();                ToastService.ShowError("Error al eliminar el certificado");
             }
-            else
-            {
+            else   }
+            {x)
                 ToastService.ShowError("Error al eliminar el certificado");
-            }
+            }   ToastService.ShowError($"Error: {ex.Message}");
         }
         catch (Exception ex)
         {
             ToastService.ShowError($"Error: {ex.Message}");
         }
-        finally
-        {
-            isProcessing = false;
-            CancelarEliminarCertificado();
-        }
     }
 
-    // Métodos auxiliares para modales y operaciones
+    // Métodos auxiliares para modales y operacionesl = null;
     private void CerrarVisualizarPDF()
-    {
+    {PDF = null;
         showVisualizarPDFModal = false;
         pdfUrl = null;
         pdfNombreArchivo = null;
         errorPDF = null;
-    }
+    }f (solicitudSeleccionada?.SolicitudId == null) return;
 
-    private async Task GuardarMetadatos()
+    private async Task GuardarMetadatos()ry
     {
-        if (solicitudSeleccionada?.SolicitudId == null) return;
-        
-        try
-        {
-            isProcessing = true;
-            
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.PutAsJsonAsync($"api/obraacademicas/editar-metadatos/{solicitudSeleccionada.SolicitudId}", metadatosEdicion);
-            
+        if (solicitudSeleccionada?.SolicitudId == null) return;   isProcessing = true;
+               
+        try        var token = await LocalStorage.GetItemAsync<string>("authToken");
+        {horization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            isProcessing = true;       
+            SolicitudId}", metadatosEdicion);
+            var token = await LocalStorage.GetItemAsync<string>("authToken");    
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token); if (response.IsSuccessStatusCode)
+               {
+            var response = await Http.PutAsJsonAsync($"api/obraacademicas/editar-metadatos/{solicitudSeleccionada.SolicitudId}", metadatosEdicion);wSuccess("Metadatos actualizados correctamente");
+                showEditarMetadatosModal = false;
             if (response.IsSuccessStatusCode)
             {
                 ToastService.ShowSuccess("Metadatos actualizados correctamente");
                 showEditarMetadatosModal = false;
-                await LoadTodasSolicitudesObras();
+                await LoadTodasSolicitudesObras();l actualizar los metadatos");
             }
             else
             {
                 ToastService.ShowError("Error al actualizar los metadatos");
-            }
+            }ToastService.ShowError($"Error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (Exception ex)lly
         {
-            ToastService.ShowError($"Error: {ex.Message}");
+            ToastService.ShowError($"Error: {ex.Message}");sProcessing = false;
         }
         finally
         {
-            isProcessing = false;
+            isProcessing = false;sync Task OnFileChangeReemplazo(InputFileChangeEventArgs e)
         }
-    }
+    }ile = e.File;
 
     private async Task OnFileChangeReemplazo(InputFileChangeEventArgs e)
-    {
+    {   try
         var file = e.File;
-        if (file != null && file.Size <= 10 * 1024 * 1024) // 10MB max
-        {
-            try
-            {
-                archivoReemplazoNombre = file.Name;
+        if (file != null && file.Size <= 10 * 1024 * 1024) // 10MB max       archivoReemplazoNombre = file.Name;
+        { 1024 * 1024);
+            try       using var memoryStream = new MemoryStream();
+            { await stream.CopyToAsync(memoryStream);
+                archivoReemplazoNombre = file.Name;       archivoReemplazoContenido = Convert.ToBase64String(memoryStream.ToArray());
                 using var stream = file.OpenReadStream(10 * 1024 * 1024);
-                using var memoryStream = new MemoryStream();
-                await stream.CopyToAsync(memoryStream);
-                archivoReemplazoContenido = Convert.ToBase64String(memoryStream.ToArray());
-            }
-            catch (Exception ex)
+                using var memoryStream = new MemoryStream();   catch (Exception ex)
+                await stream.CopyToAsync(memoryStream);       {
+                archivoReemplazoContenido = Convert.ToBase64String(memoryStream.ToArray());            ToastService.ShowError($"Error al leer el archivo: {ex.Message}");
+            }tring.Empty;
+            catch (Exception ex)           archivoReemplazoContenido = string.Empty;
             {
-                ToastService.ShowError($"Error al leer el archivo: {ex.Message}");
-                archivoReemplazoNombre = string.Empty;
+                ToastService.ShowError($"Error al leer el archivo: {ex.Message}");}
+                archivoReemplazoNombre = string.Empty;e
                 archivoReemplazoContenido = string.Empty;
-            }
+            }or("El archivo debe ser menor a 10MB");
         }
         else
         {
             ToastService.ShowError("El archivo debe ser menor a 10MB");
         }
-    }
+    }solicitudSeleccionada?.SolicitudId == null || string.IsNullOrEmpty(archivoReemplazoContenido)) return;
     
     private async Task ReemplazarArchivo()
     {
-        if (solicitudSeleccionada?.SolicitudId == null || string.IsNullOrEmpty(archivoReemplazoContenido)) return;
+        if (solicitudSeleccionada?.SolicitudId == null || string.IsNullOrEmpty(archivoReemplazoContenido)) return;sProcessing = true;
         
-        try
+        tryvoDto
         {
-            isProcessing = true;
-            
-            var reemplazarDto = new ReemplazarArchivoDto
+            isProcessing = true;   ArchivoNombre = archivoReemplazoNombre,
+            ArchivoContenido = archivoReemplazoContenido,
+            var reemplazarDto = new ReemplazarArchivoDto   ArchivoTipo = "application/pdf"
             {
                 ArchivoNombre = archivoReemplazoNombre,
-                ArchivoContenido = archivoReemplazoContenido,
-                ArchivoTipo = "application/pdf"
-            };
-            
-            var token = await LocalStorage.GetItemAsync<string>("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.PutAsJsonAsync($"api/obraacademicas/reemplazar-archivo/{solicitudSeleccionada.SolicitudId}", reemplazarDto);
-            
-            if (response.IsSuccessStatusCode)
-            {
+                ArchivoContenido = archivoReemplazoContenido,   var token = await LocalStorage.GetItemAsync<string>("authToken");
+                ArchivoTipo = "application/pdf"estHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            };   
+            obraacademicas/reemplazar-archivo/{solicitudSeleccionada.SolicitudId}", reemplazarDto);
+            var token = await LocalStorage.GetItemAsync<string>("authToken");   
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);(response.IsSuccessStatusCode)
+               {
+            var response = await Http.PutAsJsonAsync($"api/obraacademicas/reemplazar-archivo/{solicitudSeleccionada.SolicitudId}", reemplazarDto);Success("Archivo reemplazado correctamente");
+                   showReemplazarArchivoModal = false;
+            if (response.IsSuccessStatusCode)           await LoadTodasSolicitudesObras();
+            {            }
                 ToastService.ShowSuccess("Archivo reemplazado correctamente");
                 showReemplazarArchivoModal = false;
-                await LoadTodasSolicitudesObras();
+                await LoadTodasSolicitudesObras();           ToastService.ShowError("Error al reemplazar el archivo");
             }
             else
             {
-                ToastService.ShowError("Error al reemplazar el archivo");
-            }
+                ToastService.ShowError("Error al reemplazar el archivo");   {
+            }            ToastService.ShowError($"Error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (Exception ex)   finally
         {
-            ToastService.ShowError($"Error: {ex.Message}");
+            ToastService.ShowError($"Error: {ex.Message}");    isProcessing = false;
         }
         finally
         {
-            isProcessing = false;
+            isProcessing = false;async Task GuardarComentario()
         }
     }
     
@@ -1121,26 +1072,26 @@
         
         try
         {
-            isProcessing = true;
-            
+            isProcessing = true;tring>("authToken");
+            ttp.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var comentarioDto = new { Comentario = nuevoComentario };
-            
+            ar response = await Http.PostAsJsonAsync($"api/obraacademicas/agregar-comentario/{solicitudSeleccionada.SolicitudId}", comentarioDto);
             var token = await LocalStorage.GetItemAsync<string>("authToken");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
-            var response = await Http.PostAsJsonAsync($"api/obraacademicas/agregar-comentario/{solicitudSeleccionada.SolicitudId}", comentarioDto);
-            
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);f (response.IsSuccessStatusCode)
+               {
+            var response = await Http.PostAsJsonAsync($"api/obraacademicas/agregar-comentario/{solicitudSeleccionada.SolicitudId}", comentarioDto);.ShowSuccess("Comentario agregado correctamente");
+                   showAgregarComentarioModal = false;
             if (response.IsSuccessStatusCode)
-            {
-                ToastService.ShowSuccess("Comentario agregado correctamente");
-                showAgregarComentarioModal = false;
-                await LoadTodasSolicitudesObras();
-            }
-            else
-            {
+            {   }
+                ToastService.ShowSuccess("Comentario agregado correctamente");e
+                showAgregarComentarioModal = false;   {
+                await LoadTodasSolicitudesObras();Error("Error al agregar el comentario");
+            }   }
+            else   }
+            {        catch (Exception ex)
                 ToastService.ShowError("Error al agregar el comentario");
-            }
-        }
+            }{ex.Message}");
+        }   }
         catch (Exception ex)
         {
             ToastService.ShowError($"Error: {ex.Message}");
@@ -1148,40 +1099,40 @@
         finally
         {
             isProcessing = false;
-        }
+        }l()
     }
 
     // Métodos para certificados
-    private void CerrarEditarCertificadoModal()
-    {
+    private void CerrarEditarCertificadoModal()   certificadoSeleccionado = null;
+    {    }
         showEditarCertificadoModal = false;
-        editarCertificadoDto = null;
+        editarCertificadoDto = null;rivate async Task GuardarEdicionCertificado()
         certificadoSeleccionado = null;
-    }
+    }== null) return;
 
-    private async Task GuardarEdicionCertificado()
-    {
+    private async Task GuardarEdicionCertificado()   try
+    {        {
         if (editarCertificadoDto == null || certificadoSeleccionado == null) return;
-        
-        try
-        {
+               
+        try("authToken");
+        {tp.Headers.AuthenticationHeaderValue("Bearer", token);
             isProcessing = true;
-            
+            ync($"api/certificados-capacitacion/editar-metadatos/{certificadoSeleccionado.Id}", editarCertificadoDto);
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.PutAsJsonAsync($"api/certificados-capacitacion/editar-metadatos/{certificadoSeleccionado.Id}", editarCertificadoDto);
+            var response = await Http.PutAsJsonAsync($"api/certificados-capacitacion/editar-metadatos/{certificadoSeleccionado.Id}", editarCertificadoDto);do actualizado correctamente");
             
-            if (response.IsSuccessStatusCode)
-            {
-                ToastService.ShowSuccess("Certificado actualizado correctamente");
+            if (response.IsSuccessStatusCode)icados();
+            {       }
+                ToastService.ShowSuccess("Certificado actualizado correctamente");            else
                 CerrarEditarCertificadoModal();
-                await LoadTodasSolicitudesCertificados();
+                await LoadTodasSolicitudesCertificados();           ToastService.ShowError("Error al actualizar el certificado");
             }
             else
             {
                 ToastService.ShowError("Error al actualizar el certificado");
-            }
+            }e}");
         }
         catch (Exception ex)
         {
@@ -1190,6 +1141,178 @@
         finally
         {
             isProcessing = false;
-        }
+        }o
+    }
+g.Empty;
+    // DTOs necesarios para el funcionamiento   public string TipoObra { get; set; } = string.Empty;
+    public class EditarMetadatosSolicitudDto        public DateTime FechaPublicacion { get; set; }
+    {
+        public string Titulo { get; set; } = string.Empty;   public string? Revista { get; set; }
+        public string TipoObra { get; set; } = string.Empty;et; set; }
+        public DateTime FechaPublicacion { get; set; }
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; } }
+        public bool EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+        public string? Descripcion { get; set; }
+    }} = string.Empty;
+t; set; } = string.Empty;
+    public class ReemplazarArchivoDtostring.Empty;
+    {
+        public string ArchivoNombre { get; set; } = string.Empty;
+        public string ArchivoContenido { get; set; } = string.Empty;    public class EditarMetadatosCertificadoDto
+        public string ArchivoTipo { get; set; } = string.Empty;
+    }   public string NombreCurso { get; set; } = string.Empty;
+;
+    public class EditarMetadatosCertificadoDtot; } = string.Empty;
+    {   public DateTime FechaInicio { get; set; }
+        public string NombreCurso { get; set; } = string.Empty;        public DateTime FechaFin { get; set; }
+        public string InstitucionOfertante { get; set; } = string.Empty;; set; }
+        public string TipoCapacitacion { get; set; } = string.Empty;   public string Modalidad { get; set; } = string.Empty;
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaFin { get; set; }
+        public int HorasDuracion { get; set; }
+        public string Modalidad { get; set; } = string.Empty;
+        public string? NumeroRegistro { get; set; }
+        public string? AreaTematica { get; set; }
+        public string? Descripcion { get; set; }
+    }
+
+    public class ObraAcademicaDetalleDto string.Empty;
+    {tring.Empty;
+        public int Id { get; set; }t; }
+        public Guid? SolicitudId { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string TipoObra { get; set; } = string.Empty;   public string? ISBN_ISSN { get; set; }
+        public DateTime FechaPublicacion { get; set; }        public string? DOI { get; set; }
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }   public string? IndiceIndexacion { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }   public string? Descripcion { get; set; }
+        public bool EsIndexada { get; set; }        public string? Estado { get; set; }
+        public string? IndiceIndexacion { get; set; }; set; }
+        public string? Autores { get; set; }   public string? MotivoRechazo { get; set; }
+        public string? Descripcion { get; set; }
+        public string? Estado { get; set; }
+        public string? ComentariosRevision { get; set; }
+        public string? MotivoRechazo { get; set; }
+    }
+} = string.Empty;
+    public class CertificadoCapacitacionDetalleDtoring.Empty;
+    {} = string.Empty;
+        public Guid Id { get; set; }
+        public string NombreCurso { get; set; } = string.Empty;
+        public string InstitucionOfertante { get; set; } = string.Empty;
+        public string TipoCapacitacion { get; set; } = string.Empty;g.Empty;
+        public DateTime FechaInicio { get; set; }; }
+        public DateTime FechaFin { get; set; }   public string? AreaTematica { get; set; }
+        public int HorasDuracion { get; set; }       public string? Descripcion { get; set; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}    }        public string? ArchivoTipo { get; set; }        public string? ArchivoContenido { get; set; }        public string? ArchivoNombre { get; set; }        public string? Descripcion { get; set; }        public string? AreaTematica { get; set; }        public string? NumeroRegistro { get; set; }        public string Modalidad { get; set; } = string.Empty;        public int HorasDuracion { get; set; }        public DateTime FechaFin { get; set; } = DateTime.Today;        public DateTime FechaInicio { get; set; } = DateTime.Today;        public string TipoCapacitacion { get; set; } = string.Empty;        public string InstitucionOfertante { get; set; } = string.Empty;        public string NombreCurso { get; set; } = string.Empty;    {    public class CrearCertificadoCapacitacionDto    }        public List<CrearCertificadoCapacitacionDto> Certificados { get; set; } = new();    {    public class SolicitarCertificadosCapacitacionDto    }        public string? ArchivoTipo { get; set; }        public string? ArchivoContenido { get; set; }        public string? ArchivoNombre { get; set; }        public string? Descripcion { get; set; }        public string? Autores { get; set; }        public string? IndiceIndexacion { get; set; }        public bool EsIndexada { get; set; }        public string? DOI { get; set; }        public string? ISBN_ISSN { get; set; }        public string? Revista { get; set; }        public string? Editorial { get; set; }        public DateTime FechaPublicacion { get; set; } = DateTime.Today;        public string TipoObra { get; set; } = string.Empty;        public string Titulo { get; set; } = string.Empty;    {    public class NuevaObraAcademicaDto    }        public string? Comentarios { get; set; }        public List<NuevaObraAcademicaDto> Obras { get; set; } = new();    {    public class SolicitudObrasAcademicasDto    }        public string? ComentariosRevision { get; set; }        public string? MotivoRechazo { get; set; }        public string? Estado { get; set; }        public string? Descripcion { get; set; }        public string? AreaTematica { get; set; }        public string? NumeroRegistro { get; set; }        public string Modalidad { get; set; } = string.Empty;        public string? Estado { get; set; }
+        public string? MotivoRechazo { get; set; }
+        public string? ComentariosRevision { get; set; }
+    }
+
+    public class SolicitudObrasAcademicasDto
+    {
+        public List<NuevaObraAcademicaDto> Obras { get; set; } = new();
+        public string? Comentarios { get; set; }
+    }
+
+    public class NuevaObraAcademicaDto
+    {
+        public string Titulo { get; set; } = string.Empty;
+        public string TipoObra { get; set; } = string.Empty;
+        public DateTime FechaPublicacion { get; set; } = DateTime.Today;
+        public string? Editorial { get; set; }
+        public string? Revista { get; set; }
+        public string? ISBN_ISSN { get; set; }
+        public string? DOI { get; set; }
+        public bool EsIndexada { get; set; }
+        public string? IndiceIndexacion { get; set; }
+        public string? Autores { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public string? ArchivoContenido { get; set; }
+        public string? ArchivoTipo { get; set; }
+    }
+
+    public class SolicitarCertificadosCapacitacionDto
+    {
+        public List<CrearCertificadoCapacitacionDto> Certificados { get; set; } = new();
+    }
+
+    public class CrearCertificadoCapacitacionDto
+    {
+        public string NombreCurso { get; set; } = string.Empty;
+        public string InstitucionOfertante { get; set; } = string.Empty;
+        public string TipoCapacitacion { get; set; } = string.Empty;
+        public DateTime FechaInicio { get; set; } = DateTime.Today;
+        public DateTime FechaFin { get; set; } = DateTime.Today;
+        public int HorasDuracion { get; set; }
+        public string Modalidad { get; set; } = string.Empty;
+        public string? NumeroRegistro { get; set; }
+        public string? AreaTematica { get; set; }
+        public string? Descripcion { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public string? ArchivoContenido { get; set; }
+        public string? ArchivoTipo { get; set; }
     }
 }
