@@ -91,23 +91,6 @@ public class NotificacionTiempoRealService : INotificacionTiempoRealService
 
             await Task.WhenAll(tareas);
 
-            // También enviar a grupo de administradores conectados
-            var notificacionDto = new
-            {
-                id = Guid.NewGuid(),
-                titulo = titulo,
-                mensaje = mensaje,
-                tipo = tipo.ToString(),
-                urlAccion = urlAccion,
-                fechaCreacion = DateTime.UtcNow,
-                icono = ObtenerIconoPorTipo(tipo),
-                color = ObtenerColorPorTipo(tipo)
-            };
-
-            _logger.LogInformation("Enviando notificación a través de SignalR al grupo: Admins");
-            await _hubContext.Clients.Group("Admins")
-                .SendAsync("RecibirNotificacion", notificacionDto);
-
             _logger.LogInformation("✅ Notificación enviada a {Count} administradores: {Titulo}", 
                 administradores.Count, titulo);
         }

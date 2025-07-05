@@ -7,12 +7,18 @@ Esta guía documenta la implementación completa de un sistema de notificaciones
 ### 🎯 Objetivos Alcanzados
 
 - ✅ **Notificaciones instantáneas** usando SignalR
+- ✅ **Notificaciones a administradores** cuando docentes crean/reenvían solicitudes
+- ✅ **Notificaciones a docentes** cuando administradores cambian estados
+- ✅ **Prevención de duplicados** en notificaciones
 - ✅ **Arquitectura limpia** y modular siguiendo DDD
 - ✅ **Base de datos normalizada** cumpliendo 3FN
 - ✅ **Seguridad robusta** con autenticación JWT
 - ✅ **UI moderna** con toasts y componentes Bootstrap
 - ✅ **Performance optimizada** con índices y paginación
 - ✅ **Escalabilidad** para crecimiento futuro
+- ✅ **Notificaciones a administradores** al crear/reenviar solicitudes de ascenso
+- ✅ **Sistema libre de duplicidades** de notificaciones
+- ✅ **Integración completa** con el flujo de solicitudes existente
 
 ---
 
@@ -1447,32 +1453,63 @@ public async Task ProcesarObraAsync(Guid obraId, bool aprobada, string comentari
 
 ## 🔄 Flujo de Funcionamiento
 
-### **1. Flujo de Notificación Completo**
+## 🔄 Flujo de Funcionamiento
+
+### **1. Flujo de Notificación a Administradores (Nuevas Solicitudes/Reenvíos)**
 
 ```mermaid
 sequenceDiagram
     participant D as Docente
     participant API as API Controller
-    participant NS as NotificationService
+    participant SS as SolicitudService
     participant NTS as NotificacionTiempoRealService
     participant Hub as SignalR Hub
     participant BD as Base de Datos
     participant Admin as Administrador
 
-    D->>API: Envía nueva obra
-    API->>NS: NotificarNuevaObra()
-    NS->>NTS: EnviarNotificacionAdministradoresAsync()
+    Note over D, Admin: Flujo de Creación/Reenvío de Solicitud
+    D->>API: Crear/Reenviar Solicitud
+    API->>SS: CrearSolicitudAsync() / ReenviarSolicitudAsync()
+    SS->>BD: Guardar solicitud en BD
+    SS->>NTS: EnviarNotificacionAdministradoresAsync()
 
-    par Persistir en BD
+    par Persistir notificación
         NTS->>BD: Guardar notificación
     and Enviar SignalR
         NTS->>Hub: SendToGroupAsync("Administrators")
         Hub->>Admin: RecibirNotificacion
-        Admin->>Admin: Mostrar toast + actualizar UI
+        Admin->>Admin: Mostrar toast + sonido + actualizar badge
     end
 ```
 
-### **2. Flujo de Conexión Cliente**
+### **2. Flujo de Notificación a Docentes (Cambios de Estado)**
+
+```mermaid
+sequenceDiagram
+    participant Admin as Administrador
+    participant API as API Controller
+    participant SS as SolicitudService
+    participant NTS as NotificacionTiempoRealService
+    participant Hub as SignalR Hub
+    participant BD as Base de Datos
+    participant D as Docente
+
+    Note over Admin, D: Flujo de Cambio de Estado
+    Admin->>API: Cambiar estado solicitud
+    API->>SS: CambiarEstadoAsync()
+    SS->>BD: Actualizar estado en BD
+    SS->>NTS: EnviarNotificacionUsuarioAsync(docenteId)
+
+    par Persistir notificación
+        NTS->>BD: Guardar notificación
+    and Enviar SignalR
+        NTS->>Hub: SendToUserAsync(docenteId)
+        Hub->>D: RecibirNotificacion
+        D->>D: Mostrar toast + sonido + actualizar badge
+    end
+```
+
+### **3. Flujo de Conexión Cliente**
 
 ```mermaid
 sequenceDiagram
@@ -1528,9 +1565,14 @@ El sistema de notificaciones en tiempo real implementado en el SGA proporciona u
 
 ### 🎯 **Casos de Uso Cubiertos**
 
-- ✅ **Administradores**: Reciben notificaciones de nuevas solicitudes (obras, certificados, evidencias)
-- ✅ **Docentes**: Reciben notificaciones de cambios de estado en sus solicitudes
+- ✅ **Administradores**: Reciben notificaciones instantáneas cuando los docentes:
+  - Crean nuevas solicitudes de ascenso
+  - Reenvían solicitudes (con o sin documentos adicionales)
+- ✅ **Docentes**: Reciben notificaciones cuando los administradores:
+  - Cambian el estado de sus solicitudes (aprobadas/rechazadas)
+  - Agregan comentarios o observaciones
 - ✅ **Ambos roles**: Notificaciones del sistema (información, advertencias, errores)
+- ✅ **Sin duplicados**: Cada evento genera exactamente una notificación
 
 ### 🏗️ **Arquitectura de Calidad**
 
@@ -1541,3 +1583,74 @@ El sistema de notificaciones en tiempo real implementado en el SGA proporciona u
 - ✅ **Escalabilidad** preparada para crecimiento futuro
 
 El sistema está completamente integrado con la funcionalidad existente del SGA y mejora significativamente la comunicación y experiencia de usuario, manteniendo a todos los usuarios informados en tiempo real sobre eventos importantes dentro del sistema.
+
+### 🎯 **Cambios Implementados en Este Chat**
+
+1. **✅ Notificaciones a Administradores**
+
+   - Se agregó `EnviarNotificacionAdministradoresAsync` en el método `CrearSolicitudAsync`
+   - Se agregó la misma notificación en `ReenviarSolicitudAsync` y `ReenviarSolicitudConDocumentosAsync`
+   - Los administradores ahora reciben notificaciones instantáneas cuando los docentes crean o reenvían solicitudes
+
+2. **✅ Prevención de Duplicados**
+
+   - Se verificó que cada evento genere exactamente una notificación
+   - Control de flujo optimizado para evitar múltiples llamadas
+   - Documentación actualizada para reflejar el flujo real
+
+3. **✅ Pruebas Exitosas**
+
+   - Compilación sin errores
+   - Notificaciones funcionando correctamente en tiempo real
+   - UI actualizada instantáneamente con toasts y badges
+
+4. **✅ Documentación Actualizada**
+   - Objetivos reflejan las funcionalidades implementadas
+   - Diagramas de flujo actualizados
+   - Casos de uso específicos documentados
+
+## 🚫 Prevención de Notificaciones Duplicadas
+
+### **Estrategia Implementada**
+
+El sistema implementa las siguientes medidas para evitar notificaciones duplicadas:
+
+#### **1. Una Notificación por Evento**
+
+- ✅ **Creación de Solicitud**: Solo se envía una notificación cuando el docente crea la solicitud inicial
+- ✅ **Reenvío de Solicitud**: Solo se envía una notificación cuando el docente reenvía (con o sin documentos)
+- ✅ **Cambio de Estado**: Solo se envía una notificación cuando el administrador cambia el estado
+
+#### **2. Control en la Capa de Servicio**
+
+```csharp
+// En SolicitudService.cs - Método CrearSolicitudAsync
+public async Task<ResultadoOperacion<SolicitudResponseDto>> CrearSolicitudAsync(...)
+{
+    // ... lógica de creación ...
+
+    // ✅ UNA SOLA notificación después de crear la solicitud
+    await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+        "Nueva Solicitud de Ascenso",
+        $"El docente {solicitud.NombreCompleto} ha creado una nueva solicitud de ascenso.",
+        TipoNotificacion.SolicitudCreada
+    );
+
+    return ResultadoOperacion<SolicitudResponseDto>.Exitoso(solicitudDto);
+}
+```
+
+#### **3. Flujo Sin Duplicados**
+
+```
+Evento Único → Método de Servicio → Una Sola Notificación → SignalR → Frontend
+```
+
+### **Tipos de Notificaciones Implementadas**
+
+| Evento                                 | Destinatario       | Mensaje                                                               | Cuando se Envía            |
+| -------------------------------------- | ------------------ | --------------------------------------------------------------------- | -------------------------- |
+| **Solicitud Creada**                   | Administradores    | "El docente {nombre} ha creado una nueva solicitud"                   | Al crear solicitud         |
+| **Solicitud Reenviada**                | Administradores    | "El docente {nombre} ha reenviado su solicitud"                       | Al reenviar                |
+| **Solicitud Reenviada con Documentos** | Administradores    | "El docente {nombre} ha reenviado su solicitud con nuevos documentos" | Al reenviar con documentos |
+| **Estado Cambiado**                    | Docente específico | "Su solicitud ha sido {nuevo_estado}"                                 | Al cambiar estado          |

@@ -300,3 +300,43 @@ window.hideAllToasts = function () {
 document.addEventListener("DOMContentLoaded", function () {
   window.notificationSystem.init();
 });
+
+/**
+ * Sistema de sonidos para notificaciones
+ */
+window.playNotificationSound = function () {
+  try {
+    // Crear un AudioContext si no existe
+    if (!window.audioContext) {
+      window.audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+    }
+
+    // Crear un sonido de notificación usando osciladores
+    const oscillator = window.audioContext.createOscillator();
+    const gainNode = window.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(window.audioContext.destination);
+
+    // Configurar el sonido
+    oscillator.frequency.setValueAtTime(800, window.audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(
+      600,
+      window.audioContext.currentTime + 0.1
+    );
+
+    // Configurar el volumen con fade out
+    gainNode.gain.setValueAtTime(0.3, window.audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      window.audioContext.currentTime + 0.3
+    );
+
+    // Reproducir el sonido
+    oscillator.start(window.audioContext.currentTime);
+    oscillator.stop(window.audioContext.currentTime + 0.3);
+  } catch (error) {
+    console.log("No se pudo reproducir el sonido de notificación:", error);
+  }
+};

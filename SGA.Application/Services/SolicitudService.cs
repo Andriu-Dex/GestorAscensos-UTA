@@ -17,6 +17,8 @@ public class SolicitudService : ISolicitudService
     private readonly IDocumentoRepository _documentoRepository;
     private readonly DocumentoConversionService _documentoConversionService;
     private readonly INotificationService _notificationService;
+    private readonly INotificacionTiempoRealService _notificacionTiempoReal;
+    private readonly IUsuarioRepository _usuarioRepository;
 
     public SolicitudService(
         ISolicitudAscensoRepository solicitudRepository,
@@ -26,7 +28,9 @@ public class SolicitudService : ISolicitudService
         IAuditoriaService auditoriaService,
         IDocumentoRepository documentoRepository,
         DocumentoConversionService documentoConversionService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        INotificacionTiempoRealService notificacionTiempoReal,
+        IUsuarioRepository usuarioRepository)
     {
         _solicitudRepository = solicitudRepository;
         _docenteRepository = docenteRepository;
@@ -36,6 +40,8 @@ public class SolicitudService : ISolicitudService
         _documentoRepository = documentoRepository;
         _documentoConversionService = documentoConversionService;
         _notificationService = notificationService;
+        _notificacionTiempoReal = notificacionTiempoReal;
+        _usuarioRepository = usuarioRepository;
     }
 
     public async Task<SolicitudAscensoDto> CrearSolicitudAsync(Guid docenteId, CrearSolicitudRequest request)
@@ -112,6 +118,14 @@ public class SolicitudService : ISolicitudService
             docente.Id.ToString(), docente.Email, "SolicitudAscenso", 
             null, $"Nivel solicitado: Titular{request.NivelSolicitado}", null);
 
+        // Enviar notificación en tiempo real a los administradores
+        await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+            "Nueva Solicitud de Ascenso",
+            $"El docente {docente.NombreCompleto} ha enviado una nueva solicitud de ascenso de {solicitud.NivelActual} a {solicitud.NivelSolicitado}.",
+            TipoNotificacion.NuevaSolicitud,
+            $"/admin/solicitudes"
+        );
+
         return await ConvertToDto(solicitud);
     }
 
@@ -179,6 +193,9 @@ public class SolicitudService : ISolicitudService
         var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
         if (docente == null) return false;
 
+        // Obtener información del usuario asociado al docente para las notificaciones en tiempo real
+        var usuario = await _usuarioRepository.GetByEmailAsync(docente.Email);
+
         var nivelAnterior = solicitud.NivelActual.ToString();
         var nivelSolicitado = solicitud.NivelSolicitado.ToString();
 
@@ -189,26 +206,44 @@ public class SolicitudService : ISolicitudService
 
         await _solicitudRepository.UpdateAsync(solicitud);
 
-        // Si se aprueba, actualizar nivel del docente
+        // Si se aprueba, actualizar nivel del docente y enviar notificaciones
         if (request.Aprobar)
         {
             await _docenteService.ActualizarNivelDocenteAsync(solicitud.DocenteId, solicitud.NivelSolicitado.ToString());
             
-            // Enviar notificación de felicitación
+            // Enviar notificación de felicitación por email
             await _notificationService.NotificarAprobacionAscensoAsync(
                 docente.Email, 
                 docente.NombreCompleto, 
                 nivelAnterior, 
                 nivelSolicitado);
+
+            // Enviar notificación en tiempo real via SignalR
+            if (usuario != null)
+            {
+                await _notificacionTiempoReal.NotificarAscensoAprobadoAsync(
+                    usuario.Id, 
+                    nivelAnterior, 
+                    nivelSolicitado);
+            }
         }
         else
         {
-            // Enviar notificación de rechazo
+            // Enviar notificación de rechazo por email
             await _notificationService.NotificarRechazoAscensoAsync(
                 docente.Email, 
                 docente.NombreCompleto, 
                 nivelSolicitado, 
                 request.MotivoRechazo ?? "No especificado");
+
+            // Enviar notificación en tiempo real via SignalR
+            if (usuario != null)
+            {
+                await _notificacionTiempoReal.NotificarAscensoRechazadoAsync(
+                    usuario.Id, 
+                    nivelSolicitado, 
+                    request.MotivoRechazo ?? "No especificado");
+            }
         }
 
         await _auditoriaService.RegistrarAccionAsync(
@@ -395,6 +430,18 @@ public class SolicitudService : ISolicitudService
                 null
             );
 
+            // Enviar notificación a los administradores sobre el reenvío
+            var docente = await _docenteRepository.GetByIdAsync(docenteId);
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+                    "Solicitud de Ascenso Reenviada",
+                    $"El docente {docente.NombreCompleto} ha reenviado su solicitud de ascenso para revisión.",
+                    TipoNotificacion.NuevaSolicitud,
+                    $"/admin/solicitudes"
+                );
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -461,6 +508,18 @@ public class SolicitudService : ISolicitudService
                 "Pendiente",
                 $"Documentos actualizados: {documentosIds.Count} documentos asociados"
             );
+
+            // Enviar notificación a los administradores sobre el reenvío con documentos actualizados
+            var docente = await _docenteRepository.GetByIdAsync(docenteId);
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+                    "Solicitud de Ascenso Reenviada con Documentos",
+                    $"El docente {docente.NombreCompleto} ha reenviado su solicitud de ascenso con documentos actualizados ({documentosIds.Count} documentos).",
+                    TipoNotificacion.NuevaSolicitud,
+                    $"/admin/solicitudes"
+                );
+            }
 
             return true;
         }
