@@ -3,6 +3,7 @@ using SGA.Application.DTOs.EvidenciasInvestigacion;
 using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Entities;
+using SGA.Domain.Enums;
 
 namespace SGA.Application.Services;
 
@@ -16,6 +17,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
     private readonly IDocenteRepository _docenteRepository;
     private readonly IAuditoriaService _auditoriaService;
     private readonly INotificationService _notificationService;
+    private readonly INotificacionTiempoRealService _notificacionTiempoReal;
     private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<EvidenciasInvestigacionService> _logger;
 
@@ -24,6 +26,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         IDocenteRepository docenteRepository,
         IAuditoriaService auditoriaService,
         INotificationService notificationService,
+        INotificacionTiempoRealService notificacionTiempoReal,
         IPDFCompressionService pdfCompressionService,
         ILogger<EvidenciasInvestigacionService> logger)
     {
@@ -31,6 +34,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         _docenteRepository = docenteRepository;
         _auditoriaService = auditoriaService;
         _notificationService = notificationService;
+        _notificacionTiempoReal = notificacionTiempoReal;
         _pdfCompressionService = pdfCompressionService;
         _logger = logger;
     }
@@ -200,7 +204,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
 
             _logger.LogInformation("Total de evidencias creadas: {Count}", evidenciasCreadas.Count);
 
-            // Enviar notificación a administradores
+            // Enviar notificación a administradores (incluye correo + tiempo real)
             _logger.LogInformation("Enviando notificación a administradores");
             await _notificationService.NotificarNuevaSolicitudEvidenciasAsync(docente.NombreCompleto, evidenciasCreadas.Count);
 
@@ -434,15 +438,6 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
             _logger.LogDebug("Archivo PDF reemplazado y comprimido en BD para evidencia: {Titulo}, Compresión: {Porcentaje:F2}%", 
                 evidencia.TituloProyecto, estadisticas.porcentajeCompresion);
 
-            // Si estaba rechazada, volver a pendiente
-            if (evidencia.Estado == "Rechazada")
-            {
-                evidencia.Estado = "Pendiente";
-                evidencia.MotivoRechazo = null;
-                evidencia.ComentariosRevision = null;
-                evidencia.FechaRevision = null;
-            }
-
             await _solicitudEvidenciaRepository.UpdateAsync(evidencia);
 
             await _auditoriaService.RegistrarAccionAsync(
@@ -563,6 +558,92 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
         {
             _logger.LogError(ex, "Error al obtener archivo de evidencia {EvidenciaId}", evidenciaId);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Reenviar solicitud de evidencia (de rechazada a pendiente)
+    /// </summary>
+    public async Task<ResponseGenericoEvidenciaDto> ReenviarSolicitudEvidenciaAsync(Guid evidenciaId, string cedula)
+    {
+        try
+        {
+            var evidencia = await _solicitudEvidenciaRepository.GetByIdAsync(evidenciaId);
+            if (evidencia == null)
+            {
+                return new ResponseGenericoEvidenciaDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Evidencia no encontrada"
+                };
+            }
+
+            // Verificar que la evidencia pertenece al docente
+            if (evidencia.DocenteCedula != cedula)
+            {
+                return new ResponseGenericoEvidenciaDto
+                {
+                    Exitoso = false,
+                    Mensaje = "No tiene permisos para reenviar esta evidencia"
+                };
+            }
+
+            // Solo permitir reenviar si está rechazada
+            if (evidencia.Estado != "Rechazada")
+            {
+                return new ResponseGenericoEvidenciaDto
+                {
+                    Exitoso = false,
+                    Mensaje = "Solo se pueden reenviar evidencias rechazadas"
+                };
+            }
+
+            // Cambiar estado a pendiente y limpiar datos de revisión
+            evidencia.Estado = "Pendiente";
+            evidencia.MotivoRechazo = null;
+            evidencia.ComentariosRevision = null;
+            evidencia.FechaRevision = null;
+            evidencia.FechaModificacion = DateTime.UtcNow;
+
+            await _solicitudEvidenciaRepository.UpdateAsync(evidencia);
+
+            // Registrar auditoría
+            await _auditoriaService.RegistrarAccionAsync(
+                "REENVIAR_EVIDENCIA_INVESTIGACION",
+                cedula,
+                "SolicitudEvidenciaInvestigacion",
+                evidencia.Id.ToString(),
+                "Estado: Rechazada",
+                "Estado: Pendiente - Evidencia reenviada para revisión",
+                "Usuario"
+            );
+
+            // ✅ Notificar a administradores sobre el reenvío
+            var docente = await _docenteRepository.GetByCedulaAsync(cedula);
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+                    "Evidencia de Investigación Reenviada",
+                    $"El docente {docente.NombreCompleto} ha reenviado su evidencia '{evidencia.TituloProyecto}' para revisión.",
+                    TipoNotificacion.NuevaSolicitud,
+                    "/admin/evidencias"
+                );
+            }
+
+            return new ResponseGenericoEvidenciaDto
+            {
+                Exitoso = true,
+                Mensaje = "Evidencia reenviada para revisión correctamente"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reenviar evidencia {EvidenciaId}", evidenciaId);
+            return new ResponseGenericoEvidenciaDto
+            {
+                Exitoso = false,
+                Mensaje = $"Error al reenviar evidencia: {ex.Message}"
+            };
         }
     }
 
@@ -736,7 +817,7 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                 "Sistema"
             );
 
-            // Enviar notificación al docente
+            // Enviar notificación por correo al docente
             var docenteNotif = await _docenteRepository.GetByCedulaAsync(solicitud.DocenteCedula);
             if (docenteNotif != null)
             {
@@ -747,6 +828,15 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                         "Evidencia de Investigación",
                         "Aprobada"
                     );
+
+                    // ✅ Notificar en tiempo real - Aprobación
+                    await _notificacionTiempoReal.EnviarNotificacionAsync(
+                        docenteNotif.Id,
+                        "Evidencia de Investigación Aprobada",
+                        $"Su evidencia '{solicitud.TituloProyecto}' ha sido aprobada. {revision.Comentarios}",
+                        TipoNotificacion.EvidenciaAprobada,
+                        "/docente/evidencias"
+                    );
                 }
                 else
                 {
@@ -754,6 +844,15 @@ public class EvidenciasInvestigacionService : IEvidenciasInvestigacionService
                         docenteNotif.Email,
                         "Evidencia de Investigación",
                         "Rechazada"
+                    );
+
+                    // ✅ Notificar en tiempo real - Rechazo
+                    await _notificacionTiempoReal.EnviarNotificacionAsync(
+                        docenteNotif.Id,
+                        "Evidencia de Investigación Rechazada",
+                        $"Su evidencia '{solicitud.TituloProyecto}' ha sido rechazada. Motivo: {revision.Comentarios}",
+                        TipoNotificacion.EvidenciaRechazada,
+                        "/docente/evidencias"
                     );
                 }
             }

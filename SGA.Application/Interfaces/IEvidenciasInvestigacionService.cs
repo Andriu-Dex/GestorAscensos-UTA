@@ -14,6 +14,7 @@ public interface IEvidenciasInvestigacionService
     Task<ResponseGenericoEvidenciaDto> EditarMetadatosEvidenciaAsync(Guid evidenciaId, string cedula, EditarMetadatosEvidenciaDto datos);
     Task<ResponseGenericoEvidenciaDto> ReemplazarArchivoEvidenciaAsync(Guid evidenciaId, string cedula, ReemplazarArchivoEvidenciaDto archivo);
     Task<ResponseGenericoEvidenciaDto> EliminarSolicitudEvidenciaAsync(Guid evidenciaId, string cedula);
+    Task<ResponseGenericoEvidenciaDto> ReenviarSolicitudEvidenciaAsync(Guid evidenciaId, string cedula);
     Task<byte[]?> GetArchivoEvidenciaAsync(Guid evidenciaId, string cedula);
 
     // Métodos para administradores

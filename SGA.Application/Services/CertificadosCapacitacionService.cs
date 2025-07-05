@@ -3,6 +3,7 @@ using SGA.Application.DTOs;
 using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Entities;
+using SGA.Domain.Enums;
 using System.Text;
 
 namespace SGA.Application.Services;
@@ -15,6 +16,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
     private readonly IDocenteRepository _docenteRepository;
     private readonly IRepository<SolicitudCertificadoCapacitacion> _solicitudCertificadoRepository;
     private readonly INotificationService _notificationService;
+    private readonly INotificacionTiempoRealService _notificacionTiempoReal;
     private readonly IAuditoriaService _auditoriaService;
     private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<CertificadosCapacitacionService> _logger;
@@ -23,6 +25,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
         IDocenteRepository docenteRepository,
         IRepository<SolicitudCertificadoCapacitacion> solicitudCertificadoRepository,
         INotificationService notificationService,
+        INotificacionTiempoRealService notificacionTiempoReal,
         IAuditoriaService auditoriaService,
         IPDFCompressionService pdfCompressionService,
         ILogger<CertificadosCapacitacionService> logger)
@@ -30,6 +33,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
         _docenteRepository = docenteRepository;
         _solicitudCertificadoRepository = solicitudCertificadoRepository;
         _notificationService = notificationService;
+        _notificacionTiempoReal = notificacionTiempoReal;
         _auditoriaService = auditoriaService;
         _pdfCompressionService = pdfCompressionService;
         _logger = logger;
@@ -285,7 +289,7 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 grupoId.ToString()
             );
 
-            // Enviar notificación a administradores
+            // Enviar notificación a administradores (incluye correo + tiempo real)
             _logger.LogInformation("Enviando notificación a administradores");
             await _notificationService.NotificarNuevaSolicitudCertificadosAsync(docente.NombreCompleto, solicitud.Certificados?.Count ?? 0);
 
@@ -683,15 +687,6 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 _logger.LogDebug("Archivo PDF reemplazado y comprimido en BD: {Nombre}, Compresión: {Porcentaje:F2}%", 
                     archivo.ArchivoNombre, estadisticas.porcentajeCompresion);
 
-                // Si estaba rechazada, cambiar a pendiente
-                if (solicitud.Estado == "Rechazada")
-                {
-                    solicitud.Estado = "Pendiente";
-                    solicitud.MotivoRechazo = null;
-                    solicitud.FechaRevision = null;
-                    solicitud.RevisadoPorId = null;
-                }
-
                 await _solicitudCertificadoRepository.UpdateAsync(solicitud);
 
                 await _auditoriaService.RegistrarAccionAsync(
@@ -835,6 +830,18 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 "Pendiente",
                 "Usuario"
             );
+
+            // ✅ Notificar a administradores sobre el reenvío
+            var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+                    "Certificado de Capacitación Reenviado",
+                    $"El docente {docente.NombreCompleto} ha reenviado su certificado '{solicitud.NombreCurso}' para revisión.",
+                    TipoNotificacion.NuevaSolicitud,
+                    "/admin/certificados"
+                );
+            }
 
             return new ResponseGenericoCertificadoDto
             {
@@ -1013,11 +1020,23 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 "Administrador"
             );
 
-            // Notificar al docente
+            // Notificar al docente por correo
             await _notificationService.NotificarAprobacionCertificadoAsync(
                 docente?.Email ?? "", 
                 solicitud.NombreCurso, 
                 comentarios);
+
+            // ✅ Notificar al docente en tiempo real
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAsync(
+                    docente.Id,
+                    "Certificado de Capacitación Aprobado",
+                    $"Su certificado '{solicitud.NombreCurso}' ha sido aprobado. {comentarios}",
+                    TipoNotificacion.CertificadoAprobado,
+                    "/docente/certificados"
+                );
+            }
 
             return new ResponseCertificadosCapacitacionDto
             {
@@ -1067,12 +1086,24 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
                 "Administrador"
             );
 
-            // Notificar al docente
+            // Notificar al docente por correo
             var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
             await _notificationService.NotificarRechazoCertificadoAsync(
                 docente?.Email ?? "", 
                 solicitud.NombreCurso, 
                 motivo);
+
+            // ✅ Notificar al docente en tiempo real
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAsync(
+                    docente.Id,
+                    "Certificado de Capacitación Rechazado",
+                    $"Su certificado '{solicitud.NombreCurso}' ha sido rechazado. Motivo: {motivo}",
+                    TipoNotificacion.CertificadoRechazado,
+                    "/docente/certificados"
+                );
+            }
 
             return new ResponseCertificadosCapacitacionDto
             {

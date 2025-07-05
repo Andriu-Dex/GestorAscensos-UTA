@@ -5,6 +5,7 @@ using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Entities;
 using SGA.Domain.Entities.External;
+using SGA.Domain.Enums;
 
 namespace SGA.Application.Services;
 
@@ -15,6 +16,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
     private readonly IDIRINVDataService _dirInvDataService;
     private readonly IExternalDataService _externalDataService;
     private readonly INotificationService _notificationService;
+    private readonly INotificacionTiempoRealService _notificacionTiempoReal;
     private readonly IAuditoriaService _auditoriaService;
     private readonly IPDFCompressionService _pdfCompressionService;
     private readonly ILogger<ObrasAcademicasService> _logger;
@@ -25,6 +27,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
         IDIRINVDataService dirInvDataService,
         IExternalDataService externalDataService,
         INotificationService notificationService,
+        INotificacionTiempoRealService notificacionTiempoReal,
         IAuditoriaService auditoriaService,
         IPDFCompressionService pdfCompressionService,
         ILogger<ObrasAcademicasService> logger)
@@ -34,6 +37,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
         _dirInvDataService = dirInvDataService;
         _externalDataService = externalDataService;
         _notificationService = notificationService;
+        _notificacionTiempoReal = notificacionTiempoReal;
         _auditoriaService = auditoriaService;
         _pdfCompressionService = pdfCompressionService;
         _logger = logger;
@@ -465,7 +469,7 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 grupoId.ToString()
             );
 
-            // Enviar notificación a administradores
+            // Enviar notificación a administradores (incluye correo + tiempo real)
             _logger.LogInformation("Enviando notificación a administradores");
             await _notificationService.NotificarNuevaSolicitudObrasAsync(docente.NombreCompleto, solicitud.Obras?.Count ?? 0);
 
@@ -658,11 +662,23 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 await _docenteRepository.UpdateAsync(docente);
             }
 
-            // Notificar al docente
+            // Notificar al docente por correo
             await _notificationService.NotificarAprobacionObraAsync(
                 docente?.Email ?? "", 
                 solicitud.Titulo, 
                 comentarios);
+
+            // ✅ Notificar al docente en tiempo real
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAsync(
+                    docente.Id,
+                    "Obra Académica Aprobada",
+                    $"Su obra '{solicitud.Titulo}' ha sido aprobada. {comentarios}",
+                    TipoNotificacion.ObraAprobada,
+                    "/docente/obras"
+                );
+            }
 
             return new ResponseObrasAcademicasDto
             {
@@ -702,12 +718,24 @@ public class ObrasAcademicasService : IObrasAcademicasService
             solicitud.FechaRevision = DateTime.UtcNow;
             await _solicitudRepository.UpdateAsync(solicitud);
 
-            // Notificar al docente
+            // Notificar al docente por correo
             var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
             await _notificationService.NotificarRechazoObraAsync(
                 docente?.Email ?? "", 
                 solicitud.Titulo, 
                 motivo);
+
+            // ✅ Notificar al docente en tiempo real
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAsync(
+                    docente.Id,
+                    "Obra Académica Rechazada",
+                    $"Su obra '{solicitud.Titulo}' ha sido rechazada. Motivo: {motivo}",
+                    TipoNotificacion.ObraRechazada,
+                    "/docente/obras"
+                );
+            }
 
             return new ResponseObrasAcademicasDto
             {
@@ -1317,16 +1345,6 @@ public class ObrasAcademicasService : IObrasAcademicasService
 
             await _solicitudRepository.UpdateAsync(solicitud);
 
-            // Si la solicitud estaba rechazada, cambiar a pendiente para nueva revisión
-            if (solicitud.Estado == "Rechazada")
-            {
-                solicitud.Estado = "Pendiente";
-                solicitud.MotivoRechazo = null;
-                solicitud.ComentariosRevision = null;
-                solicitud.FechaRevision = null;
-                await _solicitudRepository.UpdateAsync(solicitud);
-            }
-
             // Registrar auditoría
             await _auditoriaService.RegistrarAccionAsync(
                 "ReemplazarArchivoSolicitudObra",
@@ -1338,14 +1356,10 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 "Usuario"
             );
 
-            var mensaje = solicitud.Estado == "Pendiente" && nombreAnterior != null
-                ? "Archivo reemplazado correctamente. La solicitud ha sido reenviada para revisión."
-                : "Archivo reemplazado correctamente.";
-
             return new ResponseGenericoDto
             {
                 Exitoso = true,
-                Mensaje = mensaje
+                Mensaje = "Archivo reemplazado correctamente."
             };
         }
         catch (Exception ex)
@@ -1492,6 +1506,18 @@ public class ObrasAcademicasService : IObrasAcademicasService
                 "Estado: Pendiente - Solicitud reenviada para revisión",
                 "Usuario"
             );
+
+            // ✅ Notificar a administradores sobre el reenvío
+            var docente = await _docenteRepository.GetByIdAsync(solicitud.DocenteId);
+            if (docente != null)
+            {
+                await _notificacionTiempoReal.EnviarNotificacionAdministradoresAsync(
+                    "Obra Académica Reenviada",
+                    $"El docente {docente.NombreCompleto} ha reenviado su obra '{solicitud.Titulo}' para revisión.",
+                    TipoNotificacion.NuevaSolicitud,
+                    "/admin/obras"
+                );
+            }
 
             return new ResponseGenericoDto
             {

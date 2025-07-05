@@ -248,7 +248,7 @@
 
 .notification-item.read {
   opacity: 0.85;
-  background-color: #f1d8d8; /* Color de fondo cuando ya se marca como leido */
+  background-color: #faeded; /* Color de fondo cuando ya se marca como leido */
 }
 
 /* Indicador de estado */

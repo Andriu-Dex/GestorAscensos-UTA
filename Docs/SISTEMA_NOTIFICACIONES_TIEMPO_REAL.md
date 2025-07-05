@@ -1567,9 +1567,17 @@ El sistema de notificaciones en tiempo real implementado en el SGA proporciona u
 
 - ✅ **Administradores**: Reciben notificaciones instantáneas cuando los docentes:
   - Crean nuevas solicitudes de ascenso
-  - Reenvían solicitudes (con o sin documentos adicionales)
+  - Reenvían solicitudes de ascenso (con o sin documentos adicionales)
+  - **Envían obras académicas para revisión**
+  - **Reenvían obras académicas rechazadas**
+  - **Envían certificados de capacitación para revisión**
+  - **Reenvían certificados de capacitación rechazados**
+  - **Envían evidencias de investigación para revisión**
 - ✅ **Docentes**: Reciben notificaciones cuando los administradores:
-  - Cambian el estado de sus solicitudes (aprobadas/rechazadas)
+  - Cambian el estado de sus solicitudes de ascenso (aprobadas/rechazadas)
+  - **Aprueban/rechazan sus obras académicas**
+  - **Aprueban/rechazan sus certificados de capacitación**
+  - **Aprueban/rechazan sus evidencias de investigación**
   - Agregan comentarios o observaciones
 - ✅ **Ambos roles**: Notificaciones del sistema (información, advertencias, errores)
 - ✅ **Sin duplicados**: Cada evento genera exactamente una notificación
@@ -1586,28 +1594,51 @@ El sistema está completamente integrado con la funcionalidad existente del SGA 
 
 ### 🎯 **Cambios Implementados en Este Chat**
 
-1. **✅ Notificaciones a Administradores**
+1. **✅ Notificaciones para Solicitudes de Ascenso**
 
    - Se agregó `EnviarNotificacionAdministradoresAsync` en el método `CrearSolicitudAsync`
    - Se agregó la misma notificación en `ReenviarSolicitudAsync` y `ReenviarSolicitudConDocumentosAsync`
-   - Los administradores ahora reciben notificaciones instantáneas cuando los docentes crean o reenvían solicitudes
+   - Los administradores reciben notificaciones cuando los docentes crean o reenvían solicitudes
 
-2. **✅ Prevención de Duplicados**
+2. **✅ Notificaciones para Obras Académicas**
+
+   - **ObrasAcademicasService**: Integración completa de `INotificacionTiempoRealService`
+   - **Al enviar obras**: Notificación a administradores sobre nuevas obras
+   - **Al aprobar obras**: Notificación al docente específico
+   - **Al rechazar obras**: Notificación al docente con motivo del rechazo
+   - **Al reenviar obras**: Notificación a administradores sobre reenvío
+
+3. **✅ Notificaciones para Certificados de Capacitación**
+
+   - **CertificadosCapacitacionService**: Integración completa de `INotificacionTiempoRealService`
+   - **Al enviar certificados**: Notificación a administradores sobre nuevos certificados
+   - **Al aprobar certificados**: Notificación al docente específico
+   - **Al rechazar certificados**: Notificación al docente con motivo del rechazo
+   - **Al reenviar certificados**: Notificación a administradores sobre reenvío
+
+4. **✅ Notificaciones para Evidencias de Investigación**
+
+   - **EvidenciasInvestigacionService**: Integración completa de `INotificacionTiempoRealService`
+   - **Al enviar evidencias**: Notificación a administradores sobre nuevas evidencias
+   - **Al aprobar evidencias**: Notificación al docente específico
+   - **Al rechazar evidencias**: Notificación al docente con motivo del rechazo
+
+5. **✅ Prevención de Duplicados**
 
    - Se verificó que cada evento genere exactamente una notificación
    - Control de flujo optimizado para evitar múltiples llamadas
    - Documentación actualizada para reflejar el flujo real
 
-3. **✅ Pruebas Exitosas**
+6. **✅ Pruebas Exitosas**
 
-   - Compilación sin errores
-   - Notificaciones funcionando correctamente en tiempo real
-   - UI actualizada instantáneamente con toasts y badges
+   - Compilación sin errores después de todas las implementaciones
+   - Todos los servicios ahora tienen notificaciones en tiempo real
+   - UI se actualizará instantáneamente con toasts y badges para todos los módulos
 
-4. **✅ Documentación Actualizada**
-   - Objetivos reflejan las funcionalidades implementadas
-   - Diagramas de flujo actualizados
-   - Casos de uso específicos documentados
+7. **✅ Documentación Completamente Actualizada**
+   - Objetivos reflejan todas las funcionalidades implementadas
+   - Casos de uso específicos para cada módulo documentados
+   - Tipos de notificaciones expandidos para cubrir todos los eventos
 
 ## 🚫 Prevención de Notificaciones Duplicadas
 
@@ -1648,9 +1679,16 @@ Evento Único → Método de Servicio → Una Sola Notificación → SignalR →
 
 ### **Tipos de Notificaciones Implementadas**
 
-| Evento                                 | Destinatario       | Mensaje                                                               | Cuando se Envía            |
-| -------------------------------------- | ------------------ | --------------------------------------------------------------------- | -------------------------- |
-| **Solicitud Creada**                   | Administradores    | "El docente {nombre} ha creado una nueva solicitud"                   | Al crear solicitud         |
-| **Solicitud Reenviada**                | Administradores    | "El docente {nombre} ha reenviado su solicitud"                       | Al reenviar                |
-| **Solicitud Reenviada con Documentos** | Administradores    | "El docente {nombre} ha reenviado su solicitud con nuevos documentos" | Al reenviar con documentos |
-| **Estado Cambiado**                    | Docente específico | "Su solicitud ha sido {nuevo_estado}"                                 | Al cambiar estado          |
+| Evento                                            | Destinatario       | Mensaje                                                          | Cuando se Envía                  |
+| ------------------------------------------------- | ------------------ | ---------------------------------------------------------------- | -------------------------------- |
+| **Solicitud de Ascenso Creada**                   | Administradores    | "El docente {nombre} ha creado una nueva solicitud de ascenso"   | Al crear solicitud de ascenso    |
+| **Solicitud de Ascenso Reenviada**                | Administradores    | "El docente {nombre} ha reenviado su solicitud de ascenso"       | Al reenviar solicitud de ascenso |
+| **Obra Académica Enviada**                        | Administradores    | "El docente {nombre} ha enviado {cantidad} obra(s) académica(s)" | Al enviar obras académicas       |
+| **Obra Académica Reenviada**                      | Administradores    | "El docente {nombre} ha reenviado su obra académica"             | Al reenviar obra académica       |
+| **Certificado de Capacitación Enviado**           | Administradores    | "El docente {nombre} ha enviado {cantidad} certificado(s)"       | Al enviar certificados           |
+| **Certificado de Capacitación Reenviado**         | Administradores    | "El docente {nombre} ha reenviado su certificado"                | Al reenviar certificado          |
+| **Evidencia de Investigación Enviada**            | Administradores    | "El docente {nombre} ha enviado {cantidad} evidencia(s)"         | Al enviar evidencias             |
+| **Estado de Solicitud Cambiado**                  | Docente específico | "Su solicitud de ascenso ha sido {nuevo_estado}"                 | Al cambiar estado de solicitud   |
+| **Obra Académica Aprobada/Rechazada**             | Docente específico | "Su obra '{título}' ha sido {estado}"                            | Al aprobar/rechazar obra         |
+| **Certificado Aprobado/Rechazado**                | Docente específico | "Su certificado '{nombre}' ha sido {estado}"                     | Al aprobar/rechazar certificado  |
+| **Evidencia de Investigación Aprobada/Rechazada** | Docente específico | "Su evidencia '{título}' ha sido {estado}"                       | Al aprobar/rechazar evidencia    |
