@@ -1,13 +1,22 @@
 @page "/"
 @attribute [Authorize]
 @using SGA.Web.Models
+@using SGA.Web.Models.Admin
+@using SGA.Web.Models.Enums
 @using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using System.Net.Http.Json
+@using SGA.Web.Services
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
+@inject Blazored.Toast.Services.IToastService ToastService
 @implements IDisposable
+
+<link href="css/index-modal.css" rel="stylesheet" />
 
 <div class="container dashboard-container">
     <div class="welcome-section animate__animated animate__fadeInDown">
@@ -143,9 +152,14 @@
                                     <i class="bi bi-hourglass-split me-2"></i>
                                     Aún no cumple con todos los requisitos para el ascenso. Continúe trabajando en completar los indicadores faltantes.
                                 </div>
-                                <a href="/perfil" class="btn btn-outline-primary">
-                                    <i class="bi bi-info-circle me-2"></i> Ver detalles completos
-                                </a>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-detalles-ir" @onclick="AbrirModalRequisitos">
+                                        <i class="bi bi-info-circle me-2"></i> Ver detalles completos
+                                    </button>
+                                    <small class="text-muted text-center">
+                                        Revise los requisitos específicos para su proceso de ascenso
+                                    </small>
+                                </div>
                             }
                         </div>
                     }
@@ -357,6 +371,313 @@
     }
 </div>
 
+<!-- Modal de Requisitos para Ascenso -->
+@if (mostrarModalRequisitos)
+{
+    <div class="modal-backdrop-ir fade show"></div>
+    <div class="modal-ir modal-lg fade show" tabindex="-1" style="display: block;" role="dialog">
+        <div class="modal-dialog-ir">
+            <div class="modal-content-ir">
+                <div class="modal-header-ir">
+                    <h5 class="modal-title-ir">
+                        <i class="bi bi-clipboard-check me-2"></i>
+                        Requisitos para Ascenso a Titular @(userInfo?.NivelActual + 1 ?? 0)
+                    </h5>
+                    <button type="button" class="btn-close-ir" @onclick="CerrarModalRequisitos" aria-label="Cerrar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="modal-body-ir">
+                    @if (cargandoRequisitosModal)
+                    {
+                        <div class="loading-container-ir text-center py-5">
+                            <div class="spinner-border-ir text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Cargando configuración de requisitos...</p>
+                        </div>
+                    }
+                    else if (configuracionRequisitos != null)
+                    {
+                        @if (userInfo?.EsAdmin == true)
+                        {
+                            <!-- Modo Edición para Admin -->
+                            <div class="alert alert-info-ir mb-4">
+                                <i class="bi bi-shield-check me-2"></i>
+                                <strong>Modo Administrador:</strong> Puede editar los requisitos en tiempo real.
+                            </div>
+                            
+                            <form @onsubmit="GuardarCambiosRequisitos" @onsubmit:preventDefault="true">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            Tiempo Mínimo (meses)
+                                        </label>
+                                        <input type="number" class="form-control-ir" 
+                                               @bind="configuracionRequisitos.TiempoMinimoMeses" 
+                                               min="1" max="120" required />
+                                        <div class="form-text-ir">
+                                            Actualmente: @(configuracionRequisitos.TiempoMinimoMeses / 12) años 
+                                            @(configuracionRequisitos.TiempoMinimoMeses % 12) meses
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-book me-1"></i>
+                                            Obras Mínimas
+                                        </label>
+                                        <input type="number" class="form-control-ir" 
+                                               @bind="configuracionRequisitos.ObrasMinimas" 
+                                               min="0" max="50" required />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-award me-1"></i>
+                                            Evaluación Mínima (%)
+                                        </label>
+                                        <input type="number" class="form-control-ir" 
+                                               @bind="configuracionRequisitos.PuntajeEvaluacionMinimo" 
+                                               min="0" max="100" step="0.01" required />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-journal-code me-1"></i>
+                                            Horas de Capacitación
+                                        </label>
+                                        <input type="number" class="form-control-ir" 
+                                               @bind="configuracionRequisitos.HorasCapacitacionMinimas" 
+                                               min="0" max="500" required />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-search me-1"></i>
+                                            Tiempo de Investigación (meses)
+                                        </label>
+                                        <input type="number" class="form-control-ir" 
+                                               @bind="configuracionRequisitos.TiempoInvestigacionMinimo" 
+                                               min="0" max="120" required />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-ir fw-bold">
+                                            <i class="bi bi-toggle-on me-1"></i>
+                                            Estado
+                                        </label>
+                                        <select class="form-select-ir" @bind="configuracionRequisitos.EstaActivo">
+                                            <option value="true">Activo</option>
+                                            <option value="false">Inactivo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label-ir fw-bold">
+                                        <i class="bi bi-file-text me-1"></i>
+                                        Descripción (Opcional)
+                                    </label>
+                                    <textarea class="form-control-ir" rows="3" 
+                                              @bind="configuracionRequisitos.Descripcion"
+                                              placeholder="Descripción adicional sobre estos requisitos..."></textarea>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-secondary-ir" @onclick="CerrarModalRequisitos">
+                                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                                    </button>
+                                    <button type="submit" class="btn btn-primary-ir" disabled="@guardandoCambios">
+                                        @if (guardandoCambios)
+                                        {
+                                            <span class="spinner-border-ir spinner-border-sm me-2" role="status"></span>
+                                            <span>Guardando...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-check-circle me-2"></i>
+                                            <span>Guardar Cambios</span>
+                                        }
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <!-- Modo Solo Lectura para Usuarios -->
+                            <div class="requisitos-readonly-ir">
+                                <div class="alert alert-primary-ir mb-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Estos son los requisitos actuales para ascender al siguiente nivel.
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-4">
+                                        <div class="requisito-card-ir">
+                                            <div class="requisito-header-ir">
+                                                <i class="bi bi-clock-history text-primary"></i>
+                                                <span class="requisito-title-ir">Tiempo en Nivel</span>
+                                            </div>
+                                            <div class="requisito-value-ir">
+                                                @(configuracionRequisitos.TiempoMinimoMeses / 12) años 
+                                                @(configuracionRequisitos.TiempoMinimoMeses % 12) meses
+                                            </div>
+                                            <div class="requisito-status-ir">
+                                                @if (requisitos?.CumpleTiempoRol == true)
+                                                {
+                                                    <span class="badge bg-success-ir">
+                                                        <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-ir">
+                                                        <i class="bi bi-clock me-1"></i>En progreso
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-4">
+                                        <div class="requisito-card-ir">
+                                            <div class="requisito-header-ir">
+                                                <i class="bi bi-book text-info"></i>
+                                                <span class="requisito-title-ir">Obras Académicas</span>
+                                            </div>
+                                            <div class="requisito-value-ir">
+                                                Mínimo @configuracionRequisitos.ObrasMinimas obras
+                                            </div>
+                                            <div class="requisito-status-ir">
+                                                @if (requisitos?.CumpleObras == true)
+                                                {
+                                                    <span class="badge bg-success-ir">
+                                                        <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-ir">
+                                                        <i class="bi bi-clock me-1"></i>Pendiente
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-4">
+                                        <div class="requisito-card-ir">
+                                            <div class="requisito-header-ir">
+                                                <i class="bi bi-award text-warning"></i>
+                                                <span class="requisito-title-ir">Evaluación Docente</span>
+                                            </div>
+                                            <div class="requisito-value-ir">
+                                                Mínimo @configuracionRequisitos.PuntajeEvaluacionMinimo%
+                                            </div>
+                                            <div class="requisito-status-ir">
+                                                @if (requisitos?.CumpleEvaluacion == true)
+                                                {
+                                                    <span class="badge bg-success-ir">
+                                                        <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-ir">
+                                                        <i class="bi bi-x-circle me-1"></i>No cumplido
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-4">
+                                        <div class="requisito-card-ir">
+                                            <div class="requisito-header-ir">
+                                                <i class="bi bi-journal-code text-success"></i>
+                                                <span class="requisito-title-ir">Capacitación</span>
+                                            </div>
+                                            <div class="requisito-value-ir">
+                                                Mínimo @configuracionRequisitos.HorasCapacitacionMinimas horas
+                                            </div>
+                                            <div class="requisito-status-ir">
+                                                @if (requisitos?.CumpleCapacitacion == true)
+                                                {
+                                                    <span class="badge bg-success-ir">
+                                                        <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-ir">
+                                                        <i class="bi bi-clock me-1"></i>Pendiente
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-4">
+                                        <div class="requisito-card-ir">
+                                            <div class="requisito-header-ir">
+                                                <i class="bi bi-search text-secondary"></i>
+                                                <span class="requisito-title-ir">Investigación</span>
+                                            </div>
+                                            <div class="requisito-value-ir">
+                                                Mínimo @configuracionRequisitos.TiempoInvestigacionMinimo meses
+                                            </div>
+                                            <div class="requisito-status-ir">
+                                                @if (requisitos?.CumpleInvestigacion == true)
+                                                {
+                                                    <span class="badge bg-success-ir">
+                                                        <i class="bi bi-check-circle me-1"></i>Cumplido
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-ir">
+                                                        <i class="bi bi-clock me-1"></i>Pendiente
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                @if (!string.IsNullOrEmpty(configuracionRequisitos.Descripcion))
+                                {
+                                    <div class="alert alert-light-ir mt-4">
+                                        <h6 class="fw-bold mb-2">
+                                            <i class="bi bi-info-circle me-2"></i>Información Adicional
+                                        </h6>
+                                        <p class="mb-0">@configuracionRequisitos.Descripcion</p>
+                                    </div>
+                                }
+                                
+                                <div class="d-grid gap-2 mt-4">
+                                    <button type="button" class="btn btn-outline-primary-ir" @onclick="CerrarModalRequisitos">
+                                        <i class="bi bi-arrow-left me-2"></i>Volver al Dashboard
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning-ir">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>No se encontró configuración:</strong> 
+                            No hay requisitos configurados para el ascenso al siguiente nivel.
+                        </div>
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-secondary-ir" @onclick="CerrarModalRequisitos">
+                                <i class="bi bi-arrow-left me-2"></i>Cerrar
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private UserInfoModel? userInfo;
     private IndicadoresModel? indicadores;
@@ -365,7 +686,13 @@
     private bool isImporting = false;
     private bool tieneSolicitudActiva = false;
     private Timer? _timer;
-    private DateTime _currentTime = DateTime.Now;    protected override async Task OnInitializedAsync()
+    private DateTime _currentTime = DateTime.Now;
+    
+    // Variables para el modal de requisitos
+    private bool mostrarModalRequisitos = false;
+    private bool cargandoRequisitosModal = false;
+    private bool guardandoCambios = false;
+    private ConfiguracionRequisitoDto? configuracionRequisitos = null;    protected override async Task OnInitializedAsync()
     {
         try
         {
@@ -889,6 +1216,140 @@
     {
         _timer?.Dispose();
         _timer = null;
+    }
+    
+    // Métodos para el modal de requisitos
+    private async Task AbrirModalRequisitos()
+    {
+        mostrarModalRequisitos = true;
+        await CargarConfiguracionRequisitos();
+    }
+    
+    private void CerrarModalRequisitos()
+    {
+        mostrarModalRequisitos = false;
+        configuracionRequisitos = null;
+    }
+    
+    private async Task CargarConfiguracionRequisitos()
+    {
+        if (userInfo == null) return;
+        
+        try
+        {
+            cargandoRequisitosModal = true;
+            StateHasChanged();
+            
+            // Obtener la configuración de requisitos desde el nuevo endpoint
+            var response = await Http.GetAsync("api/docente/configuracion-requisitos");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                configuracionRequisitos = await response.Content.ReadFromJsonAsync<ConfiguracionRequisitoDto>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Si no hay configuración específica, crear una por defecto basada en los valores actuales
+                var nivelSiguiente = userInfo.NivelActual + 1;
+                configuracionRequisitos = new ConfiguracionRequisitoDto
+                {
+                    TiempoMinimoMeses = 48, // 4 años por defecto
+                    ObrasMinimas = 3,
+                    PuntajeEvaluacionMinimo = 75,
+                    HorasCapacitacionMinimas = 120,
+                    TiempoInvestigacionMinimo = 24,
+                    EstaActivo = true,
+                    NivelActual = (NivelTitular)userInfo.NivelActual,
+                    NivelSolicitado = (NivelTitular)nivelSiguiente,
+                    NivelActualNombre = $"Titular {userInfo.NivelActual}",
+                    NivelSolicitadoNombre = $"Titular {nivelSiguiente}",
+                    Descripcion = "Configuración de requisitos por defecto"
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar configuración de requisitos: {ex.Message}");
+            ToastService.ShowError("Error al cargar la configuración de requisitos");
+        }
+        finally
+        {
+            cargandoRequisitosModal = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task GuardarCambiosRequisitos()
+    {
+        if (configuracionRequisitos == null || userInfo == null) return;
+        
+        try
+        {
+            guardandoCambios = true;
+            StateHasChanged();
+            
+            // Preparar el DTO para actualización
+            var updateDto = new CrearActualizarConfiguracionRequisitoDto
+            {
+                NivelActual = configuracionRequisitos.NivelActual,
+                NivelSolicitado = configuracionRequisitos.NivelSolicitado,
+                TituloActualId = configuracionRequisitos.TituloActualId,
+                TituloSolicitadoId = configuracionRequisitos.TituloSolicitadoId,
+                TiempoMinimoMeses = configuracionRequisitos.TiempoMinimoMeses,
+                ObrasMinimas = configuracionRequisitos.ObrasMinimas,
+                PuntajeEvaluacionMinimo = configuracionRequisitos.PuntajeEvaluacionMinimo,
+                HorasCapacitacionMinimas = configuracionRequisitos.HorasCapacitacionMinimas,
+                TiempoInvestigacionMinimo = configuracionRequisitos.TiempoInvestigacionMinimo,
+                EstaActivo = configuracionRequisitos.EstaActivo,
+                Descripcion = configuracionRequisitos.Descripcion
+            };
+            
+            HttpResponseMessage response;
+            
+            if (configuracionRequisitos.Id == Guid.Empty)
+            {
+                // Crear nueva configuración
+                response = await Http.PostAsJsonAsync("api/docente/configuracion-requisitos", updateDto);
+            }
+            else
+            {
+                // Actualizar configuración existente
+                response = await Http.PutAsJsonAsync("api/docente/configuracion-requisitos", updateDto);
+            }
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Actualizar la configuración con la respuesta del servidor
+                var nuevaConfiguracion = await response.Content.ReadFromJsonAsync<ConfiguracionRequisitoDto>();
+                if (nuevaConfiguracion != null)
+                {
+                    configuracionRequisitos = nuevaConfiguracion;
+                }
+                
+                ToastService.ShowSuccess("Requisitos actualizados correctamente");
+                
+                // Recargar los requisitos del usuario para reflejar los cambios
+                await LoadRequisitos();
+                
+                // Forzar actualización de la UI principal
+                StateHasChanged();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al guardar los cambios: {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al guardar cambios de requisitos: {ex.Message}");
+            ToastService.ShowError("Error al guardar los cambios en los requisitos");
+        }
+        finally
+        {
+            guardandoCambios = false;
+            StateHasChanged();
+        }
     }
     
     public void Dispose()

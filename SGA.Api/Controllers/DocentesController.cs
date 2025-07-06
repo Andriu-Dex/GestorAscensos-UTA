@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SGA.Application.DTOs.Docentes;
 using SGA.Application.DTOs.Responses;
+using SGA.Application.DTOs.Admin;
 using SGA.Application.Constants;
 using SGA.Application.Interfaces;
+using SGA.Domain.Enums;
 using System.Security.Claims;
 
 namespace SGA.Api.Controllers;
@@ -442,10 +444,14 @@ public class DocentesController : ControllerBase
 public class DocenteController : ControllerBase
 {
     private readonly IDocenteService _docenteService;
+    private readonly IConfiguracionRequisitoService _configuracionRequisitoService;
 
-    public DocenteController(IDocenteService docenteService)
+    public DocenteController(
+        IDocenteService docenteService,
+        IConfiguracionRequisitoService configuracionRequisitoService)
     {
         _docenteService = docenteService;
+        _configuracionRequisitoService = configuracionRequisitoService;
     }
 
     [HttpGet("indicadores")]
@@ -489,6 +495,97 @@ public class DocenteController : ControllerBase
 
             var requisitos = await _docenteService.GetRequisitosAscensoAsync(docente.Cedula, siguienteNivel);
             return Ok(requisitos);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("configuracion-requisitos")]
+    public async Task<ActionResult<ConfiguracionRequisitoDto>> GetConfiguracionRequisitos()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Obtener el siguiente nivel
+            var nivelActual = int.Parse(docente.NivelActual.ToString().Replace("Titular", ""));
+            var siguienteNivel = nivelActual + 1;
+
+            // Obtener configuración de requisitos desde el servicio
+            var configuracion = await _configuracionRequisitoService.GetByNivelesAsync(
+                (NivelTitular)nivelActual, 
+                (NivelTitular)siguienteNivel);
+
+            if (configuracion == null)
+            {
+                // Si no existe configuración, devolver valores por defecto
+                return Ok(new ConfiguracionRequisitoDto
+                {
+                    Id = Guid.Empty,
+                    NivelActual = (NivelTitular)nivelActual,
+                    NivelSolicitado = (NivelTitular)siguienteNivel,
+                    TiempoMinimoMeses = 48, // 4 años por defecto
+                    ObrasMinimas = 3,
+                    PuntajeEvaluacionMinimo = 75,
+                    HorasCapacitacionMinimas = 120,
+                    TiempoInvestigacionMinimo = 24,
+                    EstaActivo = true,
+                    NivelActualNombre = $"Titular {nivelActual}",
+                    NivelSolicitadoNombre = $"Titular {siguienteNivel}",
+                    Descripcion = "Configuración de requisitos por defecto"
+                });
+            }
+
+            return Ok(configuracion);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("configuracion-requisitos")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<ActionResult<ConfiguracionRequisitoDto>> ActualizarConfiguracionRequisitos([FromBody] CrearActualizarConfiguracionRequisitoDto dto)
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Verificar si existe configuración existente
+            var nivelActual = dto.NivelActual ?? (NivelTitular)int.Parse(docente.NivelActual.ToString().Replace("Titular", ""));
+            var nivelSolicitado = dto.NivelSolicitado ?? (NivelTitular)(int.Parse(docente.NivelActual.ToString().Replace("Titular", "")) + 1);
+            
+            var configuracionExistente = await _configuracionRequisitoService.GetByNivelesAsync(nivelActual, nivelSolicitado);
+
+            ConfiguracionRequisitoDto resultado;
+
+            if (configuracionExistente != null)
+            {
+                // Actualizar configuración existente
+                resultado = await _configuracionRequisitoService.UpdateAsync(configuracionExistente.Id, dto, email);
+            }
+            else
+            {
+                // Crear nueva configuración
+                resultado = await _configuracionRequisitoService.CreateAsync(dto, email);
+            }
+
+            return Ok(resultado);
         }
         catch (Exception ex)
         {
