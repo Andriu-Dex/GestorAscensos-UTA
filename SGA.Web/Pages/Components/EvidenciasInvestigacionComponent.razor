@@ -88,11 +88,7 @@
                         @foreach (var evidencia in evidenciasFiltradas)
                         {
                             <tr>
-                                <td>
-                                    <span class="badge" style="background-color: @GetTipoColor(evidencia.TipoEvidencia)">
-                                        @evidencia.TipoEvidencia
-                                    </span>
-                                </td>
+                                <td>@evidencia.TipoEvidencia</td>
                                 <td>
                                     <strong>@evidencia.TituloProyecto</strong>
                                     @if (!string.IsNullOrEmpty(evidencia.CodigoProyecto))

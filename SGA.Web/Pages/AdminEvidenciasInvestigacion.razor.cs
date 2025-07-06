@@ -492,19 +492,6 @@ namespace SGA.Web.Pages
 
         #region Métodos auxiliares
 
-        private string GetTipoColor(string tipo)
-        {
-            return tipo switch
-            {
-                "Proyecto" => "#007bff",
-                "Publicación" => "#28a745",
-                "Participación" => "#17a2b8",
-                "Dirección" => "#8a1538",
-                "Colaboración" => "#6f42c1",
-                _ => "#6c757d"
-            };
-        }
-
         #endregion
     }
 }

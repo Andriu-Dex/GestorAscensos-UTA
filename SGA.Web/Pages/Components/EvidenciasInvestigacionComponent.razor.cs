@@ -177,19 +177,6 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
         StateHasChanged();
     }
 
-    private string GetTipoColor(string tipo)
-    {
-        return tipo switch
-        {
-            "Proyecto" => "#8a1538",
-            "Publicación" => "#28a745",
-            "Participación" => "#17a2b8",
-            "Dirección" => "#fd7e14",
-            "Colaboración" => "#6f42c1",
-            _ => "#6c757d"
-        };
-    }
-
     // Modal management
     private void ShowEvidenciasModal()
     {
