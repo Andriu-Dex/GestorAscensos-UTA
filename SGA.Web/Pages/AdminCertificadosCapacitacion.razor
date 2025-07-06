@@ -13,48 +13,77 @@
 @inject ILogger<AdminCertificadosCapacitacion> Logger
 @inject IApiUrlService ApiUrlService
 
-<style>
-    .modal-backdrop {
-        z-index: 1040;
-    }
-    
-    .modal {
-        z-index: 1050;
-    }
-    
-    .pdf-viewer-container {
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    }
-</style>
-
 <div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3>
-                    <i class="bi bi-award"></i> 
-                    Panel de Administración - Certificados de Capacitación
-                </h3>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn @(filtroEstado == "Pendiente" ? "btn-primary" : "btn-outline-primary")" 
-                            @onclick="FiltrarPendientes">
-                        <i class="bi bi-hourglass-split"></i> Pendientes (@cantidadPendientes)
-                    </button>
-                    <button type="button" class="btn @(filtroEstado == "Aprobada" ? "btn-success" : "btn-outline-success")" 
-                            @onclick="FiltrarAprobadas">
-                        <i class="bi bi-check-circle"></i> Aprobadas (@cantidadAprobadas)
-                    </button>
-                    <button type="button" class="btn @(filtroEstado == "Rechazada" ? "btn-danger" : "btn-outline-danger")" 
-                            @onclick="FiltrarRechazadas">
-                        <i class="bi bi-x-circle"></i> Rechazadas (@cantidadRechazadas)
-                    </button>
-                    <button type="button" class="btn @(filtroEstado == "Todas" ? "btn-info" : "btn-outline-info")" 
-                            @onclick="FiltrarTodas">
-                        <i class="bi bi-list"></i> Todas (@totalSolicitudes)
-                    </button>
+    <!-- Encabezado de página mejorado -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h3>
+                <i class="bi bi-award me-2"></i>
+                Panel de Administración - Certificados de Capacitación
+            </h3>
+            <div class="btn-group filter-buttons" role="group">
+                <button type="button" class="btn @(filtroEstado == "Pendiente" ? "btn-light" : "btn-outline-light")" 
+                        @onclick="FiltrarPendientes" title="Ver solicitudes pendientes de revisión">
+                    <i class="bi bi-hourglass-split me-1"></i>Pendientes (@cantidadPendientes)
+                </button>
+                <button type="button" class="btn @(filtroEstado == "Aprobada" ? "btn-light" : "btn-outline-light")" 
+                        @onclick="FiltrarAprobadas" title="Ver solicitudes aprobadas">
+                    <i class="bi bi-check-circle me-1"></i>Aprobadas (@cantidadAprobadas)
+                </button>
+                <button type="button" class="btn @(filtroEstado == "Rechazada" ? "btn-light" : "btn-outline-light")" 
+                        @onclick="FiltrarRechazadas" title="Ver solicitudes rechazadas">
+                    <i class="bi bi-x-circle me-1"></i>Rechazadas (@cantidadRechazadas)
+                </button>
+                <button type="button" class="btn @(filtroEstado == "Todas" ? "btn-light" : "btn-outline-light")" 
+                        @onclick="FiltrarTodas" title="Ver todas las solicitudes">
+                    <i class="bi bi-list me-1"></i>Todas (@totalSolicitudes)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de filtros mejorada -->
+    <div class="filters-section">
+        <h5 class="filters-title">
+            <i class="bi bi-funnel me-2"></i>Filtros de Búsqueda
+        </h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="filtroCedula" placeholder="Ej: 1801000000" 
+                           @bind="filtroCedula" @bind:after="AplicarFiltros" 
+                           title="Buscar por número de cédula del docente">
+                    <label for="filtroCedula">
+                        <i class="bi bi-person-badge me-1"></i>Cédula del Docente
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="filtroCurso" placeholder="Ej: Capacitación JAVA" 
+                           @bind="filtroCurso" @bind:after="AplicarFiltros"
+                           title="Buscar por nombre o título del curso de capacitación">
+                    <label for="filtroCurso">
+                        <i class="bi bi-book me-1"></i>Nombre del Curso
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="form-floating">
+                    <select class="form-select" id="filtroTipo" @bind="filtroTipo" @bind:after="AplicarFiltros"
+                            title="Filtrar por tipo específico de capacitación">
+                        <option value="">Todos los tipos</option>
+                        @if (tiposCapacitacion != null)
+                        {
+                            @foreach (var tipo in tiposCapacitacion)
+                            {
+                                <option value="@tipo">@tipo</option>
+                            }
+                        }
+                    </select>
+                    <label for="filtroTipo">
+                        <i class="bi bi-tags me-1"></i>Tipo de Capacitación
+                    </label>
                 </div>
             </div>
         </div>
@@ -62,108 +91,155 @@
 
     @if (isLoading)
     {
-        <div class="d-flex justify-content-center my-5">
-            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                <span class="visually-hidden">Cargando solicitudes...</span>
+        <div class="loading-overlay">
+            <div class="text-center">
+                <div class="spinner-border spinner-custom" role="status">
+                    <span class="visually-hidden">Cargando solicitudes...</span>
+                </div>
+                <p class="mt-3 text-custom">Cargando solicitudes de certificados...</p>
             </div>
         </div>
     }
     else if (solicitudesFiltradas == null || !solicitudesFiltradas.Any())
     {
-        <div class="alert alert-info text-center" role="alert">
-            <i class="bi bi-info-circle fs-1"></i>
-            <h4 class="mt-3">No hay solicitudes @(filtroEstado.ToLower())</h4>
-            <p class="mb-0">No se encontraron solicitudes de certificados de capacitación con el filtro seleccionado.</p>
+        <div class="empty-state fade-in">
+            <div class="text-center">
+                <i class="bi bi-search fs-1 text-custom mb-3"></i>
+                <h4 class="text-custom">No hay solicitudes @(filtroEstado.ToLower())</h4>
+                <p class="text-muted mb-0">
+                    No se encontraron solicitudes de certificados de capacitación con los filtros seleccionados.
+                </p>
+                @if (filtroEstado != "Todas" || !string.IsNullOrEmpty(filtroCedula) || !string.IsNullOrEmpty(filtroCurso) || !string.IsNullOrEmpty(filtroTipo))
+                {
+                    <div class="container-limpiar-filtros">
+                        <button class="btn btn-outline-primary" @onclick="LimpiarFiltros"
+                                title="Limpiar todos los filtros aplicados">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>Limpiar Filtros
+                        </button>
+                    </div>
+                }
+            </div>
         </div>
     }
     else
     {
-        <div class="row">
-            @foreach (var solicitud in solicitudesFiltradas)
-            {
-                <div class="col-12 col-lg-6 col-xl-4 mb-4">
-                    <div class="card h-100 shadow-sm @GetCardClass(solicitud.Estado)">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 fw-bold">@solicitud.DocenteCedula</h6>
-                            <span class="badge @GetBadgeClass(solicitud.Estado)">
-                                @solicitud.Estado
-                            </span>
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title text-truncate" title="@solicitud.NombreCurso">
-                                @solicitud.NombreCurso
-                            </h5>
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-building"></i> @solicitud.InstitucionOfertante
-                                </small>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i> @solicitud.FechaInicio.ToString("dd/MM/yyyy") - @solicitud.FechaFin.ToString("dd/MM/yyyy")
-                                </small>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-clock"></i> @solicitud.HorasDuracion horas
-                                </small>
-                            </div>
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-tag"></i> @solicitud.TipoCapacitacion
-                                </small>
-                            </div>
-                            @if (!string.IsNullOrEmpty(solicitud.Modalidad))
-                            {
-                                <div class="mb-2">
-                                    <small class="text-muted">
-                                        <i class="bi bi-laptop"></i> @solicitud.Modalidad
-                                    </small>
-                                </div>
-                            }
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-clock"></i> Solicitado: @solicitud.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
-                                </small>
-                            </div>
-                            @if (!string.IsNullOrEmpty(solicitud.ComentariosSolicitud))
-                            {
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Comentarios del docente:</label>
-                                    <p class="small bg-light p-2 rounded">@solicitud.ComentariosSolicitud</p>
-                                </div>
-                            }
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="d-grid gap-2">
-                                @if (solicitud.Estado == "Pendiente")
+        <div class="table-responsive fade-in">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th title="Cédula del docente solicitante">
+                            <i class="bi bi-person-badge me-1"></i>Docente
+                        </th>
+                        <th title="Nombre del curso de capacitación">
+                            <i class="bi bi-book me-1"></i>Curso
+                        </th>
+                        <th title="Tipo de capacitación">
+                            <i class="bi bi-tags me-1"></i>Tipo
+                        </th>
+                        <th title="Institución que ofrece la capacitación">
+                            <i class="bi bi-building me-1"></i>Institución
+                        </th>
+                        <th title="Duración en horas académicas">
+                            <i class="bi bi-clock me-1"></i>Duración
+                        </th>
+                        <th title="Fechas de inicio y finalización">
+                            <i class="bi bi-calendar-range me-1"></i>Fechas
+                        </th>
+                        <th title="Estado actual de la solicitud">
+                            <i class="bi bi-flag me-1"></i>Estado
+                        </th>
+                        <th title="Acciones disponibles">
+                            <i class="bi bi-gear me-1"></i>Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var solicitud in solicitudesFiltradas)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@solicitud.DocenteCedula</strong>
+                                @if (!string.IsNullOrEmpty(solicitud.DocenteNombre))
                                 {
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-success btn-sm" @onclick="() => AprobarSolicitud(solicitud)">
-                                            <i class="bi bi-check-lg"></i> Aprobar
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" @onclick="() => RechazarSolicitud(solicitud)">
-                                            <i class="bi bi-x-lg"></i> Rechazar
-                                        </button>
+                                    <br><small class="text-muted">@solicitud.DocenteNombre</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="truncate-long" title="@solicitud.NombreCurso">
+                                    @solicitud.NombreCurso
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">@solicitud.TipoCapacitacion</span>
+                            </td>
+                            <td>
+                                <span class="truncate" title="@solicitud.InstitucionOfertante">
+                                    @solicitud.InstitucionOfertante
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <strong>@solicitud.HorasDuracion</strong> hrs
+                            </td>
+                            <td>
+                                <small>
+                                    <div><strong>Inicio:</strong> @solicitud.FechaInicio.ToString("dd/MM/yyyy")</div>
+                                    <div><strong>Fin:</strong> @solicitud.FechaFin.ToString("dd/MM/yyyy")</div>
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @GetBadgeClass(solicitud.Estado)">
+                                    @solicitud.Estado
+                                </span>
+                                @if (solicitud.Estado != "Pendiente" && solicitud.FechaRevision.HasValue)
+                                {
+                                    <div class="mt-1">
+                                        <small class="text-muted">@solicitud.FechaRevision.Value.ToString("dd/MM/yyyy")</small>
                                     </div>
                                 }
-                                <button class="btn btn-outline-primary btn-sm" @onclick="() => VerDetalle(solicitud)">
-                                    <i class="bi bi-eye"></i> Ver Detalle
-                                </button>
-                                @if (!string.IsNullOrEmpty(solicitud.ArchivoNombre))
-                                {
-                                    <button class="btn btn-outline-info btn-sm" @onclick="() => DescargarArchivo(solicitud)">
-                                        <i class="bi bi-download"></i> Descargar Archivo
+                            </td>
+                            <td>
+                                <div class="actions-container">
+                                    <button class="btn btn-sm btn-outline-primary btn-action" 
+                                            @onclick="() => VerDetalle(solicitud)" 
+                                            title="Ver información detallada de la solicitud">
+                                        <i class="bi bi-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => VisualizarArchivo(solicitud)">
-                                        <i class="bi bi-file-earmark-pdf"></i> Visualizar PDF
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
+                                    
+                                    @if (!string.IsNullOrEmpty(solicitud.ArchivoNombre))
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary btn-action" 
+                                                @onclick="() => VisualizarArchivo(solicitud)" 
+                                                title="Visualizar certificado en formato PDF">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-outline-info btn-action" 
+                                                @onclick="() => DescargarArchivo(solicitud)" 
+                                                title="Descargar archivo del certificado">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                    }
+                                    
+                                    @if (solicitud.Estado == "Pendiente")
+                                    {
+                                        <button class="btn btn-sm btn-success btn-action" 
+                                                @onclick="() => AprobarSolicitud(solicitud)" 
+                                                title="Aprobar solicitud de certificado">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-danger btn-action" 
+                                                @onclick="() => RechazarSolicitud(solicitud)" 
+                                                title="Rechazar solicitud de certificado">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     }
 </div>
@@ -172,139 +248,256 @@
 @if (showDetalleModal && solicitudSeleccionada != null)
 {
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header modal-header-custom">
                     <h5 class="modal-title">
-                        <i class="bi bi-award"></i> Detalle del Certificado de Capacitación
+                        <i class="bi bi-award me-2"></i>
+                        Detalle del Certificado de Capacitación
                     </h5>
-                    <button type="button" class="btn-close" @onclick="CerrarDetalleModal"></button>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarDetalleModal" 
+                            title="Cerrar ventana de detalles"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Docente:</strong> @solicitudSeleccionada.DocenteCedula
+                <div class="modal-body modal-body-detail">
+                    <!-- Encabezado del Reporte -->
+                    <div class="detail-report-header">
+                        <div class="detail-report-title">
+                            <i class="bi bi-award me-2"></i>Reporte de Certificado de Capacitación
                         </div>
-                        <div class="col-md-6">
-                            <span class="badge @GetBadgeClass(solicitudSeleccionada.Estado)">
-                                @solicitudSeleccionada.Estado
-                            </span>
-                        </div>
-                    </div>
-                    <hr />
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <strong>Nombre del Curso:</strong>
-                            <p>@solicitudSeleccionada.NombreCurso</p>
+                        <div class="detail-report-subtitle">
+                            Solicitud ID: @solicitudSeleccionada.Id.ToString()[..8]... | Fecha de Solicitud: @solicitudSeleccionada.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong>Institución Oferente:</strong>
-                            <p>@solicitudSeleccionada.InstitucionOfertante</p>
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Tipo de Capacitación:</strong>
-                            <p>@solicitudSeleccionada.TipoCapacitacion</p>
+
+                    <!-- Información General Consolidada -->
+                    <div class="detail-report-content">
+                        <div class="detail-info-grid">
+                            <!-- Información del Docente -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-person-badge me-2"></i>Docente
+                                </div>
+                                <div class="detail-info-value large">
+                                    <strong>@solicitudSeleccionada.DocenteCedula</strong>
+                                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.DocenteNombre))
+                                    {
+                                        <br><span class="text-muted">@solicitudSeleccionada.DocenteNombre</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Estado de la Solicitud -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-flag me-2"></i>Estado Actual
+                                </div>
+                                <div class="detail-info-value">
+                                    <span class="badge @GetBadgeClass(solicitudSeleccionada.Estado) fs-6">
+                                        @solicitudSeleccionada.Estado
+                                    </span>
+                                    @if (solicitudSeleccionada.FechaRevision.HasValue)
+                                    {
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                Revisado: @solicitudSeleccionada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Nombre del Curso -->
+                            <div class="detail-info-item detail-full-width">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-book me-2"></i>Nombre del Curso
+                                </div>
+                                <div class="detail-info-value large">
+                                    @solicitudSeleccionada.NombreCurso
+                                </div>
+                            </div>
+
+                            <!-- Institución Oferente -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-building me-2"></i>Institución Oferente
+                                </div>
+                                <div class="detail-info-value">
+                                    @solicitudSeleccionada.InstitucionOfertante
+                                </div>
+                            </div>
+
+                            <!-- Tipo de Capacitación -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-tags me-2"></i>Tipo de Capacitación
+                                </div>
+                                <div class="detail-info-value">
+                                    <span class="badge bg-light text-dark">@solicitudSeleccionada.TipoCapacitacion</span>
+                                </div>
+                            </div>
+
+                            <!-- Fecha de Inicio -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-calendar-check me-2"></i>Fecha de Inicio
+                                </div>
+                                <div class="detail-info-value">
+                                    @solicitudSeleccionada.FechaInicio.ToString("dd/MM/yyyy")
+                                </div>
+                            </div>
+
+                            <!-- Fecha de Finalización -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-calendar-x me-2"></i>Fecha de Finalización
+                                </div>
+                                <div class="detail-info-value">
+                                    @solicitudSeleccionada.FechaFin.ToString("dd/MM/yyyy")
+                                </div>
+                            </div>
+
+                            <!-- Duración Total -->
+                            <div class="detail-info-item">
+                                <div class="detail-info-label">
+                                    <i class="bi bi-clock me-2"></i>Duración Total
+                                </div>
+                                <div class="detail-info-value">
+                                    <span class="badge bg-info text-white">@solicitudSeleccionada.HorasDuracion horas académicas</span>
+                                </div>
+                            </div>
+
+                            <!-- Información Adicional (Solo si existe) -->
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.Modalidad))
+                            {
+                                <div class="detail-info-item">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-display me-2"></i>Modalidad
+                                    </div>
+                                    <div class="detail-info-value">
+                                        @solicitudSeleccionada.Modalidad
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.NumeroRegistro))
+                            {
+                                <div class="detail-info-item">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-hash me-2"></i>Número de Registro
+                                    </div>
+                                    <div class="detail-info-value">
+                                        @solicitudSeleccionada.NumeroRegistro
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.AreaTematica))
+                            {
+                                <div class="detail-info-item detail-full-width">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-diagram-2 me-2"></i>Área Temática
+                                    </div>
+                                    <div class="detail-info-value">
+                                        @solicitudSeleccionada.AreaTematica
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Descripción del Curso -->
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.Descripcion))
+                            {
+                                <div class="detail-info-item detail-full-width">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-text-paragraph me-2"></i>Descripción del Curso
+                                    </div>
+                                    <div class="detail-info-value">
+                                        @solicitudSeleccionada.Descripcion
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Comentarios y Observaciones -->
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosSolicitud))
+                            {
+                                <div class="detail-info-item detail-full-width">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-chat-text me-2"></i>Comentarios del Docente
+                                    </div>
+                                    <div class="detail-info-value">
+                                        <div class="bg-light p-3 rounded mt-2 border-start border-primary border-3">
+                                            @solicitudSeleccionada.ComentariosSolicitud
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosRevision))
+                            {
+                                <div class="detail-info-item detail-full-width">
+                                    <div class="detail-info-label">
+                                        <i class="bi bi-chat-square-text me-2"></i>Comentarios de Revisión
+                                    </div>
+                                    <div class="detail-info-value">
+                                        <div class="bg-warning bg-opacity-10 p-3 rounded mt-2 border-start border-warning border-3">
+                                            @solicitudSeleccionada.ComentariosRevision
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <strong>Fecha de Inicio:</strong>
-                            <p>@solicitudSeleccionada.FechaInicio.ToString("dd/MM/yyyy")</p>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Fecha de Fin:</strong>
-                            <p>@solicitudSeleccionada.FechaFin.ToString("dd/MM/yyyy")</p>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Duración:</strong>
-                            <p>@solicitudSeleccionada.HorasDuracion horas</p>
-                        </div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.Modalidad))
-                    {
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <strong>Modalidad:</strong>
-                                <p>@solicitudSeleccionada.Modalidad</p>
-                            </div>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.NumeroRegistro))
-                    {
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <strong>Número de Registro:</strong>
-                                <p>@solicitudSeleccionada.NumeroRegistro</p>
-                            </div>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.AreaTematica))
-                    {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Área Temática:</strong>
-                                <p>@solicitudSeleccionada.AreaTematica</p>
-                            </div>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.Descripcion))
-                    {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Descripción:</strong>
-                                <p>@solicitudSeleccionada.Descripcion</p>
-                            </div>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosSolicitud))
-                    {
-                        <div class="mb-3">
-                            <strong>Comentarios del Docente:</strong>
-                            <div class="bg-light p-3 rounded">@solicitudSeleccionada.ComentariosSolicitud</div>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(solicitudSeleccionada.ComentariosRevision))
-                    {
-                        <div class="mb-3">
-                            <strong>Comentarios de Revisión:</strong>
-                            <div class="bg-warning bg-opacity-10 p-3 rounded">@solicitudSeleccionada.ComentariosRevision</div>
-                        </div>
-                    }
+
+                    <!-- Certificado Adjunto -->
                     @if (!string.IsNullOrEmpty(solicitudSeleccionada.ArchivoNombre))
                     {
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <strong>Archivo Adjunto:</strong>
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-file-earmark-pdf text-danger"></i>
-                                    @solicitudSeleccionada.ArchivoNombre
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            @onclick="() => DescargarArchivo(solicitudSeleccionada)">
-                                        <i class="bi bi-download"></i> Descargar
+                        <div class="section-divider"></div>
+                        <div class="detail-section">
+                            <div class="detail-label">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>Certificado Adjunto
+                            </div>
+                            <div class="file-info">
+                                <i class="bi bi-file-earmark-pdf file-icon"></i>
+                                <span class="flex-grow-1">@solicitudSeleccionada.ArchivoNombre</span>
+                                <div class="ms-auto">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" 
+                                            @onclick="() => VisualizarArchivo(solicitudSeleccionada)"
+                                            title="Visualizar certificado en PDF">
+                                        <i class="bi bi-eye me-1"></i>Visualizar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" 
+                                            @onclick="() => DescargarArchivo(solicitudSeleccionada)"
+                                            title="Descargar archivo del certificado">
+                                        <i class="bi bi-download me-1"></i>Descargar
                                     </button>
                                 </div>
                             </div>
                         </div>
                     }
+
+                    <!-- Alerta de Acción Requerida -->
                     @if (solicitudSeleccionada.Estado == "Pendiente")
                     {
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            <strong>Acción Requerida:</strong> Esta solicitud está pendiente de revisión.
+                        <div class="section-divider"></div>
+                        <div class="alert alert-custom" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Acción Requerida:</strong> Esta solicitud está pendiente de revisión y requiere una decisión administrativa.
                         </div>
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalleModal">Cerrar</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarDetalleModal"
+                            title="Cerrar ventana sin realizar cambios">
+                        <i class="bi bi-x-circle me-2"></i>Cerrar
+                    </button>
                     @if (solicitudSeleccionada.Estado == "Pendiente")
                     {
-                        <button type="button" class="btn btn-success" @onclick="() => AprobarSolicitud(solicitudSeleccionada)">
-                            <i class="bi bi-check-lg"></i> Aprobar
+                        <button type="button" class="btn btn-success" @onclick="() => AprobarSolicitud(solicitudSeleccionada)"
+                                title="Aprobar esta solicitud de certificado">
+                            <i class="bi bi-check-lg me-2"></i>Aprobar Solicitud
                         </button>
-                        <button type="button" class="btn btn-danger" @onclick="() => RechazarSolicitud(solicitudSeleccionada)">
-                            <i class="bi bi-x-lg"></i> Rechazar
+                        <button type="button" class="btn btn-danger" @onclick="() => RechazarSolicitud(solicitudSeleccionada)"
+                                title="Rechazar esta solicitud con comentarios">
+                            <i class="bi bi-x-lg me-2"></i>Rechazar Solicitud
                         </button>
                     }
                 </div>
@@ -320,39 +513,80 @@
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Rechazar Solicitud - @solicitudParaRechazo.NombreCurso</h5>
-                    <button type="button" class="btn-close" @onclick="CerrarRechazoModal" aria-label="Cerrar"></button>
+                <div class="modal-header modal-header-danger">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle-fill me-2"></i>Rechazar Solicitud
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarRechazoModal" 
+                            title="Cerrar ventana sin realizar cambios" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong>Docente:</strong> @solicitudParaRechazo.DocenteNombre (@solicitudParaRechazo.DocenteCedula)<br/>
-                        <strong>Solicitud ID:</strong> @solicitudParaRechazo.Id
+                    <div class="rejection-info">
+                        <h6 class="mb-3">
+                            <i class="bi bi-info-circle-fill text-custom me-2"></i>
+                            Información de la Solicitud
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Docente:</strong> @solicitudParaRechazo.DocenteNombre<br>
+                                <strong>Cédula:</strong> @solicitudParaRechazo.DocenteCedula
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Solicitud ID:</strong> @solicitudParaRechazo.Id.ToString()[..8]...<br>
+                                <strong>Fecha:</strong> @solicitudParaRechazo.FechaCreacion.ToString("dd/MM/yyyy")
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Curso:</strong> @solicitudParaRechazo.NombreCurso
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Motivo del Rechazo *</label>
+                        <label class="form-label fw-bold text-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Motivo del Rechazo *
+                        </label>
                         <textarea class="form-control" rows="4" @bind="motivoRechazo" 
-                                  placeholder="Explique por qué se rechaza la solicitud..." required></textarea>
+                                  placeholder="Explique detalladamente por qué se rechaza la solicitud. Este motivo será visible para el docente." 
+                                  required title="Campo obligatorio: debe explicar por qué se rechaza"></textarea>
+                        <div class="form-text">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Este comentario será enviado al docente por correo electrónico.
+                            </small>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Comentarios Adicionales</label>
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-chat-text me-1"></i>
+                            Comentarios Adicionales
+                        </label>
                         <textarea class="form-control" rows="3" @bind="comentariosRevision" 
-                                  placeholder="Comentarios adicionales para el docente..."></textarea>
+                                  placeholder="Comentarios adicionales o sugerencias para el docente (opcional)..."
+                                  title="Campo opcional: comentarios adicionales"></textarea>
+                        <div class="form-text">
+                            <small class="text-muted">
+                                Opcional: Puede agregar sugerencias para futuras solicitudes.
+                            </small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarRechazoModal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarRechazoModal"
+                            title="Cancelar operación sin realizar cambios">
+                        <i class="bi bi-arrow-left me-2"></i>Cancelar
+                    </button>
                     <button type="button" class="btn btn-danger" @onclick="ConfirmarRechazo" 
-                            disabled="@(string.IsNullOrWhiteSpace(motivoRechazo) || isProcessing)">
+                            disabled="@(string.IsNullOrWhiteSpace(motivoRechazo) || isProcessing)"
+                            title="Confirmar rechazo de la solicitud">
                         @if (isProcessing)
                         {
-                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                            <span> Procesando...</span>
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                            <span>Procesando...</span>
                         }
                         else
                         {
-                            <i class="bi bi-x-lg"></i>
-                            <span> Confirmar Rechazo</span>
+                            <i class="bi bi-x-lg me-2"></i>
+                            <span>Confirmar Rechazo</span>
                         }
                     </button>
                 </div>
@@ -368,30 +602,38 @@
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header modal-header-custom">
                     <h5 class="modal-title">
                         <i class="bi bi-file-earmark-pdf me-2"></i>
                         Visualizar Certificado - @(pdfNombreArchivo ?? "Documento")
                     </h5>
-                    <button type="button" class="btn-close" @onclick="CerrarModalPDF" aria-label="Cerrar"></button>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalPDF" 
+                            title="Cerrar visualizador de PDF" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body p-0">
                     @if (isLoadingPDF)
                     {
-                        <div class="d-flex justify-content-center align-items-center" style="height: 500px;">
-                            <div class="text-center">
-                                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                                    <span class="visually-hidden">Cargando PDF...</span>
-                                </div>
-                                <p class="mt-3">Cargando certificado...</p>
+                        <div class="pdf-loading">
+                            <div class="spinner-border text-custom" role="status">
+                                <span class="visually-hidden">Cargando PDF...</span>
                             </div>
+                            <p class="mt-3 text-custom">Cargando certificado...</p>
+                            <small class="text-muted">Por favor, espere mientras se carga el documento</small>
                         </div>
                     }
                     else if (!string.IsNullOrEmpty(errorPDF))
                     {
                         <div class="alert alert-danger m-3" role="alert">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Error al cargar PDF:</strong> @errorPDF
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+                                <div>
+                                    <h6 class="mb-1">Error al cargar el certificado</h6>
+                                    <p class="mb-0">@errorPDF</p>
+                                    <small class="text-muted">
+                                        Por favor, intente nuevamente o contacte al administrador del sistema.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     }
                     else
@@ -402,12 +644,14 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalPDF">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalPDF"
+                            title="Cerrar visualizador de PDF">
                         <i class="bi bi-x-circle me-2"></i>Cerrar
                     </button>
                     @if (!string.IsNullOrEmpty(pdfUrl) && !isLoadingPDF && solicitudParaPDF != null)
                     {
-                        <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(solicitudParaPDF)">
+                        <button type="button" class="btn btn-primary-custom" @onclick="() => DescargarArchivo(solicitudParaPDF)"
+                                title="Descargar archivo PDF al equipo">
                             <i class="bi bi-download me-2"></i>Descargar PDF
                         </button>
                     }
@@ -424,11 +668,19 @@
     private bool isLoading = true;
     private string filtroEstado = "Pendiente";
     
+    // Contadores
     private int cantidadPendientes = 0;
     private int cantidadAprobadas = 0;
     private int cantidadRechazadas = 0;
     private int totalSolicitudes = 0;
     
+    // Filtros adicionales
+    private string filtroCedula = string.Empty;
+    private string filtroCurso = string.Empty;
+    private string filtroTipo = string.Empty;
+    private List<string>? tiposCapacitacion;
+    
+    // Modales
     private bool showDetalleModal = false;
     private bool showRechazoModal = false;
     private bool showPDFModal = false;
@@ -460,6 +712,18 @@
             if (response != null && response.Exitoso)
             {
                 solicitudes = response.Solicitudes;
+                
+                // Cargar tipos de capacitación para el filtro
+                if (solicitudes != null && solicitudes.Any())
+                {
+                    tiposCapacitacion = solicitudes
+                        .Select(s => s.TipoCapacitacion)
+                        .Where(tipo => !string.IsNullOrWhiteSpace(tipo))
+                        .Distinct()
+                        .OrderBy(t => t)
+                        .ToList();
+                }
+                
                 CalcularContadores();
                 FiltrarSolicitudes();
             }
@@ -473,6 +737,7 @@
         {
             ToastService.ShowError($"Error al cargar solicitudes: {ex.Message}");
             solicitudes = new List<SolicitudCertificadoCapacitacionAdminDto>();
+            Logger.LogError(ex, "Error al cargar solicitudes de certificados");
         }
         finally
         {
@@ -499,13 +764,39 @@
             return;
         }
 
-        solicitudesFiltradas = filtroEstado switch
+        var filtroInicial = filtroEstado switch
         {
-            "Pendiente" => solicitudes.Where(s => s.Estado == "Pendiente").OrderBy(s => s.FechaCreacion).ToList(),
-            "Aprobada" => solicitudes.Where(s => s.Estado == "Aprobada").OrderByDescending(s => s.FechaRevision).ToList(),
-            "Rechazada" => solicitudes.Where(s => s.Estado == "Rechazada").OrderByDescending(s => s.FechaRevision).ToList(),
-            _ => solicitudes.OrderByDescending(s => s.FechaCreacion).ToList()
+            "Pendiente" => solicitudes.Where(s => s.Estado == "Pendiente").OrderBy(s => s.FechaCreacion),
+            "Aprobada" => solicitudes.Where(s => s.Estado == "Aprobada").OrderByDescending(s => s.FechaRevision),
+            "Rechazada" => solicitudes.Where(s => s.Estado == "Rechazada").OrderByDescending(s => s.FechaRevision),
+            _ => solicitudes.OrderByDescending(s => s.FechaCreacion)
         };
+        
+        // Usar una variable IEnumerable para aplicar los filtros adicionales
+        IEnumerable<SolicitudCertificadoCapacitacionAdminDto> resultados = filtroInicial;
+        
+        // Aplicar filtros adicionales
+        if (!string.IsNullOrWhiteSpace(filtroCedula))
+        {
+            resultados = resultados.Where(s => s.DocenteCedula.Contains(filtroCedula, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (!string.IsNullOrWhiteSpace(filtroCurso))
+        {
+            resultados = resultados.Where(s => s.NombreCurso.Contains(filtroCurso, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (!string.IsNullOrWhiteSpace(filtroTipo))
+        {
+            resultados = resultados.Where(s => s.TipoCapacitacion == filtroTipo);
+        }
+        
+        solicitudesFiltradas = resultados.ToList();
+    }
+
+    private void AplicarFiltros()
+    {
+        FiltrarSolicitudes();
     }
 
     private void FiltrarPendientes()
@@ -529,6 +820,15 @@
     private void FiltrarTodas()
     {
         filtroEstado = "Todas";
+        FiltrarSolicitudes();
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtroEstado = "Todas";
+        filtroCedula = string.Empty;
+        filtroCurso = string.Empty;
+        filtroTipo = string.Empty;
         FiltrarSolicitudes();
     }
 
@@ -748,17 +1048,6 @@
         errorPDF = null;
         isLoadingPDF = false;
         solicitudParaPDF = null;
-    }
-
-    private string GetCardClass(string estado)
-    {
-        return estado switch
-        {
-            "Pendiente" => "border-warning",
-            "Aprobada" => "border-success",
-            "Rechazada" => "border-danger",
-            _ => "border-secondary"
-        };
     }
 
     private string GetBadgeClass(string estado)
