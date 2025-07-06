@@ -322,4 +322,25 @@ public class EvidenciasInvestigacionController : ControllerBase
             return StatusCode(500, new { mensaje = "Error interno del servidor" });
         }
     }
+
+    [HttpPut("reenviar/{evidenciaId}")]
+    public async Task<ActionResult<ResponseGenericoEvidenciaDto>> ReenviarSolicitud(Guid evidenciaId)
+    {
+        try
+        {
+            var cedula = GetCedulaFromClaims();
+            if (string.IsNullOrEmpty(cedula))
+            {
+                return Unauthorized("No se pudo obtener la cédula del usuario");
+            }
+
+            var response = await _evidenciasService.ReenviarSolicitudEvidenciaAsync(evidenciaId, cedula);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al reenviar evidencia de investigación {EvidenciaId}", evidenciaId);
+            return StatusCode(500, new { mensaje = "Error interno del servidor" });
+        }
+    }
 }

@@ -161,6 +161,15 @@
                                             </button>
                                         }
                                         
+                                        @if (PuedeReenviarEvidencia(evidencia.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => ReenviarEvidencia(evidencia.Id)"
+                                                    title="Reenviar para Revisión">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        }
+                                        
                                         @if (evidencia.Estado == "Rechazada" && !string.IsNullOrEmpty(evidencia.MotivoRechazo))
                                         {
                                             <button class="btn btn-sm btn-outline-danger" 

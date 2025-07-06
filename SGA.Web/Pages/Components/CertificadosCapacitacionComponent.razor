@@ -143,6 +143,15 @@
                                             </button>
                                         }
                                         
+                                        @if (PuedeReenviarCertificado(certificado.Estado))
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => ReenviarCertificado(certificado.Id)"
+                                                    title="Reenviar para Revisión">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        }
+                                        
                                         @if (certificado.Estado == "Rechazada" && !string.IsNullOrEmpty(certificado.MotivoRechazo))
                                         {
                                             <button class="btn btn-sm btn-outline-danger" 
@@ -180,6 +189,7 @@
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnReemplazarArchivoCertificado { get; set; }
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnVerMotivoRechazoCertificado { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarCertificado { get; set; }
 
     // Variables para filtrado
     private string selectedEstado = "";
@@ -242,9 +252,15 @@
         OnEliminarCertificado.InvokeAsync(certificadoId);
     }
 
+    private void ReenviarCertificado(Guid certificadoId)
+    {
+        OnReenviarCertificado.InvokeAsync(certificadoId);
+    }
+
     // Métodos de verificación de permisos
     private bool PuedeVisualizarCertificado(string estado) => !string.IsNullOrEmpty(estado);
     private bool PuedeEditarCertificado(string estado) => estado == "Pendiente" || estado == "En Proceso" || estado == "Rechazada";
     private bool PuedeReemplazarArchivoCertificado(string estado) => estado == "Pendiente" || estado == "Rechazada";
+    private bool PuedeReenviarCertificado(string estado) => estado == "Rechazada";
     private bool PuedeEliminarCertificado(string estado) => estado == "Pendiente" || estado == "Rechazada";
 }

@@ -72,7 +72,8 @@
                         OnEditarCertificado="OnEditarCertificado"
                         OnReemplazarArchivoCertificado="OnReemplazarArchivoCertificado"
                         OnVerMotivoRechazoCertificado="OnVerMotivoRechazoCertificado"
-                        OnEliminarCertificado="OnEliminarCertificado" />
+                        OnEliminarCertificado="OnEliminarCertificado"
+                        OnReenviarCertificado="OnReenviarCertificado" />
                 }
             </div>
         </div>
@@ -105,7 +106,8 @@
                         solicitudesEvidencias="SolicitudesEvidencias"
                         isLoadingEvidenciasParam="IsLoadingEvidencias"
                         OnEvidenciasChanged="OnEvidenciasChanged"
-                        OnEliminarEvidencia="OnEliminarEvidencia" />
+                        OnEliminarEvidencia="OnEliminarEvidencia"
+                        OnReenviarEvidencia="OnReenviarEvidencia" />
                 }
             </div>
         </div>
@@ -144,10 +146,12 @@
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnReemplazarArchivoCertificado { get; set; }
     [Parameter] public EventCallback<CertificadoCapacitacionDetalleDto> OnVerMotivoRechazoCertificado { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarCertificado { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarCertificado { get; set; }
     
     // Eventos para Evidencias
     [Parameter] public EventCallback OnEvidenciasChanged { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarEvidencia { get; set; }
 
     private Dictionary<string, bool> collapsedSections = new()
     {

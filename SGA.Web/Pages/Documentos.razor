@@ -38,8 +38,10 @@
         OnReemplazarArchivoCertificado="ReemplazarArchivoCertificado"
         OnVerMotivoRechazoCertificado="VerMotivoRechazoCertificado"
         OnEliminarCertificado="MostrarConfirmarEliminarCertificado"
+        OnReenviarCertificado="MostrarConfirmarReenvioCertificado"
         OnEvidenciasChanged="@(async () => await InvokeAsync(StateHasChanged))"
-        OnEliminarEvidencia="MostrarConfirmarEliminarEvidencia" />
+        OnEliminarEvidencia="MostrarConfirmarEliminarEvidencia"
+        OnReenviarEvidencia="MostrarConfirmarReenvioEvidencia" />
 </div>
 
 <!-- Modales principales -->
@@ -426,6 +428,90 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal de Confirmación para Reenviar Certificado -->
+@if (showConfirmarReenvioCertificadoModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-repeat"></i> Confirmar Reenvío de Certificado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarReenvioCertificado"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>¿Está seguro que desea reenviar este certificado para revisión?</strong>
+                    </div>
+                    <p class="mb-0">Esta acción enviará el certificado nuevamente al administrador para su revisión.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarReenvioCertificado">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmarReenvioCertificado" 
+                            disabled="@isProcessing" style="background-color: #8a1538; border-color: #8a1538;">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-repeat"></i>
+                        }
+                        Reenviar Certificado
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Modal de Confirmación para Reenviar Evidencia -->
+@if (showConfirmarReenvioEvidenciaModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #8a1538; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-repeat"></i> Confirmar Reenvío de Evidencia
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarReenvioEvidencia"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>¿Está seguro que desea reenviar esta evidencia de investigación para revisión?</strong>
+                    </div>
+                    <p class="mb-0">Esta acción enviará la evidencia nuevamente al administrador para su revisión.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarReenvioEvidencia">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmarReenvioEvidencia" 
+                            disabled="@isProcessing" style="background-color: #8a1538; border-color: #8a1538;">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-repeat"></i>
+                        }
+                        Reenviar Evidencia
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 <!-- Modal de Confirmación para Eliminar Solicitud -->
 @if (showConfirmarEliminarSolicitudModal)
 {
@@ -687,10 +773,14 @@
 
     // Variables para modales de confirmación (reemplazar alerts)
     private bool showConfirmarReenvioModal = false;
+    private bool showConfirmarReenvioCertificadoModal = false;
+    private bool showConfirmarReenvioEvidenciaModal = false;
     private bool showConfirmarEliminarSolicitudModal = false;
     private bool showConfirmarEliminarCertificadoModal = false;
     private bool showConfirmarEliminarEvidenciaModal = false;
     private Guid solicitudIdParaAccion = Guid.Empty;
+    private Guid certificadoIdParaReenvio = Guid.Empty;
+    private Guid evidenciaIdParaReenvio = Guid.Empty;
     private Guid certificadoIdParaEliminar = Guid.Empty;
     private Guid evidenciaIdParaEliminar = Guid.Empty;
 
@@ -1045,6 +1135,98 @@
         {
             isProcessing = false;
             CancelarEliminarSolicitud();
+        }
+    }
+
+    // Métodos para reenvío de certificados
+    private void MostrarConfirmarReenvioCertificado(Guid certificadoId)
+    {
+        certificadoIdParaReenvio = certificadoId;
+        showConfirmarReenvioCertificadoModal = true;
+        StateHasChanged();
+    }
+
+    private void CancelarReenvioCertificado()
+    {
+        showConfirmarReenvioCertificadoModal = false;
+        certificadoIdParaReenvio = Guid.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmarReenvioCertificado()
+    {
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsync($"api/certificados-capacitacion/reenviar/{certificadoIdParaReenvio}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Certificado reenviado correctamente");
+                await LoadTodasSolicitudesCertificados();
+            }
+            else
+            {
+                ToastService.ShowError("Error al reenviar el certificado");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            CancelarReenvioCertificado();
+        }
+    }
+
+    // Métodos para reenvío de evidencias
+    private void MostrarConfirmarReenvioEvidencia(Guid evidenciaId)
+    {
+        evidenciaIdParaReenvio = evidenciaId;
+        showConfirmarReenvioEvidenciaModal = true;
+        StateHasChanged();
+    }
+
+    private void CancelarReenvioEvidencia()
+    {
+        showConfirmarReenvioEvidenciaModal = false;
+        evidenciaIdParaReenvio = Guid.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmarReenvioEvidencia()
+    {
+        try
+        {
+            isProcessing = true;
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsync($"api/evidencias-investigacion/reenviar/{evidenciaIdParaReenvio}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess("Evidencia reenviada correctamente");
+                await LoadTodasSolicitudesEvidencias();
+            }
+            else
+            {
+                ToastService.ShowError("Error al reenviar la evidencia");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            CancelarReenvioEvidencia();
         }
     }
 

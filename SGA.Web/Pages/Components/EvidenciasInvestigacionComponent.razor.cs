@@ -15,6 +15,7 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
     [Parameter] public List<EvidenciaInvestigacionViewModel>? solicitudesEvidencias { get; set; }
     [Parameter] public bool isLoadingEvidenciasParam { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
+    [Parameter] public EventCallback<Guid> OnReenviarEvidencia { get; set; }
 
     private List<EvidenciaInvestigacionViewModel>? evidencias;
     private List<EvidenciaInvestigacionViewModel>? evidenciasFiltradas;
@@ -443,9 +444,16 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
         await OnEliminarEvidencia.InvokeAsync(evidencia.Id);
     }
 
+    private async Task ReenviarEvidencia(Guid evidenciaId)
+    {
+        // Invocar el callback del componente padre para manejar el reenvío
+        await OnReenviarEvidencia.InvokeAsync(evidenciaId);
+    }
+
     // Permission checks
     private bool PuedeVisualizarEvidencia(string estado) => !string.IsNullOrEmpty(estado);
     private bool PuedeEditarEvidencia(string estado) => estado == "Pendiente" || estado == "Rechazada";
     private bool PuedeReemplazarArchivoEvidencia(string estado) => estado == "Pendiente" || estado == "Rechazada";
+    private bool PuedeReenviarEvidencia(string estado) => estado == "Rechazada";
     private bool PuedeEliminarEvidencia(string estado) => estado == "Pendiente" || estado == "Rechazada";
 }
