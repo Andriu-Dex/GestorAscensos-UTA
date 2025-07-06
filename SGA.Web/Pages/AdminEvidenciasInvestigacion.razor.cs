@@ -91,7 +91,7 @@ namespace SGA.Web.Pages
                         evidencias = responseDto.Evidencias ?? new List<EvidenciaInvestigacionViewModel>();
                         ActualizarContadores();
                         AplicarFiltros();
-                        ToastService.ShowSuccess($"Se cargaron {evidencias.Count} evidencias");
+                        // Notificación de carga removida para evitar spam
                     }
                     else
                     {
