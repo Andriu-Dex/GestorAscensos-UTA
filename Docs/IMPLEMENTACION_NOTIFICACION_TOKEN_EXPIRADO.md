@@ -2,189 +2,301 @@
 
 ## Descripción
 
-Se ha implementado un sistema completo de notificación y manejo de expiración de tokens JWT para mejorar la experiencia del usuario cuando su sesión expira.
+Se ha implementado un sistema robusto y profesional de notificación de expiración de tokens JWT que proporciona una experiencia de usuario clara y consistente cuando la sesión expira. El sistema utiliza notificaciones Toast prominentes y maneja automáticamente la limpieza de sesión y redirección al login.
 
 ## Componentes Implementados
 
-### 1. AuthorizationMessageHandler Mejorado
+### 1. TokenValidationComponent - Componente Global de Validación
+
+**Archivo:** `SGA.Web/Shared/TokenValidationComponent.razor`
+
+**Funcionalidades:**
+
+- Validación periódica automática del token cada 15 segundos
+- Detección local de expiración sin peticiones al servidor
+- Mostrar notificaciones Toast prominentes y profesionales
+- Limpieza automática de sesión y redirección al login
+- Manejo de estados de autenticación en tiempo real
+
+**Características técnicas:**
+
+- Componente Blazor integrado globalmente en `App.razor`
+- Validación local de JWT mediante parseo del payload
+- Timer asíncrono con manejo robusto de excepciones
+- Integración nativa con `Blazored.Toast` para notificaciones
+
+### 2. AuthorizationMessageHandler Optimizado
 
 **Archivo:** `SGA.Web/Services/AuthorizationMessageHandler.cs`
 
 **Funcionalidades:**
 
-- Intercepta todas las respuestas HTTP 401 (Unauthorized)
-- Maneja la expiración de tokens de manera centralizada
-- Evita múltiples ejecuciones simultáneas con un sistema de bloqueo
-- Limpia automáticamente los datos de autenticación
-- Muestra notificación toast personalizada
-- Redirige automáticamente al login después de 4 segundos
+- Intercepta respuestas HTTP 401 (Unauthorized)
+- Detecta tokens expirados antes de enviar peticiones
+- Delega el manejo de expiración al `AuthService` centralizado
+- Evita múltiples ejecuciones simultáneas con sistema de bloqueo
 
 **Características técnicas:**
 
-- Usa `DelegatingHandler` para interceptar todas las peticiones HTTP
-- Implementa un patrón de singleton para evitar múltiples notificaciones
-- Manejo robusto de errores con fallbacks
+- `DelegatingHandler` para interceptación HTTP transparente
+- Validación previa de tokens para evitar peticiones innecesarias
+- Patrón de delegación para centralizar la lógica de manejo
 
-### 2. Script de Validación de Tokens (JavaScript)
+### 3. AuthService Centralizado
 
-**Archivo:** `SGA.Web/wwwroot/js/token-validation.js`
+**Archivo:** `SGA.Web/Services/AuthService.cs`
 
 **Funcionalidades:**
 
-- Parsea tokens JWT del lado del cliente
-- Verifica expiración de tokens sin hacer peticiones al servidor
-- Monitoreo periódico automático cada 2 minutos
-- Modal de notificación personalizado con cuenta regresiva
-- Funciones utilitarias para verificar tokens antes de peticiones importantes
+- Método `HandleTokenExpiration()` para limpieza centralizada de sesión
+- Eliminación completa de datos de autenticación
+- Sincronización del estado de autenticación
+- Limpieza de caché de usuario
 
 **Características técnicas:**
 
-- Validación local de JWT sin dependencias externas
-- Sistema de notificación modal nativo con estilos personalizados
-- Integración automática con localStorage
+- Integración con `ILocalStorageService` para limpieza de tokens
+- Actualización del `AuthenticationStateProvider`
+- Logging detallado para monitoreo y debugging
 
-### 3. Estilos CSS Personalizados
+### 4. Integración Global en App.razor
 
-**Archivo:** `SGA.Web/wwwroot/css/token-expiration.css`
+**Archivo:** `SGA.Web/App.razor`
 
 **Funcionalidades:**
 
-- Estilos especiales para toasts de expiración de token
-- Animaciones llamativas (pulse, shake)
-- Responsive design para móviles
-- Colores corporativos (#8a1538)
-- Efectos visuales mejorados (sombras, gradientes)
+- Inclusión global del `TokenValidationComponent`
+- Configuración centralizada de `BlazoredToasts`
+- Integración seamless con el ciclo de vida de la aplicación
 
-### 4. Integración con Blazored.Toast
+**Características técnicas:**
 
-**Configuración:** Modificaciones en `AuthorizationMessageHandler`
-
-**Características:**
-
-- Toast posicionado en el centro superior
-- Duración de 5 segundos con barra de progreso
-- Mensaje personalizado con emojis
-- Sin botón de cierre para forzar la atención del usuario
+- Configuración de posicionamiento de Toast (`TopRight`, `TopCenter`)
+- Configuración de iconos Font Awesome para diferentes tipos de notificación
+- Timeout configurado a 5 segundos para visibilidad óptima
 
 ## Flujo de Funcionamiento
 
-### Escenario 1: Token Expira Durante Petición HTTP
+### Escenario 1: Validación Periódica Automática
 
-1. Usuario hace una petición HTTP (ej: cargar perfil, actualizar datos)
-2. El servidor responde con 401 (Unauthorized)
-3. `AuthorizationMessageHandler` intercepta la respuesta
-4. Se ejecuta `HandleTokenExpiration()`:
-   - Limpia token del localStorage
-   - Marca usuario como desautenticado
-   - Limpia caché del AuthService
-   - Muestra toast de notificación
-   - Espera 4 segundos
-   - Redirige a `/login`
+1. `TokenValidationComponent` se inicializa globalmente al cargar la aplicación
+2. Timer ejecuta validación cada 15 segundos para usuarios autenticados
+3. Componente parsea el JWT localmente y verifica la fecha de expiración
+4. Si detecta expiración:
+   - Detiene el timer de validación para evitar ejecuciones múltiples
+   - Obtiene el nombre del usuario desde los claims de autenticación
+   - Llama a `AuthService.HandleTokenExpiration()` para limpiar sesión
+   - Muestra Toast personalizado con saludo al usuario (ej: "Hola Carlos, tu sesión ha expirado...")
+   - Espera 4 segundos para visibilidad del mensaje
+   - Redirige automáticamente a `/login`
 
-### Escenario 2: Token Expira Por Tiempo (Monitoreo Pasivo)
+### Escenario 2: Token Expira Durante Petición HTTP
 
-1. Script JavaScript verifica tokens cada 2 minutos
-2. Detecta token expirado localmente
-3. Muestra modal personalizado con cuenta regresiva
-4. Limpia localStorage
-5. Redirige a `/login` automáticamente
+1. `AuthorizationMessageHandler` intercepta la petición HTTP
+2. Verifica si el token está expirado antes de enviar la petición
+3. Si está expirado o el servidor responde 401:
+   - Delega el manejo a `AuthService.HandleTokenExpiration()`
+   - El `TokenValidationComponent` detecta el cambio de estado
+   - Muestra la notificación Toast correspondiente
+   - Redirige al login automáticamente
 
-### Escenario 3: Token Expira Durante Navegación
+### Escenario 3: Cambio de Estado de Autenticación
 
-1. Usuario navega entre páginas
-2. Componentes verifican autenticación
-3. Si detectan token inválido, llaman a `HandleAuthenticationError`
-4. Se delega al sistema de interceptor para manejo consistente
+1. `TokenValidationComponent` escucha cambios en `AuthenticationStateProvider`
+2. Cuando el usuario se autentica: inicia la validación periódica
+3. Cuando el usuario se desautentica: detiene la validación periódica
+4. Sincronización automática del estado en toda la aplicación
 
-## Mejoras de Experiencia de Usuario
+## Implementación Paso a Paso
 
-### Antes de la Implementación
+### Paso 1: Crear TokenValidationComponent
 
-- Errores 401 no tenían manejo centralizado
-- Usuario veía errores técnicos confusos
-- No había notificación clara de sesión expirada
-- Redirección manual o inconsistente al login
+### Paso 2: Integrar en App.razor
 
-### Después de la Implementación
+### Paso 3: Implementar AuthService.HandleTokenExpiration
 
-- Notificación clara y profesional de sesión expirada
-- Redirección automática al login
-- Limpieza automática de datos de sesión
-- Experiencia consistente en toda la aplicación
-- Prevención de múltiples notificaciones
+### Paso 4: Optimizar AuthorizationMessageHandler
 
-## Configuración y Mantenimiento
+## Características de la Implementación
 
-### Personalización de Mensajes
+### Experiencia de Usuario Mejorada
 
-Para cambiar el mensaje de expiración, modificar:
+- **Notificación Personalizada:** Toast con saludo personalizado usando el nombre del usuario (ej: "Hola Carlos, tu sesión ha expirado. Por favor, inicia sesión nuevamente.")
+- **Mensaje Único:** Solo un Toast para evitar saturación visual y confusión
+- **Redirección Automática:** Transición suave al login después de 4 segundos
+- **Limpieza Completa:** Eliminación total de datos de sesión y caché
+- **Experiencia Consistente:** Comportamiento uniforme en toda la aplicación
+- **Obtención Inteligente de Nombre:** Sistema que busca el nombre del usuario en diferentes claims como fallback
 
-```csharp
-// En AuthorizationMessageHandler.cs
-toastService.ShowError("Su mensaje personalizado aquí", settings => { ... });
-```
+### Características Técnicas
 
-### Configuración de Timing
-
-```csharp
-// Duración del toast (milisegundos)
-settings.Timeout = 5;
-
-// Delay antes de redirección
-await Task.Delay(4000);
-```
-
-### Monitoreo JavaScript
-
-```javascript
-// Frecuencia de verificación (minutos)
-window.tokenValidation.startTokenMonitoring(2);
-```
+- **Validación Local:** Parseo de JWT sin peticiones adicionales al servidor
+- **Timer Optimizado:** Verificación cada 15 segundos con inicio retardado de 5 segundos
+- **Manejo de Excepciones:** Logging detallado y fallbacks robustos
+- **Integración Nativa:** Uso completo del ecosistema Blazor y Blazored.Toast
+- **Arquitectura Modular:** Separación clara de responsabilidades entre componentes
 
 ## Consideraciones de Seguridad
 
-1. **Limpieza Completa:** Se limpia tanto localStorage como memoria
-2. **No Exposición de Tokens:** Los tokens no se muestran en logs públicos
-3. **Redirección Forzada:** El usuario es redirigido automáticamente
-4. **Estado Consistente:** Todos los servicios se sincronizan
+1. **Limpieza Completa de Sesión:**
 
-## Compatibilidad
+   - Eliminación de token de localStorage
+   - Limpieza de caché de usuario en memoria
+   - Actualización del estado de autenticación global
 
-- ✅ Blazor WebAssembly
-- ✅ Bootstrap 5
-- ✅ Blazored.Toast
-- ✅ Navegadores modernos (ES6+)
-- ✅ Responsive (móviles y desktop)
+2. **Validación Local Segura:**
 
-## Archivos Modificados
+   - Parseo de JWT sin exposición de datos sensibles
+   - Verificación de fecha de expiración con margen de seguridad
+   - Manejo seguro de excepciones en validación
 
-1. `SGA.Web/Services/AuthorizationMessageHandler.cs` - Handler principal
-2. `SGA.Web/wwwroot/js/token-validation.js` - Validación JavaScript
-3. `SGA.Web/wwwroot/css/token-expiration.css` - Estilos personalizados
-4. `SGA.Web/wwwroot/index.html` - Referencias a scripts y CSS
-5. `SGA.Web/Pages/Perfil.razor` - Método `HandleAuthenticationError` simplificado
+3. **Prevención de Fugas de Información:**
+   - Logging controlado sin exposición de tokens completos
+   - Manejo de errores sin revelar detalles internos
+   - Redirección inmediata en caso de token inválido
 
-## Testing
+## Beneficios de la Implementación
 
-Para probar la funcionalidad:
+### Antes de la Implementación
 
-1. **Forzar Expiración:**
+- Errores 401 mostraban mensajes técnicos confusos
+- No había notificación clara de expiración de sesión
+- Redirección manual e inconsistente
+- Usuario podía quedar en estado indefinido
 
-   - Modificar token en localStorage manualmente
-   - Usar herramientas de desarrollador para modificar fecha de expiración
+### Después de la Implementación
 
-2. **Verificar Respuesta 401:**
+- Notificación personalizada con saludo directo al usuario por su nombre
+- Mensaje único y claro sin saturación de notificaciones múltiples
+- Redirección automática y consistente al login
+- Limpieza automática y completa de datos de sesión
+- Experiencia uniforme en toda la aplicación
+- Sistema inteligente de obtención de nombre con fallbacks robustos
 
-   - Usar un token inválido
-   - Hacer peticiones después de que expire el token real
+## Archivos de la Implementación
 
-3. **Probar Redirección:**
-   - Verificar que se redirige a `/login`
-   - Confirmar que los datos se limpian correctamente
+### Componentes Principales
 
-## Notas de Desarrollo
+1. **`SGA.Web/Shared/TokenValidationComponent.razor`**
 
-- La implementación es modular y puede extenderse fácilmente
-- Los estilos siguen la paleta de colores corporativa
-- El código incluye manejo robusto de errores
-- Compatible con el patrón de inyección de dependencias de Blazor
+   - Componente global de validación periódica
+   - Manejo de notificaciones Toast
+   - Control del ciclo de vida de validación
+
+2. **`SGA.Web/Services/AuthService.cs`**
+
+   - Método `HandleTokenExpiration()` centralizado
+   - Limpieza de sesión y datos de usuario
+   - Integración con localStorage y AuthenticationStateProvider
+
+3. **`SGA.Web/Services/AuthorizationMessageHandler.cs`**
+
+   - Interceptor HTTP optimizado para respuestas 401
+   - Validación previa de tokens antes de peticiones
+   - Delegación al AuthService para manejo centralizado
+
+4. **`SGA.Web/App.razor`**
+   - Integración global del TokenValidationComponent
+   - Configuración de BlazoredToasts
+   - Configuración del enrutamiento con autenticación
+
+### Configuración de Dependencias
+
+Asegurar que las siguientes dependencias estén configuradas en `Program.cs`:
+
+```csharp
+builder.Services.AddBlazoredToast();
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuthorizationMessageHandler>();
+```
+
+## Testing y Validación
+
+### Métodos de Prueba
+
+1. **Simulación de Token Expirado:**
+
+   ```javascript
+   // En consola del navegador
+   localStorage.setItem("authToken", "token_invalido_para_pruebas");
+   ```
+
+2. **Verificación de Comportamiento 401:**
+
+   - Usar token expirado en peticiones HTTP
+   - Verificar que se muestra el Toast correctamente
+   - Confirmar redirección automática a `/login`
+
+3. **Validación de Limpieza de Sesión:**
+   - Verificar que localStorage se limpia completamente
+   - Confirmar que el estado de autenticación se actualiza
+   - Validar que no hay datos residuales en memoria
+
+### Logs de Debugging
+
+La implementación incluye logging detallado para facilitar el debugging:
+
+```
+[TOKEN VALIDATION] Iniciando TokenValidationComponent
+[TOKEN VALIDATION] Usuario autenticado, iniciando validación
+[TOKEN VALIDATION] Timer de validación iniciado
+[TOKEN VALIDATION] Verificando token: True
+[TOKEN VALIDATION] Token expirado detectado en verificación periódica
+[TOKEN VALIDATION] Manejando expiración de token desde componente
+[AUTH DEBUG] HandleTokenExpiration llamado
+[AUTH DEBUG] Token expirado - sesión limpiada exitosamente
+[TOKEN VALIDATION] Toasts mostrados exitosamente
+```
+
+## Mantenimiento y Extensiones
+
+### Extensiones Posibles
+
+1. **Configuración Dinámica:**
+
+   - Intervalos de validación configurables por usuario
+   - Mensajes personalizables según contexto
+   - Timeouts ajustables según tipo de sesión
+
+2. **Notificaciones Avanzadas:**
+
+   - Advertencias previas a expiración (ej: 5 minutos antes)
+   - Opciones de renovación automática de token
+   - Historial de sesiones expiradas
+
+3. **Análiticas de Sesión:**
+   - Tracking de patrones de expiración
+   - Métricas de tiempo de sesión promedio
+   - Reportes de seguridad de autenticación
+
+### Buenas Prácticas de Mantenimiento
+
+- Revisar logs periódicamente para detectar patrones anómalos
+- Actualizar intervalos de validación según necesidades de seguridad
+- Mantener sincronización entre cliente y servidor en configuración de timeouts
+- Probar regularmente la funcionalidad en diferentes navegadores y dispositivos
+
+## Compatibilidad y Requisitos
+
+### Tecnologías Requeridas
+
+- ✅ Blazor WebAssembly (.NET 6+)
+- ✅ Blazored.Toast (versión 4.0+)
+- ✅ Blazored.LocalStorage (versión 4.0+)
+- ✅ Bootstrap 5 (para estilos base)
+- ✅ Font Awesome (para iconos de Toast)
+
+### Navegadores Compatibles
+
+- ✅ Chrome/Edge (versión 90+)
+- ✅ Firefox (versión 88+)
+- ✅ Safari (versión 14+)
+- ✅ Navegadores móviles modernos
+
+### Consideraciones de Rendimiento
+
+- Timer optimizado con frecuencia balanceada (15 segundos)
+- Validación local sin peticiones HTTP adicionales
+- Manejo eficiente de memoria con IDisposable
+- Prevención de memory leaks con cleanup de event handlers

@@ -3,9 +3,10 @@
 @using Blazored.Toast.Services
 @using Microsoft.AspNetCore.Components
 @inject AuthenticationStateProvider AuthStateProvider
-@inject SGA.Web.Services.ILocalStorageService LocalStorage
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject NavigationManager Navigation
 @inject IToastService ToastService
+@inject AuthService AuthServiceLocal
 @implements IDisposable
 
 @* Este componente maneja la validación automática de tokens *@
@@ -19,11 +20,18 @@
     {
         _apiAuthStateProvider = AuthStateProvider as ApiAuthenticationStateProvider;
         
+        Console.WriteLine("[TOKEN VALIDATION] Iniciando TokenValidationComponent");
+        
         // Solo iniciar la validación si el usuario está autenticado
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
+            Console.WriteLine("[TOKEN VALIDATION] Usuario autenticado, iniciando validación");
             StartTokenValidation();
+        }
+        else
+        {
+            Console.WriteLine("[TOKEN VALIDATION] Usuario no autenticado, no iniciando validación");
         }
 
         // Suscribirse a cambios de estado de autenticación
@@ -32,15 +40,18 @@
 
     private void StartTokenValidation()
     {
-        // Verificar el token cada 2 minutos
+        // Verificar el token cada 15 segundos (más frecuente para mejor detección)
         _tokenCheckTimer = new Timer(async _ => await CheckTokenValidity(), 
-            null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2));
+            null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
+        
+        Console.WriteLine("[TOKEN VALIDATION] Timer de validación iniciado");
     }
 
     private void StopTokenValidation()
     {
         _tokenCheckTimer?.Dispose();
         _tokenCheckTimer = null;
+        Console.WriteLine("[TOKEN VALIDATION] Timer de validación detenido");
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -68,23 +79,25 @@
         {
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             
+            Console.WriteLine($"[TOKEN VALIDATION] Verificando token: {!string.IsNullOrWhiteSpace(token)}");
+            
             if (string.IsNullOrWhiteSpace(token))
             {
+                Console.WriteLine("[TOKEN VALIDATION] Token no encontrado, manejando expiración");
                 await HandleTokenExpiration();
                 return;
             }
 
-            // Verificar si el token ha expirado usando el método existente
-            var isValid = await _apiAuthStateProvider.ValidateToken();
-            
-            if (!isValid)
+            // Verificar si el token ha expirado usando validación local
+            if (IsTokenExpired(token))
             {
+                Console.WriteLine("[TOKEN VALIDATION] Token expirado detectado en verificación periódica");
                 await HandleTokenExpiration();
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error verificando token: {ex.Message}");
+            Console.WriteLine($"[TOKEN VALIDATION] Error verificando token: {ex.Message}");
         }
         finally
         {
@@ -92,27 +105,163 @@
         }
     }
 
+    private bool IsTokenExpired(string token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return true;
+
+            // Parsear el JWT para obtener la fecha de expiración
+            var parts = token.Split('.');
+            if (parts.Length != 3)
+                return true;
+
+            var payload = parts[1];
+            // Agregar padding si es necesario
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var jsonBytes = Convert.FromBase64String(payload);
+            var jsonString = System.Text.Encoding.UTF8.GetString(jsonBytes);
+            
+            // Buscar el campo exp en el JSON
+            if (jsonString.Contains("\"exp\""))
+            {
+                var expIndex = jsonString.IndexOf("\"exp\":");
+                if (expIndex >= 0)
+                {
+                    var expStart = jsonString.IndexOf(':', expIndex) + 1;
+                    var expEnd = jsonString.IndexOfAny(new char[] { ',', '}' }, expStart);
+                    if (expEnd > expStart)
+                    {
+                        var expString = jsonString.Substring(expStart, expEnd - expStart).Trim();
+                        if (long.TryParse(expString, out var exp))
+                        {
+                            var expirationTime = DateTimeOffset.FromUnixTimeSeconds(exp);
+                            return expirationTime <= DateTimeOffset.UtcNow.AddSeconds(10); // 10 segundos de margen
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TOKEN VALIDATION] Error verificando expiración: {ex.Message}");
+            return true;
+        }
+    }
+
     private async Task HandleTokenExpiration()
     {
         try
         {
-            // Limpiar datos de autenticación
-            await LocalStorage.RemoveItemAsync("authToken");
-            _apiAuthStateProvider?.MarkUserAsLoggedOut();
+            Console.WriteLine("[TOKEN VALIDATION] Manejando expiración de token desde componente");
+            
+            // Parar la validación para evitar bucles
+            StopTokenValidation();
+            
+            // Obtener el nombre del usuario antes de limpiar la sesión
+            string userName = "Usuario";
+            try
+            {
+                var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                if (authState.User.Identity?.IsAuthenticated == true)
+                {
+                    Console.WriteLine("[TOKEN VALIDATION] Claims disponibles:");
+                    foreach (var claim in authState.User.Claims)
+                    {
+                        Console.WriteLine($"[TOKEN VALIDATION] Claim: {claim.Type} = {claim.Value}");
+                    }
+                    
+                    // Buscar el nombre real del usuario con prioridad específica
+                    // Primero buscar los claims estándar de nombres que ahora incluimos en el token
+                    var nombreClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName) ??     // GivenName estándar (más común)
+                                     authState.User.FindFirst("given_name") ??                                     // given_name estándar JWT
+                                     authState.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname") ??  // Nombre de pila MS
+                                     authState.User.FindFirst("first_name") ??                                     // Primer nombre
+                                     authState.User.FindFirst("nombre") ??                                         // Campo nombre personalizado
+                                     authState.User.FindFirst("name") ??                                           // Nombre completo
+                                     authState.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name") ??    // Claim name estándar
+                                     authState.User.FindFirst(System.Security.Claims.ClaimTypes.Name);             // Name estándar
+                    
+                    if (nombreClaim != null && !string.IsNullOrWhiteSpace(nombreClaim.Value))
+                    {
+                        // Si el nombre contiene espacios, tomar solo el primer nombre
+                        var nombreCompleto = nombreClaim.Value.Trim();
+                        userName = nombreCompleto.Split(' ')[0];
+                        Console.WriteLine($"[TOKEN VALIDATION] Nombre obtenido del claim '{nombreClaim.Type}': {userName}");
+                    }
+                    else
+                    {
+                        // Como último recurso, usar email pero extraer solo el primer nombre si sigue un patrón conocido
+                        var emailClaim = authState.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress") ??
+                                        authState.User.FindFirst("email") ?? 
+                                        authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email);
+                        
+                        if (emailClaim != null && !string.IsNullOrWhiteSpace(emailClaim.Value))
+                        {
+                            var emailPart = emailClaim.Value.Split('@')[0];
+                            Console.WriteLine($"[TOKEN VALIDATION] Procesando email parte: {emailPart}");
+                            
+                            // Si el email tiene un patrón como "nombre.apellido" usar solo el nombre
+                            if (emailPart.Contains('.'))
+                            {
+                                var nameParts = emailPart.Split('.');
+                                // Tomar la primera parte antes del punto como nombre
+                                userName = nameParts[0];
+                                Console.WriteLine($"[TOKEN VALIDATION] Email con punto detectado, usando: {userName}");
+                            }
+                            else
+                            {
+                                // Si no tiene punto, podría ser algo como "sparedes" 
+                                // Intentar capitalizar la primera letra como nombre propio
+                                userName = char.ToUpper(emailPart[0]) + emailPart.Substring(1).ToLower();
+                                Console.WriteLine($"[TOKEN VALIDATION] Email sin punto, capitalizando: {userName}");
+                            }
+                            Console.WriteLine($"[TOKEN VALIDATION] Nombre final obtenido del email: {userName}");
+                        }
+                    }
+                }
+            }
+            catch (Exception userEx)
+            {
+                Console.WriteLine($"[TOKEN VALIDATION] Error obteniendo nombre de usuario: {userEx.Message}");
+            }
+            
+            // Limpiar usando AuthService
+            await AuthServiceLocal.HandleTokenExpiration();
 
-            // Mostrar notificación
+            // Mostrar notificación personalizada con el nombre del usuario
             await InvokeAsync(() =>
             {
-                ToastService.ShowWarning("Su sesión ha expirado. Será redirigido al login.", settings =>
+                try
                 {
-                    settings.Timeout = 5;
-                    settings.ShowCloseButton = false;
-                    settings.ShowProgressBar = true;
-                });
+                    var personalizedMessage = $"Hola {userName}, tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
+                    
+                    ToastService.ShowError($"🔒 {personalizedMessage}", settings =>
+                    {
+                        settings.Timeout = 8;
+                        settings.ShowCloseButton = false;
+                        settings.ShowProgressBar = true;
+                        settings.Position = Blazored.Toast.Configuration.ToastPosition.TopCenter;
+                    });
+                    
+                    Console.WriteLine($"[TOKEN VALIDATION] Toast personalizado mostrado para usuario: {userName}");
+                }
+                catch (Exception toastEx)
+                {
+                    Console.WriteLine($"[TOKEN VALIDATION] Error mostrando toast: {toastEx.Message}");
+                }
             });
 
-            // Esperar un momento y redirigir
-            await Task.Delay(3000);
+            // Esperar y redirigir
+            await Task.Delay(4000);
             
             await InvokeAsync(() =>
             {
@@ -121,7 +270,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error manejando expiración de token: {ex.Message}");
+            Console.WriteLine($"[TOKEN VALIDATION] Error manejando expiración de token: {ex.Message}");
             // En caso de error, redirigir directamente
             await InvokeAsync(() =>
             {

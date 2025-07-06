@@ -513,6 +513,33 @@ namespace SGA.Web.Services
             // Este método puede ser llamado desde el MainLayout o un componente global
             // Por ahora, la validación se manejará principalmente desde el AuthorizationMessageHandler
         }
+
+        /// <summary>
+        /// Método público para manejar expiración de token desde otros componentes
+        /// </summary>
+        public async Task HandleTokenExpiration()
+        {
+            try
+            {
+                Console.WriteLine("[AUTH DEBUG] HandleTokenExpiration llamado");
+                
+                // Limpiar información del usuario
+                _currentUser = null;
+                
+                // Limpiar token del localStorage
+                await _localStorage.RemoveItemAsync("authToken");
+                
+                // Marcar usuario como no autenticado
+                ((ApiAuthenticationStateProvider)_authStateProvider).MarkUserAsLoggedOut();
+                
+                Console.WriteLine("[AUTH DEBUG] Token expirado - sesión limpiada exitosamente");
+                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AUTH DEBUG] Error limpiando sesión expirada: {ex.Message}");
+            }
+        }
     }
 
     public class LoginResult

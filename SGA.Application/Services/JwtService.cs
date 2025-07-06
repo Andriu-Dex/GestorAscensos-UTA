@@ -35,7 +35,7 @@ public class JwtService : IJwtService
         Console.WriteLine($"[DEBUG JWT] Using audience: {_audience}");
     }
 
-    public string GenerateToken(Guid userId, string email, string role, string? cedula = null)
+    public string GenerateToken(Guid userId, string email, string role, string? cedula = null, string? nombres = null, string? apellidos = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -54,11 +54,24 @@ public class JwtService : IJwtService
             claims.Add(new Claim("cedula", cedula));
         }
 
+        if (!string.IsNullOrEmpty(nombres))
+        {
+            claims.Add(new Claim(ClaimTypes.GivenName, nombres));
+            claims.Add(new Claim("given_name", nombres)); // Para compatibilidad con estándares JWT
+        }
+
+        if (!string.IsNullOrEmpty(apellidos))
+        {
+            claims.Add(new Claim(ClaimTypes.Surname, apellidos));
+            claims.Add(new Claim("family_name", apellidos)); // Para compatibilidad con estándares JWT
+        }
+
         var token = new JwtSecurityToken(
             issuer: _issuer,
             audience: _audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            // expires: DateTime.UtcNow.AddHours(8),
+            expires: DateTime.UtcNow.AddMinutes(1),
             signingCredentials: credentials
         );
 

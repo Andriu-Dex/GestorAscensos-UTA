@@ -79,7 +79,8 @@ public class AuthService : IAuthService
         await _usuarioRepository.UpdateAsync(usuario);
 
         var docente = await _docenteRepository.GetByUsuarioIdAsync(usuario.Id);
-        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString(), docente?.Cedula);
+        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString(), 
+            docente?.Cedula, docente?.Nombres, docente?.Apellidos);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         await _auditoriaService.RegistrarAccionAsync("LOGIN_EXITOSO", usuario.Id.ToString(), 
@@ -167,7 +168,8 @@ public class AuthService : IAuthService
             usuario.Email, "Usuario", null, null, null);
 
         // Generar tokens
-        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString());
+        var token = _jwtService.GenerateToken(usuario.Id, usuario.Email, usuario.Rol.ToString(), 
+            docente.Cedula, docente.Nombres, docente.Apellidos);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
         return new LoginResponse
