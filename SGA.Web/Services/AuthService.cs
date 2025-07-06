@@ -462,6 +462,57 @@ namespace SGA.Web.Services
                 
             return user.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
         }
+
+        /// <summary>
+        /// Valida el token actual y maneja la expiración automáticamente
+        /// </summary>
+        public async Task<bool> ValidateTokenWithExpiration()
+        {
+            try
+            {
+                var token = await _localStorage.GetItemAsync<string>("authToken");
+                
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return false;
+                }
+
+                // Usar el método existente del ApiAuthenticationStateProvider para validar
+                var apiAuthProvider = _authStateProvider as ApiAuthenticationStateProvider;
+                if (apiAuthProvider != null)
+                {
+                    var isValid = await apiAuthProvider.ValidateToken();
+                    
+                    if (!isValid)
+                    {
+                        // Token expirado, limpiar datos y no mostrar notificación aquí
+                        // La notificación se mostrará en el AuthorizationMessageHandler
+                        await _localStorage.RemoveItemAsync("authToken");
+                        apiAuthProvider.MarkUserAsLoggedOut();
+                        ClearUserCache();
+                        return false;
+                    }
+                    
+                    return true;
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error validando token: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Inicia la validación periódica del token
+        /// </summary>
+        public void StartTokenValidation()
+        {
+            // Este método puede ser llamado desde el MainLayout o un componente global
+            // Por ahora, la validación se manejará principalmente desde el AuthorizationMessageHandler
+        }
     }
 
     public class LoginResult

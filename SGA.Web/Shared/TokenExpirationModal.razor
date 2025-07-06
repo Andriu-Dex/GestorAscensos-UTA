@@ -1,0 +1,93 @@
+@using Microsoft.AspNetCore.Components
+
+<div class="modal-tokenexpired @(Show ? "d-block" : "d-none")" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header modal-header-tokenexpired">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Sesión Expirada
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                </div>
+                <p class="mb-2"><strong>Su sesión ha expirado por razones de seguridad.</strong></p>
+                <p class="text-muted">Será redirigido automáticamente al login en <span class="countdown-tokenexpired">@countdown</span> segundos.</p>
+                
+                @if (countdown <= 0)
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        <span>Redirigiendo...</span>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary btn-tokenexpired" @onclick="RedirectNow">
+                    <i class="fas fa-sign-in-alt me-1"></i>
+                    Ir al Login Ahora
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Show { get; set; } = false;
+    [Parameter] public EventCallback OnRedirect { get; set; }
+    
+    private int countdown = 5;
+    private Timer? countdownTimer;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && countdownTimer == null)
+        {
+            StartCountdown();
+        }
+        else if (!Show)
+        {
+            StopCountdown();
+        }
+        
+        await base.OnParametersSetAsync();
+    }
+
+    private void StartCountdown()
+    {
+        countdown = 5;
+        countdownTimer = new Timer(async _ =>
+        {
+            countdown--;
+            await InvokeAsync(StateHasChanged);
+            
+            if (countdown <= 0)
+            {
+                StopCountdown();
+                await RedirectNow();
+            }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void StopCountdown()
+    {
+        countdownTimer?.Dispose();
+        countdownTimer = null;
+    }
+
+    private async Task RedirectNow()
+    {
+        StopCountdown();
+        if (OnRedirect.HasDelegate)
+        {
+            await OnRedirect.InvokeAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        StopCountdown();
+    }
+}

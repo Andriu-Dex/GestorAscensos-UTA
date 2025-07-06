@@ -1,0 +1,141 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using SGA.Web.Services
+@using Blazored.Toast.Services
+@using Microsoft.AspNetCore.Components
+@inject AuthenticationStateProvider AuthStateProvider
+@inject SGA.Web.Services.ILocalStorageService LocalStorage
+@inject NavigationManager Navigation
+@inject IToastService ToastService
+@implements IDisposable
+
+@* Este componente maneja la validación automática de tokens *@
+
+@code {
+    private Timer? _tokenCheckTimer;
+    private bool _isCheckingToken = false;
+    private ApiAuthenticationStateProvider? _apiAuthStateProvider;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _apiAuthStateProvider = AuthStateProvider as ApiAuthenticationStateProvider;
+        
+        // Solo iniciar la validación si el usuario está autenticado
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            StartTokenValidation();
+        }
+
+        // Suscribirse a cambios de estado de autenticación
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private void StartTokenValidation()
+    {
+        // Verificar el token cada 2 minutos
+        _tokenCheckTimer = new Timer(async _ => await CheckTokenValidity(), 
+            null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2));
+    }
+
+    private void StopTokenValidation()
+    {
+        _tokenCheckTimer?.Dispose();
+        _tokenCheckTimer = null;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            StartTokenValidation();
+        }
+        else
+        {
+            StopTokenValidation();
+        }
+    }
+
+    private async Task CheckTokenValidity()
+    {
+        if (_isCheckingToken || _apiAuthStateProvider == null)
+            return;
+
+        _isCheckingToken = true;
+
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                await HandleTokenExpiration();
+                return;
+            }
+
+            // Verificar si el token ha expirado usando el método existente
+            var isValid = await _apiAuthStateProvider.ValidateToken();
+            
+            if (!isValid)
+            {
+                await HandleTokenExpiration();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error verificando token: {ex.Message}");
+        }
+        finally
+        {
+            _isCheckingToken = false;
+        }
+    }
+
+    private async Task HandleTokenExpiration()
+    {
+        try
+        {
+            // Limpiar datos de autenticación
+            await LocalStorage.RemoveItemAsync("authToken");
+            _apiAuthStateProvider?.MarkUserAsLoggedOut();
+
+            // Mostrar notificación
+            await InvokeAsync(() =>
+            {
+                ToastService.ShowWarning("Su sesión ha expirado. Será redirigido al login.", settings =>
+                {
+                    settings.Timeout = 5;
+                    settings.ShowCloseButton = false;
+                    settings.ShowProgressBar = true;
+                });
+            });
+
+            // Esperar un momento y redirigir
+            await Task.Delay(3000);
+            
+            await InvokeAsync(() =>
+            {
+                Navigation.NavigateTo("/login", true);
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error manejando expiración de token: {ex.Message}");
+            // En caso de error, redirigir directamente
+            await InvokeAsync(() =>
+            {
+                Navigation.NavigateTo("/login", true);
+            });
+        }
+    }
+
+    public void Dispose()
+    {
+        StopTokenValidation();
+        if (AuthStateProvider != null)
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+    }
+}

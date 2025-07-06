@@ -1,0 +1,325 @@
+/* Estilos personalizados para notificaciones de expiración de token */
+
+/* Toast de expiración de token - más prominente */
+.blazored-toast-container
+  .blazored-toast.blazored-toast-warning.token-expiration {
+  background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%) !important;
+  color: white !important;
+  border: 2px solid #e67e22 !important;
+  box-shadow: 0 8px 32px rgba(231, 76, 60, 0.3) !important;
+  animation: token-expire-pulse 1s ease-in-out infinite alternate !important;
+  z-index: 9999 !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-warning.token-expiration
+  .blazored-toast-icon {
+  color: white !important;
+  font-size: 1.2rem !important;
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-warning.token-expiration
+  .blazored-toast-message {
+  color: white !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-warning.token-expiration
+  .blazored-toast-progress {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-warning.token-expiration
+  .blazored-toast-progress
+  .blazored-toast-progress-bar {
+  background-color: white !important;
+}
+
+/* Toast de error para expiración - versión alternativa */
+.blazored-toast-container
+  .blazored-toast.blazored-toast-error.token-expiration {
+  background: linear-gradient(135deg, #8a1538 0%, #a91d47 100%) !important;
+  color: white !important;
+  border: 2px solid #8a1538 !important;
+  box-shadow: 0 8px 32px rgba(138, 21, 56, 0.4) !important;
+  animation: token-expire-pulse 1s ease-in-out infinite alternate !important;
+  z-index: 9999 !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+}
+
+/* ESTILOS PARA EL MODAL DE EXPIRACIÓN DE TOKEN */
+
+.modal-tokenexpired {
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1060;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-tokenexpired .modal-content {
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+}
+
+.modal-header-tokenexpired {
+  background: linear-gradient(135deg, #8a1538 0%, #a91d47 100%);
+  color: white;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  text-align: center;
+  justify-content: center;
+}
+
+.modal-header-tokenexpired .modal-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.modal-tokenexpired .modal-body {
+  padding: 2rem 1.5rem;
+}
+
+.countdown-tokenexpired {
+  font-weight: bold;
+  color: #8a1538;
+  font-size: 1.1rem;
+}
+
+.btn-tokenexpired {
+  background: linear-gradient(135deg, #8a1538 0%, #a91d47 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-tokenexpired:hover {
+  background: linear-gradient(135deg, #a91d47 0%, #8a1538 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(138, 21, 56, 0.3);
+}
+
+.btn-tokenexpired:focus {
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+/* MEDIA QUERIES PARA RESPONSIVIDAD */
+@media (max-width: 576px) {
+  .modal-tokenexpired .modal-dialog {
+    margin: 1rem;
+  }
+
+  .modal-tokenexpired .modal-body {
+    padding: 1.5rem 1rem;
+  }
+
+  .btn-tokenexpired {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .modal-header-tokenexpired .modal-title {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-tokenexpired .modal-dialog {
+    margin: 1.5rem;
+  }
+
+  .countdown-tokenexpired {
+    font-size: 1rem;
+  }
+}
+
+/* Estilos adicionales para mejorar la experiencia móvil */
+@media (max-width: 480px) {
+  .modal-tokenexpired .modal-content {
+    margin: 0.5rem;
+  }
+
+  .modal-tokenexpired .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-tokenexpired .modal-footer {
+    padding: 1rem;
+  }
+}
+
+/* ANIMACIONES */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-tokenexpired .modal-dialog {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes token-expire-pulse {
+  from {
+    box-shadow: 0 8px 32px rgba(231, 76, 60, 0.3);
+  }
+  to {
+    box-shadow: 0 12px 40px rgba(231, 76, 60, 0.5);
+  }
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-error.token-expiration
+  .blazored-toast-icon {
+  color: white !important;
+  font-size: 1.3rem !important;
+}
+
+.blazored-toast-container
+  .blazored-toast.blazored-toast-error.token-expiration
+  .blazored-toast-message {
+  color: white !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Animaciones */
+@keyframes token-expire-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(231, 76, 60, 0.3);
+  }
+  100% {
+    transform: scale(1.02);
+    box-shadow: 0 12px 40px rgba(231, 76, 60, 0.5);
+  }
+}
+
+@keyframes token-expire-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Estilos para posicionar el toast en el centro superior */
+.blazored-toast-container.blazored-toast-top-center {
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  max-width: 500px !important;
+}
+
+/* Override para toasts de expiración de token - centrados y más visibles */
+.blazored-toast-container .blazored-toast.token-expiration-toast {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 10000 !important;
+  min-width: 400px !important;
+  max-width: 500px !important;
+  background: linear-gradient(135deg, #8a1538 0%, #a91d47 100%) !important;
+  color: white !important;
+  border-radius: 15px !important;
+  border: 3px solid #fff !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3), 0 0 30px rgba(138, 21, 56, 0.4) !important;
+  animation: token-modal-appear 0.3s ease-out !important;
+  padding: 1.5rem !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+@keyframes token-modal-appear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Backdrop para el toast centrado */
+.token-expiration-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  z-index: 9999 !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .blazored-toast-container .blazored-toast.token-expiration-toast {
+    min-width: 90vw !important;
+    max-width: 90vw !important;
+    left: 5vw !important;
+    transform: translateY(-50%) !important;
+    font-size: 1rem !important;
+    padding: 1rem !important;
+  }
+}
+
+/* Personalización adicional para tokens expirados */
+.token-expired-icon {
+  font-size: 2rem !important;
+  color: #ffeb3b !important;
+  margin-bottom: 0.5rem !important;
+  display: block !important;
+}
+
+.token-expired-title {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+  color: white !important;
+}
+
+.token-expired-message {
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  line-height: 1.4 !important;
+}

@@ -1015,17 +1015,18 @@
     
     private async Task HandleAuthenticationError(string message)
     {
-        // Mostrar mensaje al usuario con más detalles
-        // Toast message removed
+        Console.WriteLine($"Error de autenticación detectado: {message}");
         
-        // Limpiar el token y la sesión antes de redirigir
+        // No mostrar notificación aquí ya que el AuthorizationMessageHandler se encargará
+        // Solo limpiar los datos locales y variables de estado
+        
         await LocalStorage.RemoveItemAsync("authToken");
         
         try {
             await AuthService.Logout();
         }
         catch (Exception ex) {
-            // Ignorar errores en el logout
+            Console.WriteLine($"Error durante logout: {ex.Message}");
         }
         
         // Limpiar las cabeceras de autorización
@@ -1037,12 +1038,15 @@
         indicadores = new IndicadoresModel();
         requisitos = new RequisitosModel();
         
-        // Mostrar mensaje de sesión expirada
-        // Toast message removed
+        // El AuthorizationMessageHandler se encargará de la notificación y redirección
+        // Si por alguna razón no funciona, redirigir después de un delay
+        await Task.Delay(1000);
         
-        // Redireccionar al login después de un breve delay para que el usuario vea el mensaje
-        await Task.Delay(2000);
-        NavigationManager.NavigateTo("/login?returnUrl=/perfil&sessionExpired=true", true);
+        // Verificar si aún estamos en la misma página (no se ha redirigido)
+        if (NavigationManager.Uri.Contains("/perfil"))
+        {
+            NavigationManager.NavigateTo("/login?returnUrl=/perfil&sessionExpired=true", true);
+        }
     }
     
     private string GetInitials()
