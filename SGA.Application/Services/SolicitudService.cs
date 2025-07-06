@@ -4,6 +4,7 @@ using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Entities;
 using SGA.Domain.Enums;
+using SGA.Domain.Extensions;
 
 namespace SGA.Application.Services;
 
@@ -337,9 +338,9 @@ public class SolicitudService : ISolicitudService
             DocenteApellidos = docente?.Apellidos ?? "N/A", 
             DocenteEmail = docente?.Email ?? "N/A",
             DocenteCedula = docente?.Cedula ?? "N/A",
-            NivelActual = solicitud.NivelActual.ToString(),
-            NivelSolicitado = solicitud.NivelSolicitado.ToString(),
-            Estado = solicitud.Estado.ToString(),
+            NivelActual = solicitud.NivelActual.GetDescription(),
+            NivelSolicitado = solicitud.NivelSolicitado.GetDescription(),
+            Estado = solicitud.Estado.GetDescription(),
             MotivoRechazo = solicitud.MotivoRechazo,
             FechaSolicitud = solicitud.FechaSolicitud,
             FechaAprobacion = solicitud.FechaAprobacion,

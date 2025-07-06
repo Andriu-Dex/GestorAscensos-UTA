@@ -7,6 +7,7 @@ using SGA.Application.DTOs.Solicitudes;
 using SGA.Application.Features.Docentes.Commands;
 using SGA.Domain.Entities;
 using SGA.Domain.Enums;
+using SGA.Domain.Extensions;
 
 namespace SGA.Application.Mappings;
 
@@ -44,9 +45,9 @@ public class MappingProfile : Profile
         // Mapeos de SolicitudAscenso
         CreateMap<SolicitudAscenso, DTOs.Solicitudes.SolicitudAscensoDto>()
             .ForMember(dest => dest.DocenteNombre, opt => opt.MapFrom(src => $"{src.Docente.Nombres} {src.Docente.Apellidos}"))
-            .ForMember(dest => dest.NivelActual, opt => opt.MapFrom(src => src.NivelActual.ToString()))
-            .ForMember(dest => dest.NivelSolicitado, opt => opt.MapFrom(src => src.NivelSolicitado.ToString()))
-            .ForMember(dest => dest.Estado, opt => opt.MapFrom(src => src.Estado.ToString()));
+            .ForMember(dest => dest.NivelActual, opt => opt.MapFrom(src => src.NivelActual.GetDescription()))
+            .ForMember(dest => dest.NivelSolicitado, opt => opt.MapFrom(src => src.NivelSolicitado.GetDescription()))
+            .ForMember(dest => dest.Estado, opt => opt.MapFrom(src => src.Estado.GetDescription()));
 
         CreateMap<CreateSolicitudAscensoDto, SolicitudAscenso>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -86,9 +87,9 @@ public class MappingProfile : Profile
 
         // Mapeos de ConfiguracionRequisito
         CreateMap<ConfiguracionRequisito, DTOs.Admin.ConfiguracionRequisitoDto>()
-            .ForMember(dest => dest.NombreAscenso, opt => opt.MapFrom(src => $"{src.NivelActual} → {src.NivelSolicitado}"))
-            .ForMember(dest => dest.NivelActualNombre, opt => opt.MapFrom(src => src.NivelActual.ToString()))
-            .ForMember(dest => dest.NivelSolicitadoNombre, opt => opt.MapFrom(src => src.NivelSolicitado.ToString()))
+            .ForMember(dest => dest.NombreAscenso, opt => opt.MapFrom(src => $"{src.NivelActual.GetDescription()} → {src.NivelSolicitado.GetDescription()}"))
+            .ForMember(dest => dest.NivelActualNombre, opt => opt.MapFrom(src => src.NivelActual.GetDescription()))
+            .ForMember(dest => dest.NivelSolicitadoNombre, opt => opt.MapFrom(src => src.NivelSolicitado.GetDescription()))
             .ForMember(dest => dest.ResumenRequisitos, opt => opt.MapFrom(src => 
                 $"{src.TiempoMinimoMeses} meses, {src.ObrasMinimas} obras, {src.PuntajeEvaluacionMinimo}% eval, {src.HorasCapacitacionMinimas}h cap"));
 

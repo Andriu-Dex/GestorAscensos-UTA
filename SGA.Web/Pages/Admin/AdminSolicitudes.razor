@@ -159,10 +159,10 @@
                                     </td>
                                     <td>@solicitud.DocenteCedula</td>
                                     <td>
-                                        <span class="badge bg-info">Titular @solicitud.NivelActual</span>
+                                        <span class="badge bg-info">@solicitud.NivelActual</span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">Titular @solicitud.NivelSolicitado</span>
+                                        <span class="badge bg-primary">@solicitud.NivelSolicitado</span>
                                     </td>
                                     <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
                                     <td>
@@ -226,9 +226,9 @@
                             </p>
                             <p class="mb-0">
                                 <strong>Ascenso:</strong> 
-                                <span class="badge bg-info">Titular @solicitudParaModal.NivelActual</span>
+                                <span class="badge bg-info">@solicitudParaModal.NivelActual</span>
                                 <i class="bi bi-arrow-right mx-2"></i>
-                                <span class="badge bg-success">Titular @solicitudParaModal.NivelSolicitado</span>
+                                <span class="badge bg-success">@solicitudParaModal.NivelSolicitado</span>
                             </p>
                         </div>
                         
@@ -236,7 +236,7 @@
                             <i class="bi bi-exclamation-triangle"></i>
                             <strong>¡Atención!</strong> Al aprobar esta solicitud:
                             <ul class="mb-0 mt-2">
-                                <li>El docente será promovido al nivel <strong>Titular @solicitudParaModal.NivelSolicitado</strong></li>
+                                <li>El docente será promovido al nivel <strong>@solicitudParaModal.NivelSolicitado</strong></li>
                                 <li>Se reiniciarán automáticamente sus contadores de obras, horas de capacitación, etc.</li>
                                 <li>Se enviará una notificación de felicitación al docente</li>
                                 <li>Esta acción <strong>no se puede deshacer</strong></li>
@@ -299,7 +299,7 @@
                             </p>
                             <p class="mb-0">
                                 <strong>Nivel solicitado:</strong> 
-                                <span class="badge bg-primary">Titular @solicitudParaModal.NivelSolicitado</span>
+                                <span class="badge bg-primary">@solicitudParaModal.NivelSolicitado</span>
                             </p>
                         </div>
                     }

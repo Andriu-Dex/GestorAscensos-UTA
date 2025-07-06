@@ -1,5 +1,6 @@
 using SGA.Application.DTOs.Docentes;
 using SGA.Domain.Enums;
+using SGA.Domain.Extensions;
 
 namespace SGA.Application.DTOs;
 
@@ -23,9 +24,9 @@ public class SolicitudAscensoDto
     public List<DocumentoDto> Documentos { get; set; } = new();
     
     // Propiedades calculadas
-    public string EstadoTexto => Estado.ToString();
-    public string NivelActualTexto => NivelActual.ToString();
-    public string NivelSolicitadoTexto => NivelSolicitado.ToString();
+    public string EstadoTexto => Estado.GetDescription();
+    public string NivelActualTexto => NivelActual.GetDescription();
+    public string NivelSolicitadoTexto => NivelSolicitado.GetDescription();
     public bool PuedeSerAprobada => Estado == EstadoSolicitud.Pendiente || Estado == EstadoSolicitud.EnProceso;
     public bool PuedeSerRechazada => Estado == EstadoSolicitud.Pendiente || Estado == EstadoSolicitud.EnProceso;
 }
