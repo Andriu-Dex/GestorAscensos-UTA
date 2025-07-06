@@ -105,9 +105,11 @@ h3::after {
 }
 
 .btn-outline-primary {
-  color: var(--uta-primary);
   border-color: var(--uta-primary);
   transition: all 0.3s ease;
+  background-color: #8a1538;
+  color: white;
+  border-radius: 6px;
 }
 
 .btn-outline-primary:hover,

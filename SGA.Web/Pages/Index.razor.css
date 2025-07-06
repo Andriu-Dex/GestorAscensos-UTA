@@ -229,6 +229,20 @@
   border-radius: 2px;
 }
 
+.btn-outline-primary {
+  border-color: var(--uta-primary);
+  transition: all 0.3s ease;
+  background-color: #8a1538;
+  color: white;
+  border-radius: 6px;
+}
+
+.btn-outline-primary:hover {
+  background-color: #8a1515;
+  scale: 1.05;
+  text-decoration: none;
+}
+
 .indicator-card .text-muted {
   color: #000000 !important;
   font-size: 0.9rem;

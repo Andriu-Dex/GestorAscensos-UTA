@@ -1,5 +1,6 @@
 using SGA.Application.DTOs.Docentes;
 using SGA.Application.DTOs.Responses;
+using SGA.Application.DTOs.Admin;
 using SGA.Application.Constants;
 using SGA.Application.Interfaces;
 using SGA.Application.Interfaces.Repositories;
@@ -18,6 +19,7 @@ public class DocenteService : IDocenteService
     private readonly IExternalDataService _externalDataService;
     private readonly IAuditoriaService _auditoriaService;
     private readonly IImageService _imageService;
+    private readonly IConfiguracionRequisitoService _configuracionRequisitoService;
     private readonly ILogger<DocenteService> _logger;
 
     public DocenteService(
@@ -26,6 +28,7 @@ public class DocenteService : IDocenteService
         IExternalDataService externalDataService,
         IAuditoriaService auditoriaService,
         IImageService imageService,
+        IConfiguracionRequisitoService configuracionRequisitoService,
         ILogger<DocenteService> logger)
     {
         _docenteRepository = docenteRepository;
@@ -33,6 +36,7 @@ public class DocenteService : IDocenteService
         _externalDataService = externalDataService;
         _auditoriaService = auditoriaService;
         _imageService = imageService;
+        _configuracionRequisitoService = configuracionRequisitoService;
         _logger = logger;
     }
 
@@ -542,15 +546,16 @@ public class DocenteService : IDocenteService
             var siguienteNivel = $"Titular{nivelActualNum + 1}";
             try
             {
-                var requisitos = GetRequisitosPorNivel(siguienteNivel);
+                var nivelActualEnum = (NivelTitular)nivelActualNum;
+                var requisitos = await GetRequisitosDinamicosAsync(nivelActualEnum, siguienteNivel);
                 tiempoRequiridoMeses = requisitos.TiempoRol;
                 cumpleTiempoMinimo = tiempoRolMeses >= tiempoRequiridoMeses;
                 var mesesRestantes = Math.Max(0, tiempoRequiridoMeses - tiempoRolMeses);
                 tiempoRestante = TimeSpan.FromDays(mesesRestantes * 30.44);
             }
-            catch (ArgumentException)
+            catch (Exception)
             {
-                // Nivel no válido, usar valores por defecto
+                // Si hay error al obtener configuración, usar valores por defecto
                 cumpleTiempoMinimo = true;
             }
         }
@@ -602,7 +607,9 @@ public class DocenteService : IDocenteService
             throw new ArgumentException("Docente no encontrado");
 
         var indicadores = await GetIndicadoresAsync(cedula);
-        var requisitos = GetRequisitosPorNivel(nivelObjetivo);
+        
+        // Obtener requisitos dinámicos desde la configuración en base de datos
+        var requisitos = await GetRequisitosDinamicosAsync(docente.NivelActual, nivelObjetivo);
 
         return new RequisitosAscensoDto
         {
@@ -629,7 +636,54 @@ public class DocenteService : IDocenteService
         };
     }
 
-    private (int TiempoRol, int NumeroObras, decimal PuntajeEvaluacion, int HorasCapacitacion, int TiempoInvestigacion) GetRequisitosPorNivel(string nivel)
+    /// <summary>
+    /// Obtiene los requisitos dinámicos desde la configuración en base de datos
+    /// con fallback a valores por defecto si no existe configuración
+    /// </summary>
+    private async Task<(int TiempoRol, int NumeroObras, decimal PuntajeEvaluacion, int HorasCapacitacion, int TiempoInvestigacion)> GetRequisitosDinamicosAsync(NivelTitular nivelActual, string nivelObjetivoString)
+    {
+        try
+        {
+            // Convertir el string del nivel objetivo a enum
+            if (!Enum.TryParse<NivelTitular>(nivelObjetivoString, out var nivelObjetivo))
+            {
+                // Si no se puede parsear, extraer número del string
+                var numeroNivel = int.Parse(nivelObjetivoString.Replace("Titular", ""));
+                nivelObjetivo = (NivelTitular)numeroNivel;
+            }
+
+            // Buscar configuración específica en la base de datos
+            var configuracion = await _configuracionRequisitoService.GetByNivelesAsync(nivelActual, nivelObjetivo);
+
+            if (configuracion != null)
+            {
+                // Usar configuración dinámica de la BD
+                return (
+                    TiempoRol: configuracion.TiempoMinimoMeses,
+                    NumeroObras: configuracion.ObrasMinimas,
+                    PuntajeEvaluacion: configuracion.PuntajeEvaluacionMinimo,
+                    HorasCapacitacion: configuracion.HorasCapacitacionMinimas,
+                    TiempoInvestigacion: configuracion.TiempoInvestigacionMinimo
+                );
+            }
+
+            // Fallback: Si no existe configuración, usar valores por defecto basados en el nivel
+            return GetRequisitosPorDefecto(nivelObjetivoString);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error al obtener requisitos dinámicos para {NivelActual} -> {NivelObjetivo}. Usando valores por defecto.", 
+                nivelActual, nivelObjetivoString);
+            
+            // En caso de error, usar valores por defecto
+            return GetRequisitosPorDefecto(nivelObjetivoString);
+        }
+    }
+
+    /// <summary>
+    /// Valores por defecto para compatibilidad cuando no existe configuración en BD
+    /// </summary>
+    private (int TiempoRol, int NumeroObras, decimal PuntajeEvaluacion, int HorasCapacitacion, int TiempoInvestigacion) GetRequisitosPorDefecto(string nivel)
     {
         return nivel switch
         {
@@ -637,7 +691,7 @@ public class DocenteService : IDocenteService
             "Titular3" => (48, 2, 75, 96, 12),   // Titular 2 → 3: 4 años, 2 obras, 75%, 96h, 12 meses investigación
             "Titular4" => (48, 3, 75, 128, 24),  // Titular 3 → 4: 4 años, 3 obras, 75%, 128h, 24 meses investigación
             "Titular5" => (48, 5, 75, 160, 24),  // Titular 4 → 5: 4 años, 5 obras, 75%, 160h, 24 meses investigación
-            _ => throw new ArgumentException($"Nivel no válido: {nivel}")
+            _ => (48, 3, 75, 120, 24) // Valores por defecto genéricos
         };
     }
 

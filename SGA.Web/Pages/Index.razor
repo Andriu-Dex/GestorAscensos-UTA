@@ -216,7 +216,7 @@
                                              style="width: @GetTiempoPercentage()%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 4 años (48 meses)</span>
+                                        <span>Meta: @GetTiempoRequeritoTexto()</span>
                                         <span>@GetTiempoPercentage()%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(1)">
@@ -237,11 +237,11 @@
                                     <div class="text-muted">obras</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.NumeroObras ?? 0), 3)%;"></div>
+                                             style="width: @GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas())%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 3 obras</span>
-                                        <span>@GetPercentage((indicadores?.NumeroObras ?? 0), 3)%</span>
+                                        <span>Meta: @GetObrasRequeridas() obras</span>
+                                        <span>@GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas())%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(2)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -270,14 +270,14 @@
                                     {
                                         <div class="evaluation-status text-success">
                                             <i class="bi bi-check-circle-fill me-1"></i>
-                                            <small>Cumple requisito (≥75%)</small>
+                                            <small>Cumple requisito (≥@GetEvaluacionRequerida()%)</small>
                                         </div>
                                     }
                                     else
                                     {
                                         <div class="evaluation-status text-warning">
                                             <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                            <small>No cumple requisito (≥75%)</small>
+                                            <small>No cumple requisito (≥@GetEvaluacionRequerida()%)</small>
                                         </div>
                                     }
                                     @if (!string.IsNullOrEmpty(indicadores?.PeriodoEvaluado))
@@ -291,7 +291,7 @@
                                              style="width: @(indicadores?.PuntajeEvaluacion ?? 0)%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 75%</span>
+                                        <span>Meta: @GetEvaluacionRequerida()%</span>
                                         <span>@string.Format("{0:F2}", indicadores?.PuntajeEvaluacion ?? 0)%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(3)">
@@ -312,11 +312,11 @@
                                     <div class="text-muted">horas</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.HorasCapacitacion ?? 0), 120)%;"></div>
+                                             style="width: @GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida())%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 120 horas</span>
-                                        <span>@GetPercentage((indicadores?.HorasCapacitacion ?? 0), 120)%</span>
+                                        <span>Meta: @GetCapacitacionRequerida() horas</span>
+                                        <span>@GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida())%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(4)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -335,11 +335,11 @@
                                     <div class="text-muted">meses</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.TiempoInvestigacion ?? 0), 24)%;"></div>
+                                             style="width: @GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida())%;"></div>
                                     </div>
                                     <div class="indicator-meta">
-                                        <span>Meta: 24 meses</span>
-                                        <span>@GetPercentage((indicadores?.TiempoInvestigacion ?? 0), 24)%</span>
+                                        <span>Meta: @GetInvestigacionRequerida() meses</span>
+                                        <span>@GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida())%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(5)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -719,6 +719,7 @@
             
             await LoadIndicadores();
             await LoadRequisitos();
+            await CargarConfiguracionRequisitos(); // ✅ AGREGAR: Cargar configuración al inicio
             await VerificarSolicitudActiva();
             
             // Calcular tiempo detallado e iniciar timer
@@ -1024,6 +1025,46 @@
         return max > 0 ? Math.Min(100, (value * 100) / max) : 0;
     }
     
+    // ✅ NUEVOS MÉTODOS: Obtener valores dinámicos de configuración
+    private int GetTiempoRequeritoMeses()
+    {
+        return configuracionRequisitos?.TiempoMinimoMeses ?? 48; // Fallback a 48 meses
+    }
+    
+    private int GetObrasRequeridas()
+    {
+        return configuracionRequisitos?.ObrasMinimas ?? 3; // Fallback a 3 obras
+    }
+    
+    private decimal GetEvaluacionRequerida()
+    {
+        return configuracionRequisitos?.PuntajeEvaluacionMinimo ?? 75; // Fallback a 75%
+    }
+    
+    private int GetCapacitacionRequerida()
+    {
+        return configuracionRequisitos?.HorasCapacitacionMinimas ?? 120; // Fallback a 120h
+    }
+    
+    private int GetInvestigacionRequerida()
+    {
+        return configuracionRequisitos?.TiempoInvestigacionMinimo ?? 24; // Fallback a 24 meses
+    }
+    
+    private string GetTiempoRequeritoTexto()
+    {
+        var meses = GetTiempoRequeritoMeses();
+        var años = meses / 12;
+        var mesesRestantes = meses % 12;
+        
+        if (años > 0 && mesesRestantes > 0)
+            return $"{años} año{(años > 1 ? "s" : "")} {mesesRestantes} mes{(mesesRestantes > 1 ? "es" : "")} ({meses} meses)";
+        else if (años > 0)
+            return $"{años} año{(años > 1 ? "s" : "")} ({meses} meses)";
+        else
+            return $"{meses} mes{(meses > 1 ? "es" : "")}";
+    }
+    
     private string GetInitials()
     {
         if (userInfo == null)
@@ -1196,7 +1237,8 @@
             return 0;
             
         var tiempoTranscurrido = _currentTime - userInfo.FechaIngresoNivelActual;
-        var tiempoMinimoEnDias = 4 * 365.25; // 4 años en días
+        var tiempoRequeridoMeses = GetTiempoRequeritoMeses(); // ✅ Usar valor dinámico
+        var tiempoMinimoEnDias = (tiempoRequeridoMeses / 12.0) * 365.25; // Convertir meses a días
         var porcentaje = (int)Math.Min(100, (tiempoTranscurrido.TotalDays / tiempoMinimoEnDias) * 100);
         
         return porcentaje;

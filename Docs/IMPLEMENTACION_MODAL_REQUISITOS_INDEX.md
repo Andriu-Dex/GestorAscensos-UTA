@@ -576,13 +576,155 @@ La implementación del modal de requisitos en la página Index logra exitosament
 
 El sistema está **listo para producción** y proporciona una base sólida para futuras extensiones del módulo de gestión de requisitos.
 
----
+## 🔧 **Corrección Post-Implementación: Consistencia de Datos**
 
-**📄 Documentación relacionada:**
+**Fecha de Corrección:** Julio 6, 2025  
+**Problema Identificado:** Inconsistencia entre los datos mostrados en el dashboard vs el modal
 
-- [Implementación de Requisitos Dinámicos Híbridos](IMPLEMENTACION_REQUISITOS_DINAMICOS_HIBRIDOS.md)
-- [Guía de Usuario](../README.md)
-- [Estrategia de Migraciones](ESTRATEGIA_MIGRACIONES.md)
+### **Problema Original**
 
-**🔧 Mantenido por:** Equipo de Desarrollo SGA  
-**📅 Última actualización:** Julio 6, 2025
+El sistema tenía una **inconsistencia crítica** donde:
+
+- **Dashboard del Index:** Mostraba requisitos **hardcodeados** (valores fijos en código)
+- **Modal de Requisitos:** Mostraba configuraciones **dinámicas** (valores de la base de datos)
+
+### **Arquitectura Problemática Anterior**
+
+```
+Index.razor (Dashboard)
+    ↓ LoadRequisitos()
+    ↓ GET /api/docente/requisitos
+    ↓ DocenteService.GetRequisitosAscensoAsync()
+    ↓ GetRequisitosPorNivel() ❌ HARDCODED (48, 3, 75%, 120h, 24m)
+
+Index.razor (Modal)
+    ↓ CargarConfiguracionRequisitos()
+    ↓ GET /api/docente/configuracion-requisitos
+    ↓ ConfiguracionRequisitoService.GetByNivelesAsync() ✅ DINÁMICO
+```
+
+### **Corrección Implementada**
+
+#### **1. Refactorización del DocenteService**
+
+- ✅ **Inyectado `IConfiguracionRequisitoService`** en el constructor
+- ✅ **Reemplazado método hardcodeado** `GetRequisitosPorNivel()`
+- ✅ **Creado método híbrido** `GetRequisitosDinamicosAsync()`
+- ✅ **Mantenido fallback** a valores por defecto para compatibilidad
+
+#### **2. Nuevo Flujo Unificado**
+
+```csharp
+// Método corregido en DocenteService
+private async Task<(int, int, decimal, int, int)> GetRequisitosDinamicosAsync(
+    NivelTitular nivelActual, string nivelObjetivoString)
+{
+    // 1. Buscar configuración en BD
+    var configuracion = await _configuracionRequisitoService
+        .GetByNivelesAsync(nivelActual, nivelObjetivo);
+
+    if (configuracion != null)
+    {
+        // 2. Usar valores dinámicos de la BD
+        return (configuracion.TiempoMinimoMeses,
+                configuracion.ObrasMinimas,
+                configuracion.PuntajeEvaluacionMinimo,
+                configuracion.HorasCapacitacionMinimas,
+                configuracion.TiempoInvestigacionMinimo);
+    }
+
+    // 3. Fallback a valores por defecto si no existe configuración
+    return GetRequisitosPorDefecto(nivelObjetivoString);
+}
+```
+
+#### **3. Arquitectura Corregida**
+
+```
+Index.razor (Dashboard)
+    ↓ LoadRequisitos()
+    ↓ GET /api/docente/requisitos
+    ↓ DocenteService.GetRequisitosAscensoAsync()
+    ↓ GetRequisitosDinamicosAsync() ✅ DINÁMICO
+    ↓ ConfiguracionRequisitoService.GetByNivelesAsync()
+
+Index.razor (Modal)
+    ↓ CargarConfiguracionRequisitos()
+    ↓ GET /api/docente/configuracion-requisitos
+    ↓ ConfiguracionRequisitoService.GetByNivelesAsync() ✅ DINÁMICO
+
+RESULTADO: ✅ Ambos usan la misma fuente dinámica unificada
+```
+
+### **Beneficios de la Corrección**
+
+| Aspecto            | Antes                          | Después                            |
+| ------------------ | ------------------------------ | ---------------------------------- |
+| **Consistencia**   | ❌ Datos diferentes            | ✅ Mismos datos en ambos lugares   |
+| **Administración** | ❌ Cambios no reflejados       | ✅ Cambios inmediatos en dashboard |
+| **Mantenibilidad** | ❌ Múltiples fuentes de verdad | ✅ Fuente única centralizada       |
+| **Flexibilidad**   | ❌ Valores fijos en código     | ✅ Configuraciones 100% dinámicas  |
+
+### **Casos de Prueba Validados**
+
+#### **✅ Caso 1: Admin Modifica Requisitos**
+
+```
+1. Admin abre modal de requisitos
+2. Cambia "Horas de capacitación" de 120 a 150
+3. Guarda cambios
+4. Dashboard actualiza automáticamente mostrando 150h
+5. Modal y dashboard ahora consistent con 150h
+```
+
+#### **✅ Caso 2: Sin Configuración en BD**
+
+```
+1. Usuario sin configuración específica
+2. Sistema usa valores por defecto consistentes
+3. Dashboard y modal muestran los mismos valores
+4. Experiencia uniforme en toda la aplicación
+```
+
+#### **✅ Caso 3: Títulos Dinámicos Híbridos**
+
+```
+1. Sistema soporta tanto niveles enum como títulos dinámicos
+2. Configuraciones híbridas funcionan correctamente
+3. Dashboard refleja configuraciones personalizadas
+4. Modal permite edición de títulos académicos dinámicos
+```
+
+### **Cambios Técnicos Realizados**
+
+#### **SGA.Application/Services/DocenteService.cs**
+
+- ✅ Agregado `IConfiguracionRequisitoService` al constructor
+- ✅ Método `GetRequisitosAscensoAsync()` usa configuraciones dinámicas
+- ✅ Método `GetRequisitosDinamicosAsync()` con fallback inteligente
+- ✅ Eliminado método hardcodeado `GetRequisitosPorNivel()`
+- ✅ Actualizado método `GetIndicadoresAsync()` para consistencia
+
+#### **Flujo de Dependencias**
+
+- ✅ `IConfiguracionRequisitoService` ya registrado en DI
+- ✅ Inyección de dependencias funcional
+- ✅ Compilación exitosa sin warnings críticos
+
+### **Resultados de la Corrección**
+
+🎯 **Problema Resuelto:** Dashboard e Index ahora muestran datos **100% consistentes**
+
+🔄 **Flujo Mejorado:**
+
+1. Admin configura requisitos → BD actualizada
+2. Dashboard carga desde BD → Datos dinámicos
+3. Modal carga desde BD → Mismos datos dinámicos
+4. **Resultado:** Experiencia coherente para el usuario
+
+🚀 **Impacto:**
+
+- **Administradores:** Cambios se reflejan inmediatamente
+- **Usuarios:** Información consistente en toda la interfaz
+- **Desarrolladores:** Fuente única de verdad para requisitos
+- **Sistema:** Flexibilidad total sin comprometer estabilidad
