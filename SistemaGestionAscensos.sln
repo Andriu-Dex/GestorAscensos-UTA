@@ -2,8 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HashGenerator", "HashGenerator\HashGenerator.csproj", "{EE71756A-CCF3-9954-820B-F535E837FC86}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SGA.Api", "SGA.Api\SGA.Api.csproj", "{A2C8BB90-8CF8-958D-D6A7-C4F883435EBF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SGA.Application", "SGA.Application\SGA.Application.csproj", "{AE4AFCCF-57A1-7228-FE35-FDDB19158343}"
@@ -20,10 +18,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EE71756A-CCF3-9954-820B-F535E837FC86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EE71756A-CCF3-9954-820B-F535E837FC86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EE71756A-CCF3-9954-820B-F535E837FC86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EE71756A-CCF3-9954-820B-F535E837FC86}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A2C8BB90-8CF8-958D-D6A7-C4F883435EBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A2C8BB90-8CF8-958D-D6A7-C4F883435EBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2C8BB90-8CF8-958D-D6A7-C4F883435EBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
