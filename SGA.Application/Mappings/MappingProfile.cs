@@ -87,9 +87,9 @@ public class MappingProfile : Profile
 
         // Mapeos de ConfiguracionRequisito
         CreateMap<ConfiguracionRequisito, DTOs.Admin.ConfiguracionRequisitoDto>()
-            .ForMember(dest => dest.NombreAscenso, opt => opt.MapFrom(src => $"{src.NivelActual.GetDescription()} → {src.NivelSolicitado.GetDescription()}"))
-            .ForMember(dest => dest.NivelActualNombre, opt => opt.MapFrom(src => src.NivelActual.GetDescription()))
-            .ForMember(dest => dest.NivelSolicitadoNombre, opt => opt.MapFrom(src => src.NivelSolicitado.GetDescription()))
+            .ForMember(dest => dest.NombreAscenso, opt => opt.MapFrom(src => GetNombreAscensoConfig(src)))
+            .ForMember(dest => dest.NivelActualNombre, opt => opt.MapFrom(src => GetNivelActualNombre(src)))
+            .ForMember(dest => dest.NivelSolicitadoNombre, opt => opt.MapFrom(src => GetNivelSolicitadoNombre(src)))
             .ForMember(dest => dest.ResumenRequisitos, opt => opt.MapFrom(src => 
                 $"{src.TiempoMinimoMeses} meses, {src.ObrasMinimas} obras, {src.PuntajeEvaluacionMinimo}% eval, {src.HorasCapacitacionMinimas}h cap"));
 
@@ -98,5 +98,38 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.FechaCreacion, opt => opt.Ignore())
             .ForMember(dest => dest.FechaModificacion, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.ModificadoPor, opt => opt.Ignore());
+
+        // Mapeos de TituloAcademico
+        CreateMap<TituloAcademico, DTOs.Admin.TituloAcademicoDto>();
+        CreateMap<TituloAcademico, DTOs.Admin.TituloAcademicoResumenDto>();
+        CreateMap<TituloAcademico, DTOs.Admin.TituloAcademicoOpcionDto>();
+        
+        CreateMap<DTOs.Admin.CrearActualizarTituloAcademicoDto, TituloAcademico>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.FechaCreacion, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.FechaModificacion, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.ModificadoPor, opt => opt.Ignore())
+            .ForMember(dest => dest.EsTituloSistema, opt => opt.MapFrom(src => false)); // Títulos creados por usuario no son del sistema por defecto
+    }
+
+    private static string GetNombreAscensoConfig(ConfiguracionRequisito src)
+    {
+        var nivelActual = src.NivelActual != null ? src.NivelActual.Value.GetDescription() : 
+                         (src.TituloActual != null ? src.TituloActual.Nombre : "N/A");
+        var nivelSolicitado = src.NivelSolicitado != null ? src.NivelSolicitado.Value.GetDescription() : 
+                             (src.TituloSolicitado != null ? src.TituloSolicitado.Nombre : "N/A");
+        return $"{nivelActual} → {nivelSolicitado}";
+    }
+
+    private static string GetNivelActualNombre(ConfiguracionRequisito src)
+    {
+        return src.NivelActual != null ? src.NivelActual.Value.GetDescription() : 
+               (src.TituloActual != null ? src.TituloActual.Nombre : "N/A");
+    }
+
+    private static string GetNivelSolicitadoNombre(ConfiguracionRequisito src)
+    {
+        return src.NivelSolicitado != null ? src.NivelSolicitado.Value.GetDescription() : 
+               (src.TituloSolicitado != null ? src.TituloSolicitado.Nombre : "N/A");
     }
 }

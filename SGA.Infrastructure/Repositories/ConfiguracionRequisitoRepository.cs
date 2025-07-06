@@ -22,6 +22,8 @@ public class ConfiguracionRequisitoRepository : IConfiguracionRequisitoRepositor
     public async Task<List<ConfiguracionRequisito>> GetAllAsync()
     {
         return await _context.ConfiguracionesRequisitos
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
             .OrderBy(c => c.NivelActual)
             .ThenBy(c => c.NivelSolicitado)
             .ToListAsync();
@@ -30,6 +32,8 @@ public class ConfiguracionRequisitoRepository : IConfiguracionRequisitoRepositor
     public async Task<List<ConfiguracionRequisito>> GetActivasAsync()
     {
         return await _context.ConfiguracionesRequisitos
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
             .Where(c => c.EstaActivo)
             .OrderBy(c => c.NivelActual)
             .ThenBy(c => c.NivelSolicitado)
@@ -39,12 +43,16 @@ public class ConfiguracionRequisitoRepository : IConfiguracionRequisitoRepositor
     public async Task<ConfiguracionRequisito?> GetByIdAsync(Guid id)
     {
         return await _context.ConfiguracionesRequisitos
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task<ConfiguracionRequisito?> GetByNivelesAsync(NivelTitular nivelActual, NivelTitular nivelSolicitado)
     {
         return await _context.ConfiguracionesRequisitos
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
             .Where(c => c.NivelActual == nivelActual && c.NivelSolicitado == nivelSolicitado && c.EstaActivo)
             .FirstOrDefaultAsync();
     }
@@ -52,6 +60,8 @@ public class ConfiguracionRequisitoRepository : IConfiguracionRequisitoRepositor
     public async Task<List<ConfiguracionRequisito>> GetByNivelActualAsync(NivelTitular nivelActual)
     {
         return await _context.ConfiguracionesRequisitos
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
             .Where(c => c.NivelActual == nivelActual && c.EstaActivo)
             .OrderBy(c => c.NivelSolicitado)
             .ToListAsync();
@@ -116,8 +126,12 @@ public class ConfiguracionRequisitoRepository : IConfiguracionRequisitoRepositor
     public async Task<List<ConfiguracionRequisito>> GetOrderedByNivelAsync()
     {
         return await _context.ConfiguracionesRequisitos
-            .OrderBy(c => (int)c.NivelActual)
-            .ThenBy(c => (int)c.NivelSolicitado)
+            .Include(c => c.TituloActual)
+            .Include(c => c.TituloSolicitado)
+            .OrderBy(c => c.NivelActual.HasValue ? (int)c.NivelActual.Value : 999)
+            .ThenBy(c => c.NivelSolicitado.HasValue ? (int)c.NivelSolicitado.Value : 999)
+            .ThenBy(c => c.TituloActual != null ? c.TituloActual.OrdenJerarquico : 999)
+            .ThenBy(c => c.TituloSolicitado != null ? c.TituloSolicitado.OrdenJerarquico : 999)
             .ToListAsync();
     }
 

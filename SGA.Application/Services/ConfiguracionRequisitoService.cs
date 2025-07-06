@@ -6,6 +6,7 @@ using SGA.Domain.Entities;
 using SGA.Domain.Enums;
 using SGA.Domain.Extensions;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SGA.Application.Services;
 
@@ -63,17 +64,32 @@ public class ConfiguracionRequisitoService : IConfiguracionRequisitoService
 
     public async Task<ConfiguracionRequisitoDto> CreateAsync(CrearActualizarConfiguracionRequisitoDto dto, string usuarioEmail)
     {
-        // Validar que no exista ya una configuración para esta transición
-        var existeConfiguracion = await _repository.ExisteConfiguracionAsync(dto.NivelActual, dto.NivelSolicitado);
-        if (existeConfiguracion)
+        // Validar que sea un nivel enum o tenga títulos válidos
+        if (dto.NivelActual == null && dto.TituloActualId == null)
         {
-            throw new InvalidOperationException($"Ya existe una configuración para el ascenso de {dto.NivelActual.GetDescription()} a {dto.NivelSolicitado.GetDescription()}");
+            throw new ArgumentException("Debe especificar un nivel actual o un título académico actual");
+        }
+        
+        if (dto.NivelSolicitado == null && dto.TituloSolicitadoId == null)
+        {
+            throw new ArgumentException("Debe especificar un nivel solicitado o un título académico solicitado");
         }
 
-        // Validar que el ascenso sea válido
-        if (!dto.NivelActual.EsAscensoValido(dto.NivelSolicitado))
+        // Solo validar para niveles enum
+        if (dto.NivelActual.HasValue && dto.NivelSolicitado.HasValue)
         {
-            throw new ArgumentException($"El ascenso de {dto.NivelActual.GetDescription()} a {dto.NivelSolicitado.GetDescription()} no es válido");
+            // Validar que no exista ya una configuración para esta transición
+            var existeConfiguracion = await _repository.ExisteConfiguracionAsync(dto.NivelActual.Value, dto.NivelSolicitado.Value);
+            if (existeConfiguracion)
+            {
+                throw new InvalidOperationException($"Ya existe una configuración para el ascenso de {dto.NivelActual.Value.GetDescription()} a {dto.NivelSolicitado.Value.GetDescription()}");
+            }
+
+            // Validar que el ascenso sea válido
+            if (!dto.NivelActual.Value.EsAscensoValido(dto.NivelSolicitado.Value))
+            {
+                throw new ArgumentException($"El ascenso de {dto.NivelActual.Value.GetDescription()} a {dto.NivelSolicitado.Value.GetDescription()} no es válido");
+            }
         }
 
         var configuracion = _mapper.Map<ConfiguracionRequisito>(dto);
@@ -112,17 +128,21 @@ public class ConfiguracionRequisitoService : IConfiguracionRequisitoService
             throw new ArgumentException("Configuración no encontrada");
         }
 
-        // Validar que no exista otra configuración para esta transición (excepto la actual)
-        var existeOtraConfiguracion = await _repository.ExisteConfiguracionAsync(dto.NivelActual, dto.NivelSolicitado, id);
-        if (existeOtraConfiguracion)
+        // Solo validar para niveles enum
+        if (dto.NivelActual.HasValue && dto.NivelSolicitado.HasValue)
         {
-            throw new InvalidOperationException($"Ya existe otra configuración para el ascenso de {dto.NivelActual.GetDescription()} a {dto.NivelSolicitado.GetDescription()}");
-        }
+            // Validar que no exista otra configuración para esta transición (excepto la actual)
+            var existeOtraConfiguracion = await _repository.ExisteConfiguracionAsync(dto.NivelActual.Value, dto.NivelSolicitado.Value, id);
+            if (existeOtraConfiguracion)
+            {
+                throw new InvalidOperationException($"Ya existe otra configuración para el ascenso de {dto.NivelActual.Value.GetDescription()} a {dto.NivelSolicitado.Value.GetDescription()}");
+            }
 
-        // Validar que el ascenso sea válido
-        if (!dto.NivelActual.EsAscensoValido(dto.NivelSolicitado))
-        {
-            throw new ArgumentException($"El ascenso de {dto.NivelActual.GetDescription()} a {dto.NivelSolicitado.GetDescription()} no es válido");
+            // Validar que el ascenso sea válido
+            if (!dto.NivelActual.Value.EsAscensoValido(dto.NivelSolicitado.Value))
+            {
+                throw new ArgumentException($"El ascenso de {dto.NivelActual.Value.GetDescription()} a {dto.NivelSolicitado.Value.GetDescription()} no es válido");
+            }
         }
 
         // Guardar valores anteriores para auditoría
@@ -176,7 +196,26 @@ public class ConfiguracionRequisitoService : IConfiguracionRequisitoService
             return false;
         }
 
-        var valoresAnteriores = JsonSerializer.Serialize(configuracion);
+        // Serializar solo los datos necesarios para auditoría (evita referencias circulares y es más eficiente)
+        var datosAuditoria = new
+        {
+            Id = configuracion.Id,
+            NivelActual = configuracion.NivelActual?.ToString(),
+            NivelSolicitado = configuracion.NivelSolicitado?.ToString(),
+            TituloActualId = configuracion.TituloActualId,
+            TituloSolicitadoId = configuracion.TituloSolicitadoId,
+            TiempoMinimoMeses = configuracion.TiempoMinimoMeses,
+            ObrasMinimas = configuracion.ObrasMinimas,
+            PuntajeEvaluacionMinimo = configuracion.PuntajeEvaluacionMinimo,
+            HorasCapacitacionMinimas = configuracion.HorasCapacitacionMinimas,
+            TiempoInvestigacionMinimo = configuracion.TiempoInvestigacionMinimo,
+            EstaActivo = configuracion.EstaActivo,
+            Descripcion = configuracion.Descripcion,
+            FechaCreacion = configuracion.FechaCreacion,
+            FechaModificacion = configuracion.FechaModificacion
+        };
+        
+        var valoresAnteriores = JsonSerializer.Serialize(datosAuditoria);
 
         await _repository.DeleteAsync(id);
 
@@ -354,7 +393,12 @@ public class ConfiguracionRequisitoService : IConfiguracionRequisitoService
 
             foreach (var configDto in configuraciones)
             {
-                var existeConfiguracion = await _repository.ExisteConfiguracionAsync(configDto.NivelActual, configDto.NivelSolicitado);
+                // Solo validar existencia para configuraciones con niveles enum
+                bool existeConfiguracion = false;
+                if (configDto.NivelActual.HasValue && configDto.NivelSolicitado.HasValue)
+                {
+                    existeConfiguracion = await _repository.ExisteConfiguracionAsync(configDto.NivelActual.Value, configDto.NivelSolicitado.Value);
+                }
                 
                 if (!existeConfiguracion)
                 {

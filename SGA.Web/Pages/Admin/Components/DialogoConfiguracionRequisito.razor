@@ -1,6 +1,7 @@
 @using SGA.Web.Models.Admin
 @using SGA.Web.Models.Enums
 @using Microsoft.AspNetCore.Authorization
+@using MudBlazor
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -12,11 +13,11 @@
 
             <MudGrid>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="NivelTitular" 
+                    <MudSelect T="NivelTitular?" 
                               @bind-Value="configuracion.NivelActual" 
                               Label="Nivel Actual"
                               Variant="Variant.Outlined"
-                              Required="true">
+                              Clearable="true">
                         <MudSelectItem Value="NivelTitular.Titular1">Titular Auxiliar 1</MudSelectItem>
                         <MudSelectItem Value="NivelTitular.Titular2">Titular Auxiliar 2</MudSelectItem>
                         <MudSelectItem Value="NivelTitular.Titular3">Titular Auxiliar 3</MudSelectItem>
@@ -25,11 +26,11 @@
                 </MudItem>
                 
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="NivelTitular" 
+                    <MudSelect T="NivelTitular?" 
                               @bind-Value="configuracion.NivelSolicitado" 
                               Label="Nivel Solicitado"
                               Variant="Variant.Outlined"
-                              Required="true">
+                              Clearable="true">
                         <MudSelectItem Value="NivelTitular.Titular2">Titular Auxiliar 2</MudSelectItem>
                         <MudSelectItem Value="NivelTitular.Titular3">Titular Auxiliar 3</MudSelectItem>
                         <MudSelectItem Value="NivelTitular.Titular4">Titular Auxiliar 4</MudSelectItem>

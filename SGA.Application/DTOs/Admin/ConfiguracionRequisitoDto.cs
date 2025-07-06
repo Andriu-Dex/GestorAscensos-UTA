@@ -3,13 +3,23 @@ using SGA.Domain.Enums;
 namespace SGA.Application.DTOs.Admin;
 
 /// <summary>
-/// DTO para visualizar configuración de requisitos
+/// DTO para visualizar configuración de requisitos híbrida
 /// </summary>
 public class ConfiguracionRequisitoDto
 {
     public Guid Id { get; set; }
-    public NivelTitular NivelActual { get; set; }
-    public NivelTitular NivelSolicitado { get; set; }
+    
+    // Niveles enum (compatibilidad)
+    public NivelTitular? NivelActual { get; set; }
+    public NivelTitular? NivelSolicitado { get; set; }
+    
+    // Títulos dinámicos
+    public Guid? TituloActualId { get; set; }
+    public Guid? TituloSolicitadoId { get; set; }
+    public TituloAcademicoResumenDto? TituloActual { get; set; }
+    public TituloAcademicoResumenDto? TituloSolicitado { get; set; }
+    
+    // Configuración de requisitos
     public int TiempoMinimoMeses { get; set; }
     public int ObrasMinimas { get; set; }
     public decimal PuntajeEvaluacionMinimo { get; set; }
@@ -26,17 +36,26 @@ public class ConfiguracionRequisitoDto
     public string ResumenRequisitos { get; set; } = string.Empty;
     public string NivelActualNombre { get; set; } = string.Empty;
     public string NivelSolicitadoNombre { get; set; } = string.Empty;
+    public bool UsaTitulosDinamicos => TituloActualId.HasValue || TituloSolicitadoId.HasValue;
+    public string TipoConfiguracion => UsaTitulosDinamicos ? "Títulos Dinámicos" : "Niveles Predefinidos";
     public int TiempoMinimoAnios => TiempoMinimoMeses / 12;
     public int TiempoMinimoMesesRestantes => TiempoMinimoMeses % 12;
 }
 
 /// <summary>
-/// DTO para crear o actualizar configuración de requisitos
+/// DTO para crear o actualizar configuración de requisitos híbrida
 /// </summary>
 public class CrearActualizarConfiguracionRequisitoDto
 {
-    public NivelTitular NivelActual { get; set; }
-    public NivelTitular NivelSolicitado { get; set; }
+    // Niveles enum (usar SOLO UNO de los dos tipos)
+    public NivelTitular? NivelActual { get; set; }
+    public NivelTitular? NivelSolicitado { get; set; }
+    
+    // Títulos dinámicos (usar SOLO UNO de los dos tipos)
+    public Guid? TituloActualId { get; set; }
+    public Guid? TituloSolicitadoId { get; set; }
+    
+    // Configuración de requisitos
     public int TiempoMinimoMeses { get; set; }
     public int ObrasMinimas { get; set; }
     public decimal PuntajeEvaluacionMinimo { get; set; }

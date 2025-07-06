@@ -31,6 +31,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SolicitudEvidenciaInvestigacion> SolicitudesEvidenciasInvestigacion { get; set; }
     public DbSet<Notificacion> Notificaciones { get; set; }
     public DbSet<ConfiguracionRequisito> ConfiguracionesRequisitos { get; set; }
+    public DbSet<TituloAcademico> TitulosAcademicos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -312,12 +313,37 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.HasIndex(e => e.FechaCreacion);
         });
 
-        // Configuración ConfiguracionRequisito
+        // Configuración TituloAcademico
+        modelBuilder.Entity<TituloAcademico>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Codigo).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+            entity.Property(e => e.OrdenJerarquico).IsRequired();
+            entity.Property(e => e.EstaActivo).HasDefaultValue(true);
+            entity.Property(e => e.EsTituloSistema).HasDefaultValue(false);
+            entity.Property(e => e.ModificadoPor).HasMaxLength(255);
+            entity.Property(e => e.ColorHex).HasMaxLength(7);
+            
+            // Índices únicos para garantizar integridad
+            entity.HasIndex(e => e.Codigo).IsUnique();
+            entity.HasIndex(e => e.Nombre).IsUnique();
+            entity.HasIndex(e => e.OrdenJerarquico).IsUnique();
+            entity.HasIndex(e => e.EstaActivo);
+            entity.HasIndex(e => e.EsTituloSistema);
+        });
+
+        // Configuración ConfiguracionRequisito (actualizada para soportar títulos híbridos)
         modelBuilder.Entity<ConfiguracionRequisito>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.NivelActual).HasConversion<string>().IsRequired();
-            entity.Property(e => e.NivelSolicitado).HasConversion<string>().IsRequired();
+            
+            // Propiedades enum (nullable para compatibilidad híbrida)
+            entity.Property(e => e.NivelActual).HasConversion<string>();
+            entity.Property(e => e.NivelSolicitado).HasConversion<string>();
+            
+            // Configuración de requisitos
             entity.Property(e => e.TiempoMinimoMeses).IsRequired();
             entity.Property(e => e.ObrasMinimas).IsRequired();
             entity.Property(e => e.PuntajeEvaluacionMinimo).HasColumnType("decimal(5,2)").IsRequired();
@@ -327,10 +353,28 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.Descripcion).HasMaxLength(500);
             entity.Property(e => e.ModificadoPor).HasMaxLength(255);
             
+            // Relaciones con TituloAcademico
+            entity.HasOne(cr => cr.TituloActual)
+                .WithMany(ta => ta.ConfiguracionesComoActual)
+                .HasForeignKey(cr => cr.TituloActualId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            entity.HasOne(cr => cr.TituloSolicitado)
+                .WithMany(ta => ta.ConfiguracionesComoSolicitado)
+                .HasForeignKey(cr => cr.TituloSolicitadoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
             // Índices para optimizar consultas
-            entity.HasIndex(e => new { e.NivelActual, e.NivelSolicitado }).IsUnique();
+            entity.HasIndex(e => new { e.NivelActual, e.NivelSolicitado });
+            entity.HasIndex(e => new { e.TituloActualId, e.TituloSolicitadoId });
             entity.HasIndex(e => e.EstaActivo);
             entity.HasIndex(e => e.NivelActual);
+            entity.HasIndex(e => e.TituloActualId);
+            
+            // Restricción: debe usar SOLO UNO de los dos tipos (enum O título)
+            entity.ToTable(t => t.HasCheckConstraint("CK_ConfiguracionRequisito_TipoNivel", 
+                "(NivelActual IS NOT NULL AND TituloActualId IS NULL AND NivelSolicitado IS NOT NULL AND TituloSolicitadoId IS NULL) OR " +
+                "(NivelActual IS NULL AND TituloActualId IS NOT NULL AND NivelSolicitado IS NULL AND TituloSolicitadoId IS NOT NULL)"));
         });
 
         // Datos semilla

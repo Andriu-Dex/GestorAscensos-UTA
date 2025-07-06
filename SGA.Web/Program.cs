@@ -47,6 +47,7 @@ builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<DocumentosService>();
 builder.Services.AddScoped<DocumentVisualizationService>();
 builder.Services.AddScoped<NotificacionesService>();
+builder.Services.AddScoped<TitulosAcademicosService>();
 builder.Services.AddScoped<AuthenticationStateProvider, ApiAuthenticationStateProvider>();
 
 await builder.Build().RunAsync();

@@ -1,0 +1,129 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #dc3545; color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnCancel" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-2 text-center">
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="col-10">
+                            <h6 class="mb-3">¿Está seguro que desea eliminar este elemento?</h6>
+                            
+                            @if (!string.IsNullOrEmpty(ItemName))
+                            {
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-graduation-cap text-primary me-3" style="font-size: 1.5rem;"></i>
+                                            <div>
+                                                <strong>@ItemName</strong>
+                                                @if (!string.IsNullOrEmpty(ItemDescription))
+                                                {
+                                                    <br><small class="text-muted">@ItemDescription</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="alert alert-danger mt-3" role="alert">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-exclamation-circle"></i> ¡Atención!
+                                </h6>
+                                <ul class="mb-0">
+                                    <li>Esta acción <strong>no se puede deshacer</strong></li>
+                                    <li>El elemento será eliminado permanentemente</li>
+                                    <li>Si está siendo utilizado en configuraciones, la eliminación podría fallar</li>
+                                </ul>
+                            </div>
+
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" @bind="confirmationChecked" id="confirmationCheck">
+                                <label class="form-check-label" for="confirmationCheck">
+                                    Entiendo que esta acción no se puede deshacer
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnCancel">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" 
+                            class="btn btn-danger" 
+                            @onclick="HandleConfirm"
+                            disabled="@(!confirmationChecked || IsProcessing)">
+                        @if (IsProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash"></i>
+                        }
+                        Sí, Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string? ItemName { get; set; }
+    [Parameter] public string? ItemDescription { get; set; }
+    [Parameter] public bool IsProcessing { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool confirmationChecked = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            confirmationChecked = false;
+        }
+    }
+
+    private async Task HandleConfirm()
+    {
+        if (confirmationChecked && !IsProcessing)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'hidden'");
+        }
+        else if (!IsVisible)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+        }
+    }
+
+    public void Dispose()
+    {
+        JSRuntime.InvokeVoidAsync("eval", "document.body.style.overflow = 'auto'");
+    }
+}
