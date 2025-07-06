@@ -70,8 +70,8 @@ public class JwtService : IJwtService
             issuer: _issuer,
             audience: _audience,
             claims: claims,
-            // expires: DateTime.UtcNow.AddHours(8),
-            expires: DateTime.UtcNow.AddMinutes(1),
+            expires: DateTime.UtcNow.AddHours(2), // Tiempo de expiración del token
+            // expires: DateTime.UtcNow.AddMinutes(1),
             signingCredentials: credentials
         );
 
