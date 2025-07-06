@@ -132,6 +132,7 @@ public class RevisionSolicitudCertificadoDto
     public Guid SolicitudId { get; set; }
     public string Accion { get; set; } = string.Empty; // "Aprobar" o "Rechazar"
     public string Comentarios { get; set; } = string.Empty;
+    public string? ComentariosAdicionales { get; set; }
 }
 
 // DTOs para gestión de documentos del usuario (similar a obras académicas)

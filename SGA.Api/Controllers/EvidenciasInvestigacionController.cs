@@ -323,6 +323,30 @@ public class EvidenciasInvestigacionController : ControllerBase
         }
     }
 
+    [HttpGet("admin/descargar/{solicitudId}")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> DescargarArchivoAdmin(Guid solicitudId)
+    {
+        try
+        {
+            var archivo = await _evidenciasService.GetArchivoEvidenciaSolicitudAsync(solicitudId);
+            if (archivo == null)
+            {
+                return NotFound("Archivo no encontrado");
+            }
+
+            // Generar un nombre de archivo descriptivo
+            var fileName = $"evidencia_investigacion_{solicitudId.ToString()[..8]}.pdf";
+
+            return File(archivo, "application/pdf", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al descargar archivo de evidencia como admin {SolicitudId}", solicitudId);
+            return StatusCode(500, new { mensaje = "Error interno del servidor" });
+        }
+    }
+
     [HttpPut("reenviar/{evidenciaId}")]
     public async Task<ActionResult<ResponseGenericoEvidenciaDto>> ReenviarSolicitud(Guid evidenciaId)
     {

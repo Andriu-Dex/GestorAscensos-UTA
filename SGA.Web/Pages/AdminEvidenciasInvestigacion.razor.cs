@@ -49,6 +49,10 @@ namespace SGA.Web.Pages
         private bool showVisualizarModal = false;
         private EvidenciaInvestigacionViewModel? evidenciaParaVisualizar;
 
+        // Variables para el modal de detalle
+        private EvidenciaInvestigacionViewModel? evidenciaSeleccionada;
+        private bool showDetalleModal = false;
+
         protected override async Task OnInitializedAsync()
         {
             await ConfigurarHttpClient();
@@ -448,6 +452,79 @@ namespace SGA.Web.Pages
 
         #endregion
 
+        #region Nuevos métodos para completar funcionalidades
+
+        /// <summary>
+        /// Mostrar modal con información detallada de la evidencia
+        /// </summary>
+        private void VerDetalle(EvidenciaInvestigacionViewModel evidencia)
+        {
+            evidenciaSeleccionada = evidencia;
+            showDetalleModal = true;
+            StateHasChanged();
+        }
+
+        /// <summary>
+        /// Cerrar modal de detalle
+        /// </summary>
+        private void CerrarDetalleModal()
+        {
+            showDetalleModal = false;
+            evidenciaSeleccionada = null;
+            StateHasChanged();
+        }
+
+        /// <summary>
+        /// Visualizar archivo PDF de la evidencia
+        /// </summary>
+        private async Task VisualizarArchivo(EvidenciaInvestigacionViewModel evidencia)
+        {
+            evidenciaParaVisualizar = evidencia;
+            showVisualizarModal = true;
+            pdfDataUrl = "";
+            
+            await CargarPdfEvidencia(evidencia.Id);
+            StateHasChanged();
+        }
+
+        /// <summary>
+        /// Descargar archivo de la evidencia
+        /// </summary>
+        private async Task DescargarArchivo(EvidenciaInvestigacionViewModel evidencia)
+        {
+            try
+            {
+                var token = await LocalStorage.GetItemAsStringAsync("token");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
+                
+                var response = await Http.GetAsync($"api/evidencias-investigacion/admin/descargar/{evidencia.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                    var fileName = !string.IsNullOrEmpty(evidencia.ArchivoNombre) 
+                        ? evidencia.ArchivoNombre 
+                        : $"evidencia_{evidencia.TituloProyecto.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf";
+                    
+                    await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, fileBytes);
+                    ToastService.ShowSuccess("Archivo descargado correctamente");
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    ToastService.ShowError($"Error al descargar el archivo: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Error al descargar archivo: {ex.Message}");
+            }
+        }
+
+        #endregion
+
         #region Visualización
 
         private async Task VisualizarEvidencia(EvidenciaInvestigacionViewModel evidencia)
@@ -491,6 +568,17 @@ namespace SGA.Web.Pages
         #endregion
 
         #region Métodos auxiliares
+
+        private string GetBadgeClass(string estado)
+        {
+            return estado switch
+            {
+                "Pendiente" => "bg-warning text-dark",
+                "Aprobada" => "bg-success",
+                "Rechazada" => "bg-danger",
+                _ => "bg-secondary"
+            };
+        }
 
         #endregion
     }

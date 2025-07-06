@@ -16,11 +16,13 @@
 <div class="container-fluid mt-4">
     <!-- Encabezado de página mejorado -->
     <div class="page-header">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
+        <div class="text-left">
             <h3>
                 <i class="bi bi-award me-2"></i>
                 Panel de Administración - Certificados de Capacitación
             </h3>
+        </div>
+        <div class="d-flex justify-content-left mt-3">
             <div class="btn-group filter-buttons" role="group">
                 <button type="button" class="btn @(filtroEstado == "Pendiente" ? "btn-light" : "btn-outline-light")" 
                         @onclick="FiltrarPendientes" title="Ver solicitudes pendientes de revisión">
@@ -47,28 +49,8 @@
         <h5 class="filters-title">
             <i class="bi bi-funnel me-2"></i>Filtros de Búsqueda
         </h5>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <div class="form-floating">
-                    <input type="text" class="form-control" id="filtroCedula" placeholder="Ej: 1801000000" 
-                           @bind="filtroCedula" @bind:after="AplicarFiltros" 
-                           title="Buscar por número de cédula del docente">
-                    <label for="filtroCedula">
-                        <i class="bi bi-person-badge me-1"></i>Cédula del Docente
-                    </label>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="form-floating">
-                    <input type="text" class="form-control" id="filtroCurso" placeholder="Ej: Capacitación JAVA" 
-                           @bind="filtroCurso" @bind:after="AplicarFiltros"
-                           title="Buscar por nombre o título del curso de capacitación">
-                    <label for="filtroCurso">
-                        <i class="bi bi-book me-1"></i>Nombre del Curso
-                    </label>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6 col-sm-12">
                 <div class="form-floating">
                     <select class="form-select" id="filtroTipo" @bind="filtroTipo" @bind:after="AplicarFiltros"
                             title="Filtrar por tipo específico de capacitación">
@@ -84,6 +66,34 @@
                     <label for="filtroTipo">
                         <i class="bi bi-tags me-1"></i>Tipo de Capacitación
                     </label>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-12">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="filtroCurso" placeholder=" " 
+                           @bind="filtroCurso" @bind:after="AplicarFiltros"
+                           title="Buscar por nombre o título del curso de capacitación">
+                    <label for="filtroCurso">
+                        <i class="bi bi-book me-1"></i>Nombre del Curso
+                    </label>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-12">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="filtroCedula" placeholder=" " 
+                           @bind="filtroCedula" @bind:after="AplicarFiltros" 
+                           title="Buscar por número de cédula del docente">
+                    <label for="filtroCedula">
+                        <i class="bi bi-person-badge me-1"></i>Cédula del Docente
+                    </label>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-12">
+                <div class="d-grid h-100">
+                    <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center" @onclick="LimpiarFiltros"
+                            title="Limpiar todos los filtros aplicados">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Limpiar Filtros
+                    </button>
                 </div>
             </div>
         </div>
@@ -232,6 +242,14 @@
                                                 @onclick="() => RechazarSolicitud(solicitud)" 
                                                 title="Rechazar solicitud de certificado">
                                             <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    }
+                                    else if (solicitud.Estado == "Rechazada" && !string.IsNullOrEmpty(solicitud.MotivoRechazo))
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger btn-action" 
+                                                @onclick="() => VerMotivoRechazo(solicitud)" 
+                                                title="Ver motivo del rechazo">
+                                            <i class="bi bi-exclamation-triangle"></i>
                                         </button>
                                     }
                                 </div>
@@ -662,6 +680,72 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal para mostrar motivo de rechazo -->
+@if (certificadoRechazado != null)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header modal-header-danger">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Motivo de Rechazo
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarMotivoRechazo"
+                            title="Cerrar ventana" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="rejection-info">
+                        <h6 class="mb-3">
+                            <i class="bi bi-info-circle-fill text-custom me-2"></i>
+                            Información del Certificado
+                        </h6>
+                        <h6>@certificadoRechazado.NombreCurso</h6>
+                        <p><strong>Docente:</strong> @certificadoRechazado.DocenteCedula</p>
+                        @if (!string.IsNullOrEmpty(certificadoRechazado.DocenteNombre))
+                        {
+                            <p><strong>Nombre:</strong> @certificadoRechazado.DocenteNombre</p>
+                        }
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <h6 class="mb-2">
+                            <i class="bi bi-x-circle-fill me-2"></i>Motivo del Rechazo:
+                        </h6>
+                        <p class="mb-0">@certificadoRechazado.MotivoRechazo</p>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(certificadoRechazado.ComentariosRevision))
+                    {
+                        <div class="alert alert-warning">
+                            <h6 class="mb-2">
+                                <i class="bi bi-chat-text-fill me-2"></i>Comentarios Adicionales:
+                            </h6>
+                            <p class="mb-0">@certificadoRechazado.ComentariosRevision</p>
+                        </div>
+                    }
+                    
+                    @if (certificadoRechazado.FechaRevision.HasValue)
+                    {
+                        <div class="text-muted mt-3">
+                            <small>
+                                <i class="bi bi-calendar-check me-1"></i>
+                                Fecha de revisión: @certificadoRechazado.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarMotivoRechazo"
+                            title="Cerrar ventana">
+                        <i class="bi bi-x-circle me-2"></i>Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private List<SolicitudCertificadoCapacitacionAdminDto>? solicitudes;
     private List<SolicitudCertificadoCapacitacionAdminDto>? solicitudesFiltradas;
@@ -687,6 +771,7 @@
     private SolicitudCertificadoCapacitacionAdminDto? solicitudSeleccionada; // Para modal de detalle
     private SolicitudCertificadoCapacitacionAdminDto? solicitudParaRechazo; // Para modal de rechazo
     private SolicitudCertificadoCapacitacionAdminDto? solicitudParaPDF;
+    private SolicitudCertificadoCapacitacionAdminDto? certificadoRechazado; // Para modal de motivo de rechazo
     private string motivoRechazo = string.Empty;
     private string comentariosRevision = string.Empty;
     private bool isProcessing = false;
@@ -844,6 +929,18 @@
         solicitudSeleccionada = null;
     }
 
+    private void VerMotivoRechazo(SolicitudCertificadoCapacitacionAdminDto solicitud)
+    {
+        certificadoRechazado = solicitud;
+        StateHasChanged();
+    }
+
+    private void CerrarMotivoRechazo()
+    {
+        certificadoRechazado = null;
+        StateHasChanged();
+    }
+
     private async Task AprobarSolicitud(SolicitudCertificadoCapacitacionAdminDto solicitud)
     {
         try
@@ -934,9 +1031,10 @@
             {
                 SolicitudId = solicitudParaRechazo.Id,
                 Accion = "Rechazar",
-                Comentarios = !string.IsNullOrWhiteSpace(comentariosRevision) 
-                    ? $"{motivoRechazo.Trim()}\n\nComentarios adicionales: {comentariosRevision.Trim()}"
-                    : motivoRechazo.Trim()
+                Comentarios = motivoRechazo.Trim(),
+                ComentariosAdicionales = !string.IsNullOrWhiteSpace(comentariosRevision) 
+                    ? comentariosRevision.Trim() 
+                    : null
             };
 
             var response = await Http.PostAsJsonAsync($"api/certificados-capacitacion/admin/revisar/{solicitudParaRechazo.Id}", request);
@@ -1100,6 +1198,7 @@
         public Guid SolicitudId { get; set; }
         public string Accion { get; set; } = string.Empty; // "Aprobar" o "Rechazar"
         public string Comentarios { get; set; } = string.Empty;
+        public string? ComentariosAdicionales { get; set; }
     }
 
     public class ResponseGenericoCertificadoDto

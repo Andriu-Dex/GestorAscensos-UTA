@@ -1150,10 +1150,16 @@ public class CertificadosCapacitacionService : ICertificadosCapacitacionService
 
             // Actualizar estado de la solicitud
             solicitud.Estado = revision.Accion.Equals("Aprobar", StringComparison.OrdinalIgnoreCase) ? "Aprobada" : "Rechazada";
-            solicitud.ComentariosRevision = revision.Comentarios;
-            if (!revision.Accion.Equals("Aprobar", StringComparison.OrdinalIgnoreCase))
+            
+            if (revision.Accion.Equals("Aprobar", StringComparison.OrdinalIgnoreCase))
             {
+                solicitud.ComentariosRevision = revision.Comentarios;
+            }
+            else
+            {
+                // Para rechazos, separar motivo y comentarios adicionales
                 solicitud.MotivoRechazo = revision.Comentarios;
+                solicitud.ComentariosRevision = revision.ComentariosAdicionales;
             }
             solicitud.FechaRevision = DateTime.UtcNow;
             solicitud.FechaModificacion = DateTime.UtcNow;
