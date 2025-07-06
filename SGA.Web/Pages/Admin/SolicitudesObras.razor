@@ -395,103 +395,139 @@
     <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Detalles de la Obra Académica</h5>
-                    <button type="button" class="btn-close" @onclick="CerrarModalDetalles" aria-label="Cerrar"></button>
+                <div class="modal-detalles-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Detalles de la Obra Académica
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalDetalles" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th width="30%">Título:</th>
-                                    <td>@obraSeleccionada.Titulo</td>
-                                </tr>
-                                <tr>
-                                    <th>Tipo:</th>
-                                    <td>@obraSeleccionada.TipoObra</td>
-                                </tr>
-                                <tr>
-                                    <th>Fecha Publicación:</th>
-                                    <td>@obraSeleccionada.FechaPublicacion.ToString("dd/MM/yyyy")</td>
-                                </tr>
-                                <tr>
-                                    <th>Autores:</th>
-                                    <td>@(obraSeleccionada.Autores ?? "No especificado")</td>
-                                </tr>
-                                <tr>
-                                    <th>Editorial:</th>
-                                    <td>@(obraSeleccionada.Editorial ?? "No especificado")</td>
-                                </tr>
-                                <tr>
-                                    <th>Revista:</th>
-                                    <td>@(obraSeleccionada.Revista ?? "No especificado")</td>
-                                </tr>
-                            </table>
+                <div class="modal-detalles-body">
+                    <div class="obra-info-card">
+                        <!-- Sección del título -->
+                        <div class="obra-titulo-section">
+                            <h4>@obraSeleccionada.Titulo</h4>
+                            <div class="obra-tipo-badge">@obraSeleccionada.TipoObra</div>
                         </div>
-                        <div class="col-md-6">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <th width="30%">ISBN/ISSN:</th>
-                                    <td>@(obraSeleccionada.ISBN_ISSN ?? "No especificado")</td>
-                                </tr>
-                                <tr>
-                                    <th>DOI:</th>
-                                    <td>@(obraSeleccionada.DOI ?? "No especificado")</td>
-                                </tr>
-                                <tr>
-                                    <th>Es Indexada:</th>
-                                    <td>
+                        
+                        <!-- Grid de información -->
+                        <div class="obra-info-grid">
+                            <div class="obra-info-section">
+                                <div class="info-group">
+                                    <label class="info-label">Fecha de Publicación</label>
+                                    <div class="info-value info-value-highlight">
+                                        <i class="bi bi-calendar-event me-1"></i>
+                                        @obraSeleccionada.FechaPublicacion.ToString("dd/MM/yyyy")
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">Autores</label>
+                                    <div class="info-value @(string.IsNullOrEmpty(obraSeleccionada.Autores) ? "info-value-muted" : "")">
+                                        <i class="bi bi-people me-1"></i>
+                                        @(obraSeleccionada.Autores ?? "No especificado")
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">Editorial</label>
+                                    <div class="info-value @(string.IsNullOrEmpty(obraSeleccionada.Editorial) ? "info-value-muted" : "")">
+                                        <i class="bi bi-building me-1"></i>
+                                        @(obraSeleccionada.Editorial ?? "No especificado")
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">Revista</label>
+                                    <div class="info-value @(string.IsNullOrEmpty(obraSeleccionada.Revista) ? "info-value-muted" : "")">
+                                        <i class="bi bi-journal-text me-1"></i>
+                                        @(obraSeleccionada.Revista ?? "No especificado")
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="obra-info-section">
+                                <div class="info-group">
+                                    <label class="info-label">ISBN/ISSN</label>
+                                    <div class="info-value @(string.IsNullOrEmpty(obraSeleccionada.ISBN_ISSN) ? "info-value-muted" : "")">
+                                        <i class="bi bi-hash me-1"></i>
+                                        @(obraSeleccionada.ISBN_ISSN ?? "No especificado")
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">DOI</label>
+                                    <div class="info-value @(string.IsNullOrEmpty(obraSeleccionada.DOI) ? "info-value-muted" : "")">
+                                        <i class="bi bi-link-45deg me-1"></i>
+                                        @(obraSeleccionada.DOI ?? "No especificado")
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">Obra Indexada</label>
+                                    <div class="info-value">
                                         @if (obraSeleccionada.EsIndexada)
                                         {
-                                            <span class="badge bg-success">Sí</span>
+                                            <span class="badge-indexada">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Sí
+                                            </span>
                                             @if (!string.IsNullOrEmpty(obraSeleccionada.IndiceIndexacion))
                                             {
-                                                <span class="ms-2">(@obraSeleccionada.IndiceIndexacion)</span>
+                                                <div class="mt-1 small">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    Índice: @obraSeleccionada.IndiceIndexacion
+                                                </div>
                                             }
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">No</span>
+                                            <span class="badge-no-indexada">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                No
+                                            </span>
                                         }
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Archivo:</th>
-                                    <td>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label class="info-label">Archivo Adjunto</label>
+                                    <div class="archivo-info @(string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre) ? "no-file" : "has-file")">
                                         @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
                                         {
-                                            <span class="text-success">
-                                                <i class="bi bi-file-earmark-pdf me-1"></i>@obraSeleccionada.ArchivoNombre
-                                            </span>
+                                            <div class="archivo-icon success">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </div>
+                                            <div class="archivo-nombre">@obraSeleccionada.ArchivoNombre</div>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">Sin archivo adjunto</span>
+                                            <div class="archivo-icon warning">
+                                                <i class="bi bi-file-earmark-x"></i>
+                                            </div>
+                                            <div class="archivo-nombre">No se adjuntó ningún archivo</div>
                                         }
-                                    </td>
-                                </tr>
-                            </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
                     @if (!string.IsNullOrEmpty(obraSeleccionada.Descripcion))
                     {
-                        <hr>
-                        <div>
-                            <h6>Descripción:</h6>
-                            <p>@obraSeleccionada.Descripcion</p>
+                        <div class="descripcion-section">
+                            <h6 class="descripcion-titulo">
+                                <i class="bi bi-card-text me-2"></i>
+                                Descripción
+                            </h6>
+                            <p class="descripcion-texto">@obraSeleccionada.Descripcion</p>
                         </div>
                     }
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalDetalles">Cerrar</button>
-                    @if (!string.IsNullOrEmpty(obraSeleccionada.ArchivoNombre))
-                    {
-                        <button type="button" class="btn btn-primary" @onclick="() => DescargarArchivo(obraSeleccionada.Id)">
-                            <i class="bi bi-download"></i> Descargar PDF
-                        </button>
-                    }
+                <div class="modal-detalles-footer">
+                    <button type="button" class="btn-custom-secondary" @onclick="CerrarModalDetalles">
+                        <i class="bi bi-x-lg me-2"></i>Cerrar
+                    </button>
                 </div>
             </div>
         </div>

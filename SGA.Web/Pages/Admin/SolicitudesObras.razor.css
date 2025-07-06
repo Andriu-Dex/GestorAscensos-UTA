@@ -1,0 +1,246 @@
+/* Estilos CSS aislados para SolicitudesObras.razor */
+
+/* Modal de detalles */
+.modal-detalles-header {
+  background: linear-gradient(135deg, #8a1538 0%, #6d1029 100%);
+  color: white;
+  border-radius: 0.375rem 0.375rem 0 0;
+  padding: 1.25rem 1.5rem;
+  border: none;
+}
+
+.modal-detalles-header .modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-detalles-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-detalles-body {
+  padding: 0;
+  background-color: #f8f9fa;
+}
+
+.obra-info-card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 1.5rem;
+  overflow: hidden;
+}
+
+.obra-titulo-section {
+  background: linear-gradient(135deg, #8a1538 0%, #6d1029 100%);
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.obra-titulo-section h4 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: white;
+}
+
+.obra-tipo-badge {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
+  display: inline-block;
+}
+
+.obra-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.obra-info-section {
+  padding: 1.5rem;
+}
+
+.obra-info-section:first-child {
+  border-right: 1px solid #e9ecef;
+}
+
+.info-group {
+  margin-bottom: 1.25rem;
+}
+
+.info-group:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 1rem;
+  color: #212529;
+  font-weight: 500;
+  word-wrap: break-word;
+}
+
+.info-value-muted {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.info-value-highlight {
+  color: #8a1538;
+  font-weight: 600;
+}
+
+.badge-indexada {
+  background-color: #28a745;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-no-indexada {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.archivo-info {
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.archivo-info.has-file {
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.archivo-info.no-file {
+  background: rgba(108, 117, 125, 0.1);
+}
+
+.archivo-icon {
+  font-size: 1.25rem;
+  margin-right: 0.75rem;
+}
+
+.archivo-icon.success {
+  color: #28a745;
+}
+
+.archivo-icon.warning {
+  color: #6c757d;
+}
+
+.archivo-nombre {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #495057;
+  flex-grow: 1;
+}
+
+.descripcion-section {
+  margin: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.descripcion-titulo {
+  color: #212529;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.descripcion-texto {
+  color: #495057;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modal-detalles-footer {
+  background: white;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.5rem;
+}
+
+.btn-custom-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-custom-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+  color: white;
+}
+
+.btn-custom-primary {
+  background-color: #8a1538;
+  border-color: #8a1538;
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-custom-primary:hover {
+  background-color: #6d1029;
+  border-color: #6d1029;
+  color: white;
+}
+
+.btn-custom-primary:focus,
+.btn-custom-secondary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+@media (max-width: 768px) {
+  .obra-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .obra-info-section:first-child {
+    border-right: none;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .obra-info-card,
+  .descripcion-section {
+    margin: 1rem;
+  }
+}
