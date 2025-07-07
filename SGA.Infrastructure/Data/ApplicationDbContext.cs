@@ -125,6 +125,17 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             entity.Property(e => e.SolicitudAscensoId).IsRequired(false); // Permitir null
             entity.Property(e => e.DocenteId).IsRequired(false); // Permitir null
             
+            // Propiedades para control de reutilización
+            entity.Property(e => e.FueUtilizadoEnSolicitudAprobada).HasDefaultValue(false);
+            entity.Property(e => e.SolicitudAprobadaId).IsRequired(false);
+            entity.Property(e => e.FechaUtilizacion).IsRequired(false);
+            
+            // Índices para optimizar consultas de reutilización
+            entity.HasIndex(e => e.FueUtilizadoEnSolicitudAprobada);
+            entity.HasIndex(e => new { e.TipoDocumento, e.FueUtilizadoEnSolicitudAprobada });
+            entity.HasIndex(e => new { e.DocenteId, e.FueUtilizadoEnSolicitudAprobada });
+            entity.HasIndex(e => e.SolicitudAprobadaId);
+            
             entity.HasOne(e => e.SolicitudAscenso)
                   .WithMany(s => s.Documentos)
                   .HasForeignKey(e => e.SolicitudAscensoId)
@@ -134,6 +145,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
                   .WithMany()
                   .HasForeignKey(e => e.DocenteId)
                   .OnDelete(DeleteBehavior.SetNull); // Permitir documentos sin docente específico
+                  
+            // Relación con la solicitud aprobada
+            entity.HasOne(e => e.SolicitudAprobada)
+                  .WithMany()
+                  .HasForeignKey(e => e.SolicitudAprobadaId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
 
         // Configuración LogAuditoria

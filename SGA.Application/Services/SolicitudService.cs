@@ -20,6 +20,7 @@ public class SolicitudService : ISolicitudService
     private readonly INotificationService _notificationService;
     private readonly INotificacionTiempoRealService _notificacionTiempoReal;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IDocumentoUtilizacionService _documentoUtilizacionService;
 
     public SolicitudService(
         ISolicitudAscensoRepository solicitudRepository,
@@ -31,7 +32,8 @@ public class SolicitudService : ISolicitudService
         DocumentoConversionService documentoConversionService,
         INotificationService notificationService,
         INotificacionTiempoRealService notificacionTiempoReal,
-        IUsuarioRepository usuarioRepository)
+        IUsuarioRepository usuarioRepository,
+        IDocumentoUtilizacionService documentoUtilizacionService)
     {
         _solicitudRepository = solicitudRepository;
         _docenteRepository = docenteRepository;
@@ -43,6 +45,7 @@ public class SolicitudService : ISolicitudService
         _notificationService = notificationService;
         _notificacionTiempoReal = notificacionTiempoReal;
         _usuarioRepository = usuarioRepository;
+        _documentoUtilizacionService = documentoUtilizacionService;
     }
 
     public async Task<SolicitudAscensoDto> CrearSolicitudAsync(Guid docenteId, CrearSolicitudRequest request)
@@ -194,6 +197,9 @@ public class SolicitudService : ISolicitudService
         // Si se aprueba, actualizar nivel del docente y enviar notificaciones
         if (request.Aprobar)
         {
+            // ✅ NUEVO: Marcar documentos como utilizados antes de actualizar el nivel
+            await _documentoUtilizacionService.MarcarDocumentosComoUtilizadosAsync(solicitudId);
+            
             await _docenteService.ActualizarNivelDocenteAsync(solicitud.DocenteId, solicitud.NivelSolicitado.ToString());
             
             // Enviar notificación de felicitación por email

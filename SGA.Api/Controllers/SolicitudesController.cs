@@ -14,11 +14,13 @@ public class SolicitudesController : ControllerBase
 {
     private readonly ISolicitudService _solicitudService;
     private readonly IDocenteService _docenteService;
+    private readonly IDocumentoUtilizacionService _documentoUtilizacionService;
 
-    public SolicitudesController(ISolicitudService solicitudService, IDocenteService docenteService)
+    public SolicitudesController(ISolicitudService solicitudService, IDocenteService docenteService, IDocumentoUtilizacionService documentoUtilizacionService)
     {
         _solicitudService = solicitudService;
         _docenteService = docenteService;
+        _documentoUtilizacionService = documentoUtilizacionService;
     }
 
     [HttpPost]
@@ -366,6 +368,167 @@ public class SolicitudesController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
+        }
+    }
+
+    /// <summary>
+    /// Obtiene los documentos disponibles (no utilizados en solicitudes aprobadas) para el docente actual
+    /// </summary>
+    [HttpGet("documentos-disponibles")]
+    public async Task<ActionResult<List<DocumentoDto>>> GetDocumentosDisponibles()
+    {
+        try
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            // Obtener documentos disponibles usando el servicio
+            var documentosDisponibles = await _documentoUtilizacionService.ObtenerDocumentosDisponiblesAsync(docente.Id);
+
+            // Convertir a DTOs
+            var documentosDto = documentosDisponibles.Select(d => new DocumentoDto
+            {
+                Id = d.Id,
+                NombreArchivo = d.NombreArchivo,
+                Nombre = d.NombreArchivo,
+                TamanoArchivo = d.TamanoArchivo,
+                TipoDocumento = d.TipoDocumento.ToString(),
+                FechaCreacion = d.FechaCreacion
+            }).ToList();
+
+            return Ok(documentosDto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Verifica el estado de un documento específico (disponible o ya utilizado)
+    /// </summary>
+    [HttpGet("documento-estado/{documentoId}")]
+    public async Task<ActionResult<object>> GetEstadoDocumento(Guid documentoId)
+    {
+        try
+        {
+            var (estaDisponible, motivoNoDisponible, fechaUtilizacion) = 
+                await _documentoUtilizacionService.ObtenerEstadoDocumentoAsync(documentoId);
+
+            return Ok(new 
+            {
+                EstaDisponible = estaDisponible,
+                MotivoNoDisponible = motivoNoDisponible,
+                FechaUtilizacion = fechaUtilizacion
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Verifica si una obra académica está disponible para usar en una nueva solicitud
+    /// </summary>
+    [HttpGet("verificar-disponibilidad-obra/{solicitudId}")]
+    public async Task<ActionResult<object>> VerificarDisponibilidadObra(Guid solicitudId)
+    {
+        try
+        {
+            // Verificar que el usuario tenga permisos para esta verificación
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var (estaDisponible, motivoNoDisponible, fechaUtilizacion) = 
+                await _documentoUtilizacionService.VerificarDisponibilidadObraAsync(solicitudId);
+
+            return Ok(new 
+            {
+                EstaDisponible = estaDisponible,
+                MotivoNoDisponible = motivoNoDisponible,
+                FechaUtilizacion = fechaUtilizacion
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Verifica si un certificado de capacitación está disponible para usar en una nueva solicitud
+    /// </summary>
+    [HttpGet("verificar-disponibilidad-certificado/{certificadoId}")]
+    public async Task<ActionResult<object>> VerificarDisponibilidadCertificado(Guid certificadoId)
+    {
+        try
+        {
+            // Verificar que el usuario tenga permisos para esta verificación
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var (estaDisponible, motivoNoDisponible, fechaUtilizacion) = 
+                await _documentoUtilizacionService.VerificarDisponibilidadCertificadoAsync(certificadoId);
+
+            return Ok(new 
+            {
+                EstaDisponible = estaDisponible,
+                MotivoNoDisponible = motivoNoDisponible,
+                FechaUtilizacion = fechaUtilizacion
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Verifica si una evidencia de investigación está disponible para usar en una nueva solicitud
+    /// </summary>
+    [HttpGet("verificar-disponibilidad-evidencia/{evidenciaId}")]
+    public async Task<ActionResult<object>> VerificarDisponibilidadEvidencia(Guid evidenciaId)
+    {
+        try
+        {
+            // Verificar que el usuario tenga permisos para esta verificación
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var docente = await _docenteService.GetDocenteByEmailAsync(email);
+            if (docente == null)
+                return NotFound("Docente no encontrado");
+
+            var (estaDisponible, motivoNoDisponible, fechaUtilizacion) = 
+                await _documentoUtilizacionService.VerificarDisponibilidadEvidenciaAsync(evidenciaId);
+
+            return Ok(new 
+            {
+                EstaDisponible = estaDisponible,
+                MotivoNoDisponible = motivoNoDisponible,
+                FechaUtilizacion = fechaUtilizacion
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
         }
     }
 }

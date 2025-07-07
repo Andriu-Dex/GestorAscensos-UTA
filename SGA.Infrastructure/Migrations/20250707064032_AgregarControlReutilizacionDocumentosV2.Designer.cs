@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SGA.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SGA.Infrastructure.Data;
 namespace SGA.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250707064032_AgregarControlReutilizacionDocumentosV2")]
+    partial class AgregarControlReutilizacionDocumentosV2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,8 +243,8 @@ namespace SGA.Infrastructure.Migrations
                             Cedula = "999999999",
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 7, 7, 7, 19, 8, 232, DateTimeKind.Utc).AddTicks(412),
-                            FechaInicioNivelActual = new DateTime(2020, 7, 7, 7, 19, 8, 232, DateTimeKind.Utc).AddTicks(127),
+                            FechaCreacion = new DateTime(2025, 7, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(8234),
+                            FechaInicioNivelActual = new DateTime(2020, 7, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(7929),
                             NivelActual = "Titular5",
                             Nombres = "Admin",
                             UsuarioId = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad")
@@ -253,8 +256,8 @@ namespace SGA.Infrastructure.Migrations
                             Cedula = "1801000000",
                             Email = "sparedes@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 7, 7, 7, 19, 8, 232, DateTimeKind.Utc).AddTicks(420),
-                            FechaInicioNivelActual = new DateTime(2023, 7, 7, 7, 19, 8, 232, DateTimeKind.Utc).AddTicks(417),
+                            FechaCreacion = new DateTime(2025, 7, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(8248),
+                            FechaInicioNivelActual = new DateTime(2023, 7, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(8245),
                             NivelActual = "Titular1",
                             Nombres = "Steven",
                             UsuarioId = new Guid("f47ac10b-58cc-4372-a567-0e02b2c3d479")
@@ -314,19 +317,15 @@ namespace SGA.Infrastructure.Migrations
 
                     b.Property<string>("TipoDocumento")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FueUtilizadoEnSolicitudAprobada");
+                    b.HasIndex("DocenteId");
 
                     b.HasIndex("SolicitudAprobadaId");
 
                     b.HasIndex("SolicitudAscensoId");
-
-                    b.HasIndex("DocenteId", "FueUtilizadoEnSolicitudAprobada");
-
-                    b.HasIndex("TipoDocumento", "FueUtilizadoEnSolicitudAprobada");
 
                     b.ToTable("Documentos");
                 });
@@ -1116,22 +1115,22 @@ namespace SGA.Infrastructure.Migrations
                             Id = new Guid("c24cd969-b99a-4354-b49f-0cae93b0b7ad"),
                             Email = "admin@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 7, 7, 7, 19, 8, 89, DateTimeKind.Utc).AddTicks(3181),
+                            FechaCreacion = new DateTime(2025, 7, 7, 6, 40, 31, 553, DateTimeKind.Utc).AddTicks(6017),
                             IntentosLogin = 0,
-                            PasswordHash = "$2a$11$a0vZecgAtYE/glYm4YkemOxFD16/0KUC2E1em/FJkdIRd1Rmmg13u",
+                            PasswordHash = "$2a$11$UuMJZpvVXBQwH1P1EBhZvOECeiH7oJxNTB75rgOXIkxJfVokwN8vG",
                             Rol = "Administrador",
-                            UltimoLogin = new DateTime(2020, 7, 7, 7, 19, 8, 89, DateTimeKind.Utc).AddTicks(2979)
+                            UltimoLogin = new DateTime(2020, 7, 7, 6, 40, 31, 553, DateTimeKind.Utc).AddTicks(5729)
                         },
                         new
                         {
                             Id = new Guid("f47ac10b-58cc-4372-a567-0e02b2c3d479"),
                             Email = "sparedes@uta.edu.ec",
                             EstaActivo = true,
-                            FechaCreacion = new DateTime(2025, 7, 7, 7, 19, 8, 231, DateTimeKind.Utc).AddTicks(4542),
+                            FechaCreacion = new DateTime(2025, 7, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(1639),
                             IntentosLogin = 0,
-                            PasswordHash = "$2a$11$p2hLUXxH6ex5f4JHjweujOjq1Lur0GkXryPM2NoWcRRNCWiTjEmmy",
+                            PasswordHash = "$2a$11$AIxcF1sZFmJflekhCCEbbeaLSnQcAMOXzlKOJrhsRpJGzcWND250S",
                             Rol = "Docente",
-                            UltimoLogin = new DateTime(2025, 6, 7, 7, 19, 8, 231, DateTimeKind.Utc).AddTicks(4491)
+                            UltimoLogin = new DateTime(2025, 6, 7, 6, 40, 31, 706, DateTimeKind.Utc).AddTicks(1533)
                         });
                 });
 

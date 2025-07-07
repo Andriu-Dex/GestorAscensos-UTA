@@ -45,6 +45,9 @@ public static class DependencyInjection
         // Servicio de conversión de documentos para solicitudes de ascenso
         services.AddScoped<DocumentoConversionService>();
         
+        // Servicio de utilización de documentos
+        services.AddScoped<IDocumentoUtilizacionService, DocumentoUtilizacionService>();
+        
         // Servicio de configuración dinámica de requisitos y títulos académicos
         services.AddScoped<IRequisitosDinamicosService, RequisitosDinamicosService>();
         services.AddScoped<IConfiguracionRequisitoService, ConfiguracionRequisitoService>();

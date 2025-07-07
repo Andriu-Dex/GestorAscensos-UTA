@@ -90,6 +90,21 @@ public class DocumentoConversionService
                 return null;
             }
             
+            // ✅ NUEVO: Verificar si esta obra ya fue utilizada en una solicitud de ascenso aprobada
+            var solicitudIdCorto = solicitud.Id.ToString().Substring(0, 8);
+            var patternStart = $"ObraAcademica_{solicitudIdCorto}";
+            var documentoExistente = await _context.Documentos
+                .FirstOrDefaultAsync(d => d.FueUtilizadoEnSolicitudAprobada && 
+                                         d.TipoDocumento == TipoDocumento.ObrasAcademicas &&
+                                         d.DocenteId == solicitud.DocenteId &&
+                                         d.NombreArchivo.StartsWith(patternStart));
+            
+            if (documentoExistente != null)
+            {
+                // Este documento ya fue utilizado en una solicitud aprobada
+                return null;
+            }
+            
             // Obtener contenido del archivo (BD preferido, fallback a archivo físico)
             byte[] contenidoArchivo;
             long tamanoArchivo;
@@ -120,7 +135,7 @@ public class DocumentoConversionService
             
             var documento = new Documento
             {
-                NombreArchivo = solicitud.ArchivoNombre ?? $"obra_{solicitud.Titulo?.Replace(" ", "_") ?? solicitudId.ToString()[..8]}.pdf",
+                NombreArchivo = $"ObraAcademica_{solicitudIdCorto}_DocId_{Guid.NewGuid().ToString()[..8]}.pdf",
                 RutaArchivo = $"solicitud_ascenso/obra_{solicitudId}",
                 TamanoArchivo = tamanoArchivo,
                 TipoDocumento = TipoDocumento.ObrasAcademicas,
@@ -152,6 +167,21 @@ public class DocumentoConversionService
                 return null;
             }
             
+            // ✅ NUEVO: Verificar si este certificado ya fue utilizado en una solicitud de ascenso aprobada
+            var certificadoIdCorto = solicitudCertificado.Id.ToString().Substring(0, 8);
+            var patternStart = $"CertificadoCapacitacion_{certificadoIdCorto}";
+            var documentoExistente = await _context.Documentos
+                .FirstOrDefaultAsync(d => d.FueUtilizadoEnSolicitudAprobada && 
+                                         d.TipoDocumento == TipoDocumento.CertificadosCapacitacion &&
+                                         d.DocenteId == solicitudCertificado.DocenteId &&
+                                         d.NombreArchivo.StartsWith(patternStart));
+            
+            if (documentoExistente != null)
+            {
+                // Este documento ya fue utilizado en una solicitud aprobada
+                return null;
+            }
+            
             // Verificar que tenga archivo
             if (solicitudCertificado.ArchivoContenido == null || solicitudCertificado.ArchivoContenido.Length == 0)
             {
@@ -160,7 +190,7 @@ public class DocumentoConversionService
             
             var documento = new Documento
             {
-                NombreArchivo = solicitudCertificado.ArchivoNombre ?? $"certificado_{solicitudCertificado.NombreCurso?.Replace(" ", "_") ?? certificadoId.ToString()[..8]}.pdf",
+                NombreArchivo = $"CertificadoCapacitacion_{certificadoIdCorto}_DocId_{Guid.NewGuid().ToString()[..8]}.pdf",
                 RutaArchivo = $"solicitud_ascenso/certificado_{certificadoId}",
                 TamanoArchivo = solicitudCertificado.ArchivoTamano ?? solicitudCertificado.ArchivoContenido.Length,
                 TipoDocumento = TipoDocumento.CertificadosCapacitacion,
@@ -193,6 +223,21 @@ public class DocumentoConversionService
                 return null;
             }
             
+            // ✅ NUEVO: Verificar si esta evidencia ya fue utilizada en una solicitud de ascenso aprobada
+            var evidenciaIdCorto = solicitudEvidencia.Id.ToString().Substring(0, 8);
+            var patternStart = $"EvidenciaInvestigacion_{evidenciaIdCorto}";
+            var documentoExistente = await _context.Documentos
+                .FirstOrDefaultAsync(d => d.FueUtilizadoEnSolicitudAprobada && 
+                                         d.TipoDocumento == TipoDocumento.CertificadoInvestigacion &&
+                                         d.DocenteId == solicitudEvidencia.DocenteId &&
+                                         d.NombreArchivo.StartsWith(patternStart));
+            
+            if (documentoExistente != null)
+            {
+                // Este documento ya fue utilizado en una solicitud aprobada
+                return null;
+            }
+            
             // Verificar que tenga archivo
             if (solicitudEvidencia.ArchivoContenido == null || solicitudEvidencia.ArchivoContenido.Length == 0)
             {
@@ -201,7 +246,7 @@ public class DocumentoConversionService
             
             var documento = new Documento
             {
-                NombreArchivo = !string.IsNullOrEmpty(solicitudEvidencia.ArchivoNombre) ? solicitudEvidencia.ArchivoNombre : $"evidencia_{solicitudEvidencia.TipoEvidencia?.Replace(" ", "_") ?? evidenciaId.ToString()[..8]}.pdf",
+                NombreArchivo = $"EvidenciaInvestigacion_{evidenciaIdCorto}_DocId_{Guid.NewGuid().ToString()[..8]}.pdf",
                 RutaArchivo = $"solicitud_ascenso/evidencia_{evidenciaId}",
                 TamanoArchivo = solicitudEvidencia.ArchivoTamano > 0 ? solicitudEvidencia.ArchivoTamano : solicitudEvidencia.ArchivoContenido.Length,
                 TipoDocumento = TipoDocumento.CertificadoInvestigacion,

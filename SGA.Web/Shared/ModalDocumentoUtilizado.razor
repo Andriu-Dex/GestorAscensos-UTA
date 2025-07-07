@@ -1,0 +1,96 @@
+<div class="modal fade @(Show ? "show d-block" : "")" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Documento Ya Utilizado
+                </h5>
+                <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-info-circle me-2"></i>Información importante</h6>
+                    <p class="mb-0">
+                        Este documento ya fue utilizado en una solicitud de ascenso aprobada anteriormente 
+                        y no puede volver a ser utilizado para nuevas solicitudes.
+                    </p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(MotivoNoDisponible))
+                {
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning bg-opacity-25">
+                            <h6 class="mb-0"><i class="bi bi-file-earmark-x me-2"></i>Detalles del uso anterior</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2">@MotivoNoDisponible</p>
+                            
+                            @if (FechaUtilizacion.HasValue)
+                            {
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Fecha de utilización: @FechaUtilizacion.Value.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="mt-4">
+                    <h6><i class="bi bi-lightbulb me-2"></i>¿Qué puedes hacer?</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check2 text-success me-2"></i>
+                            <strong>Subir documentos nuevos:</strong> Crea nuevas obras académicas, certificados de capacitación o evidencias de investigación
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check2 text-success me-2"></i>
+                            <strong>Usar otros documentos disponibles:</strong> Selecciona otros documentos que no hayan sido utilizados en solicitudes previas
+                        </li>
+                        <li class="mb-0">
+                            <i class="bi bi-check2 text-success me-2"></i>
+                            <strong>Verificar documentos disponibles:</strong> Revisa tu lista de documentos para ver cuáles están disponibles para usar
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Cerrar
+                </button>
+                
+                @if (OnMostrarDocumentosDisponibles.HasDelegate)
+                {
+                    <button type="button" class="btn btn-primary" @onclick="MostrarDocumentosDisponibles">
+                        <i class="bi bi-files me-1"></i>
+                        Ver Documentos Disponibles
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public string? MotivoNoDisponible { get; set; }
+    [Parameter] public DateTime? FechaUtilizacion { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback OnMostrarDocumentosDisponibles { get; set; }
+
+    private async Task CerrarModal()
+    {
+        Show = false;
+        await OnCerrar.InvokeAsync();
+    }
+
+    private async Task MostrarDocumentosDisponibles()
+    {
+        await OnMostrarDocumentosDisponibles.InvokeAsync();
+        await CerrarModal();
+    }
+}

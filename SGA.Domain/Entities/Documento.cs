@@ -19,4 +19,10 @@ public class Documento : BaseEntity
     // Relación opcional con Docente (nullable)
     public Guid? DocenteId { get; set; }
     public virtual Docente? Docente { get; set; }
+    
+    // Control de reutilización de documentos
+    public bool FueUtilizadoEnSolicitudAprobada { get; set; } = false;
+    public Guid? SolicitudAprobadaId { get; set; }
+    public DateTime? FechaUtilizacion { get; set; }
+    public virtual SolicitudAscenso? SolicitudAprobada { get; set; }
 }

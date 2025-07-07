@@ -255,6 +255,13 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal para documentos ya utilizados -->
+<ModalDocumentoUtilizado Show="@showDocumentoUtilizadoModal" 
+                        MotivoNoDisponible="@motivoDocumentoNoDisponible"
+                        FechaUtilizacion="@fechaUtilizacionDocumento"
+                        OnCerrar="CerrarModalDocumentoUtilizado"
+                        OnMostrarDocumentosDisponibles="MostrarDocumentosDisponibles" />
+
 @code {
     [Parameter] public EventCallback<Dictionary<string, bool>> OnSelectionChanged { get; set; }
 
@@ -271,6 +278,11 @@
     private string pdfNombreArchivo = string.Empty;
     private bool isLoadingPDF = false;
     private string errorPDF = string.Empty;
+
+    // Variables para el modal de documento utilizado
+    private bool showDocumentoUtilizadoModal = false;
+    private string? motivoDocumentoNoDisponible;
+    private DateTime? fechaUtilizacionDocumento;
 
     protected override async Task OnInitializedAsync()
     {
@@ -427,6 +439,19 @@
     private async Task ToggleObraSelection(ObraAcademicaDetalleDto obra, bool selected)
     {
         var keyId = obra.SolicitudId?.ToString() ?? obra.Id.ToString();
+        
+        if (selected)
+        {
+            // Verificar si el documento está disponible antes de seleccionarlo
+            var disponible = await VerificarDisponibilidadDocumento("obra", keyId);
+            if (!disponible)
+            {
+                // No permitir la selección y mantener el estado anterior
+                StateHasChanged();
+                return;
+            }
+        }
+        
         DocumentosSeleccionados[GetDocumentKey("obra", keyId)] = selected;
         await OnDocumentSelectionChanged();
         StateHasChanged();
@@ -434,6 +459,18 @@
 
     private async Task ToggleCertificadoSelection(CertificadoCapacitacionDetalleDto certificado, bool selected)
     {
+        if (selected)
+        {
+            // Verificar si el documento está disponible antes de seleccionarlo
+            var disponible = await VerificarDisponibilidadDocumento("certificado", certificado.Id.ToString());
+            if (!disponible)
+            {
+                // No permitir la selección y mantener el estado anterior
+                StateHasChanged();
+                return;
+            }
+        }
+        
         DocumentosSeleccionados[GetDocumentKey("certificado", certificado.Id.ToString())] = selected;
         await OnDocumentSelectionChanged();
         StateHasChanged();
@@ -441,6 +478,18 @@
 
     private async Task ToggleEvidenciaSelection(EvidenciaInvestigacionViewModel evidencia, bool selected)
     {
+        if (selected)
+        {
+            // Verificar si el documento está disponible antes de seleccionarlo
+            var disponible = await VerificarDisponibilidadDocumento("evidencia", evidencia.Id.ToString());
+            if (!disponible)
+            {
+                // No permitir la selección y mantener el estado anterior
+                StateHasChanged();
+                return;
+            }
+        }
+        
         DocumentosSeleccionados[GetDocumentKey("evidencia", evidencia.Id.ToString())] = selected;
         await OnDocumentSelectionChanged();
         StateHasChanged();
@@ -553,6 +602,79 @@
         errorPDF = string.Empty;
         isLoadingPDF = false;
         StateHasChanged();
+    }
+
+    // Métodos para el modal de documento utilizado
+    private void CerrarModalDocumentoUtilizado()
+    {
+        showDocumentoUtilizadoModal = false;
+        motivoDocumentoNoDisponible = null;
+        fechaUtilizacionDocumento = null;
+        StateHasChanged();
+    }
+
+    private async Task MostrarDocumentosDisponibles()
+    {
+        // Recargar los documentos para mostrar solo los disponibles
+        await CargarDocumentos();
+        StateHasChanged();
+    }
+
+    private async Task<bool> VerificarDisponibilidadDocumento(string tipo, string documentoId)
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsStringAsync("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            // Verificar si ya existe un documento convertido de esta solicitud que haya sido utilizado
+            var endpoint = "";
+            switch (tipo)
+            {
+                case "obra":
+                    endpoint = $"api/solicitudascenso/verificar-disponibilidad-obra/{documentoId}";
+                    break;
+                case "certificado":
+                    endpoint = $"api/solicitudascenso/verificar-disponibilidad-certificado/{documentoId}";
+                    break;
+                case "evidencia":
+                    endpoint = $"api/solicitudascenso/verificar-disponibilidad-evidencia/{documentoId}";
+                    break;
+                default:
+                    return true;
+            }
+
+            var response = await Http.GetFromJsonAsync<EstadoDocumentoResponse>(endpoint);
+            
+            if (response != null && !response.EstaDisponible)
+            {
+                // Documento no disponible, mostrar modal informativo
+                motivoDocumentoNoDisponible = response.MotivoNoDisponible ?? "Documento ya utilizado en una solicitud aprobada";
+                fechaUtilizacionDocumento = response.FechaUtilizacion;
+                
+                showDocumentoUtilizadoModal = true;
+                StateHasChanged();
+                return false;
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al verificar disponibilidad del documento: {ex.Message}");
+            return true; // En caso de error, permitir la selección
+        }
+    }
+
+    // Clase auxiliar para deserializar la respuesta del estado del documento
+    public class EstadoDocumentoResponse
+    {
+        public bool EstaDisponible { get; set; }
+        public string? MotivoNoDisponible { get; set; }
+        public DateTime? FechaUtilizacion { get; set; }
     }
 
     public Dictionary<string, List<string>> GetSelectedDocuments()
