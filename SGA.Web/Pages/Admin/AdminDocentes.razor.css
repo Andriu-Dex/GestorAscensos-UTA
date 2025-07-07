@@ -1,0 +1,253 @@
+/* Estilos para la vista de administración de docentes */
+
+.admin-docentes {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.card-total {
+  text-align: center;
+  background-color: #e42424;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: all 0.3s ease;
+  color: white;
+  position: relative;
+}
+
+.admin-docentes .card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: all 0.3s ease;
+  color: white;
+  background-color: #8a1538;
+}
+
+.admin-docentes .card:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.admin-docentes .card-header {
+  background-color: #8a1538;
+  color: white;
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+}
+
+.admin-docentes .btn-primary {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.admin-docentes .btn-primary:hover {
+  background-color: #6d1029;
+  border-color: #6d1029;
+}
+
+.admin-docentes .btn-outline-primary {
+  color: #8a1538;
+  border-color: #8a1538;
+}
+
+.admin-docentes .btn-outline-primary:hover {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.admin-docentes .text-primary {
+  color: #8a1538 !important;
+}
+
+.admin-docentes .breadcrumb-item a {
+  color: #8a1538;
+  text-decoration: none;
+}
+
+.admin-docentes .breadcrumb-item a:hover {
+  color: #6d1029;
+}
+
+.admin-docentes .table-hover tbody tr:hover {
+  background-color: rgba(138, 21, 56, 0.05);
+}
+
+.admin-docentes .badge {
+  border-radius: 8px;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.admin-docentes .form-control:focus {
+  border-color: #8a1538;
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+.admin-docentes .form-select:focus {
+  border-color: #8a1538;
+  box-shadow: 0 0 0 0.2rem rgba(138, 21, 56, 0.25);
+}
+
+.admin-docentes .pagination .page-link {
+  color: #8a1538;
+}
+
+.admin-docentes .pagination .page-item.active .page-link {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.admin-docentes .pagination .page-link:hover {
+  color: #6d1029;
+  background-color: rgba(138, 21, 56, 0.1);
+}
+
+.admin-docentes .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.25em;
+}
+
+.admin-docentes .spinner-border.text-primary {
+  color: #8a1538 !important;
+}
+
+.admin-docentes .alert-info {
+  background-color: #f0f8ff;
+  border-color: #8a1538;
+  color: #6d1029;
+}
+
+.admin-docentes .btn-group .btn {
+  border-radius: 0;
+}
+
+.admin-docentes .btn-group .btn:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.admin-docentes .btn-group .btn:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.btn-outline-secondary {
+  background-color: #161616;
+  padding: 13px 0;
+  color: white;
+  border-radius: 6px;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+  scale: 1.04;
+  background-color: #242424;
+}
+
+.btn-outline-secondary:focus {
+  border-color: none;
+  box-shadow: none;
+}
+
+.admin-docentes .table td {
+  vertical-align: middle;
+}
+
+.admin-docentes .table th {
+  border-top: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+}
+
+.admin-docentes .stats-card {
+  border-left: 4px solid #8a1538;
+  background: linear-gradient(
+    135deg,
+    rgba(138, 21, 56, 0.1) 0%,
+    rgba(138, 21, 56, 0.05) 100%
+  );
+}
+
+.admin-docentes .text-success {
+  color: #28a745 !important;
+}
+
+.admin-docentes .text-warning {
+  color: #ffc107 !important;
+}
+
+.admin-docentes .text-danger {
+  color: #dc3545 !important;
+}
+
+.admin-docentes .text-info {
+  color: #17a2b8 !important;
+}
+
+.admin-docentes .text-secondary {
+  color: #6c757d !important;
+}
+
+.admin-docentes .text-dark {
+  color: #343a40 !important;
+}
+
+/* Estilos para la columna de solicitudes */
+.admin-docentes .solicitudes-container {
+  min-width: 120px;
+}
+
+.admin-docentes .solicitud-item {
+  margin-bottom: 0.25rem;
+}
+
+.admin-docentes .solicitud-item:last-child {
+  margin-bottom: 0;
+}
+
+.admin-docentes .solicitud-item .badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.admin-docentes .solicitud-item .badge i {
+  font-size: 0.85rem;
+}
+
+.admin-docentes .badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.admin-docentes .badge.bg-success {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.admin-docentes .badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+/* Responsive para solicitudes */
+@media (max-width: 768px) {
+  .admin-docentes .solicitudes-container {
+    min-width: 100px;
+  }
+
+  .admin-docentes .solicitud-item .badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.4rem;
+  }
+}

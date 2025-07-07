@@ -7,6 +7,8 @@ public interface IApplicationDbContext
 {
     DbSet<Usuario> Usuarios { get; set; }
     DbSet<Docente> Docentes { get; set; }
+    DbSet<Facultad> Facultades { get; set; }
+    DbSet<Departamento> Departamentos { get; set; }
     DbSet<SolicitudAscenso> SolicitudesAscenso { get; set; }
     DbSet<Documento> Documentos { get; set; }
     DbSet<LogAuditoria> LogsAuditoria { get; set; }

@@ -1,0 +1,203 @@
+@using Microsoft.AspNetCore.Components.Web
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<div class="modal fade @(mostrar ? "show" : "")" id="modalSolicitudesDocente" tabindex="-1" aria-labelledby="modalSolicitudesDocenteLabel" aria-hidden="@(!mostrar)" style="display: @(mostrar ? "block" : "none");">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalSolicitudesDocenteLabel">
+                    <i class="bi bi-clipboard-check"></i>
+                    Solicitudes del Docente
+                </h5>
+                <button type="button" class="btn-close" @onclick="Cerrar" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                @if (cargando)
+                {
+                    <div class="d-flex justify-content-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando solicitudes...</span>
+                        </div>
+                    </div>
+                }
+                else if (solicitudes != null && solicitudes.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha Solicitud</th>
+                                    <th>Desde</th>
+                                    <th>Hacia</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Respuesta</th>
+                                    <th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var solicitud in solicitudes)
+                                {
+                                    <tr>
+                                        <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <span class="badge bg-secondary">@solicitud.NivelActual</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">@solicitud.NivelSolicitado</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetEstadoBadgeClass(solicitud.Estado)">
+                                                @solicitud.Estado
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (solicitud.FechaRespuesta.HasValue)
+                                            {
+                                                @solicitud.FechaRespuesta.Value.ToString("dd/MM/yyyy")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Pendiente</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(solicitud.Observaciones))
+                                            {
+                                                <span title="@solicitud.Observaciones">
+                                                    @(solicitud.Observaciones.Length > 50 ? 
+                                                      solicitud.Observaciones.Substring(0, 50) + "..." : 
+                                                      solicitud.Observaciones)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Sin observaciones</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen de estadísticas -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-bar-chart"></i>
+                                        Resumen de Solicitudes
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3 text-center">
+                                            <h5 class="text-warning">@solicitudes.Count(s => s.Estado.ToString() == "Pendiente")</h5>
+                                            <small class="text-muted">Pendientes</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <h5 class="text-success">@solicitudes.Count(s => s.Estado.ToString() == "Aprobada")</h5>
+                                            <small class="text-muted">Aprobadas</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <h5 class="text-danger">@solicitudes.Count(s => s.Estado.ToString() == "Rechazada")</h5>
+                                            <small class="text-muted">Rechazadas</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <h5 class="text-info">@solicitudes.Count</h5>
+                                            <small class="text-muted">Total</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i>
+                        Este docente no tiene solicitudes de ascenso registradas.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Cerrar">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (mostrar)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool mostrar { get; set; } = false;
+    [Parameter] public Guid? docenteId { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+
+    private bool cargando = false;
+    private List<SolicitudDocenteModel>? solicitudes;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (mostrar && docenteId.HasValue)
+        {
+            await CargarSolicitudes();
+        }
+    }
+
+    private async Task CargarSolicitudes()
+    {
+        try
+        {
+            cargando = true;
+            solicitudes = await Http.GetFromJsonAsync<List<SolicitudDocenteModel>>($"api/admin/docentes/{docenteId}/solicitudes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar solicitudes del docente: {ex.Message}");
+            solicitudes = new List<SolicitudDocenteModel>();
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        mostrar = false;
+        solicitudes = null;
+        await OnCerrar.InvokeAsync();
+    }
+
+    private string GetEstadoBadgeClass(object estado)
+    {
+        return estado.ToString() switch
+        {
+            "Pendiente" => "bg-warning",
+            "Aprobada" => "bg-success",
+            "Rechazada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    // Modelo para las solicitudes del docente
+    public class SolicitudDocenteModel
+    {
+        public Guid Id { get; set; }
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public object Estado { get; set; } = null!;
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaRespuesta { get; set; }
+        public string? Observaciones { get; set; }
+        public string? NombreRevisor { get; set; }
+    }
+}

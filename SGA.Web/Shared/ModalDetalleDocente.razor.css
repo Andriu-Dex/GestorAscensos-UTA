@@ -1,0 +1,120 @@
+/* Estilos para el modal de detalle de docente */
+
+.modal-xl {
+  max-width: 1200px;
+}
+
+.modal-content {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  background-color: #8a1538;
+  color: white;
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.btn-close {
+  filter: brightness(0) invert(1);
+}
+
+.card {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+}
+
+.card-header h6 {
+  color: #8a1538;
+  margin: 0;
+}
+
+.badge {
+  border-radius: 6px;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.bg-primary {
+  background-color: #8a1538 !important;
+}
+
+.text-primary {
+  color: #8a1538 !important;
+}
+
+.btn-primary {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.btn-primary:hover {
+  background-color: #6d1029;
+  border-color: #6d1029;
+}
+
+.spinner-border.text-primary {
+  color: #8a1538 !important;
+}
+
+.table-sm td,
+.table-sm th {
+  padding: 0.5rem;
+  vertical-align: middle;
+}
+
+.table thead th {
+  border-top: none;
+  font-weight: 600;
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+.img-fluid {
+  max-width: 100%;
+  height: auto;
+}
+
+.rounded-circle {
+  border-radius: 50% !important;
+  border: 3px solid #8a1538;
+}
+
+@media (max-width: 768px) {
+  .modal-xl {
+    max-width: 95%;
+    margin: 0.5rem auto;
+  }
+
+  .modal-dialog {
+    margin: 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .row .col-md-6 {
+    margin-bottom: 1rem;
+  }
+}

@@ -1,0 +1,333 @@
+@using Microsoft.AspNetCore.Components.Web
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<div class="modal fade @(mostrar ? "show" : "")" id="modalDetalleDocente" tabindex="-1" aria-labelledby="modalDetalleDocenteLabel" aria-hidden="@(!mostrar)" style="display: @(mostrar ? "block" : "none");">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDetalleDocenteLabel">
+                    <i class="bi bi-person-circle"></i>
+                    Detalle del Docente
+                </h5>
+                <button type="button" class="btn-close" @onclick="Cerrar" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                @if (cargando)
+                {
+                    <div class="d-flex justify-content-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                }
+                else if (docente != null)
+                {
+                    <div class="row">
+                        <!-- Información Personal -->
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-person"></i>
+                                        Información Personal
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (!string.IsNullOrEmpty(docente.FotoPerfilBase64))
+                                    {
+                                        <div class="text-center mb-3">
+                                            <img src="data:image/jpeg;base64,@docente.FotoPerfilBase64" 
+                                                 class="img-fluid rounded-circle" 
+                                                 style="width: 120px; height: 120px; object-fit: cover;" 
+                                                 alt="Foto de perfil" />
+                                        </div>
+                                    }
+                                    <p><strong>Nombre:</strong> @docente.Nombres @docente.Apellidos</p>
+                                    <p><strong>Cédula:</strong> @docente.Cedula</p>
+                                    <p><strong>Email:</strong> @docente.Email</p>
+                                    <p><strong>Teléfono:</strong> @docente.Celular</p>
+                                    <p><strong>Facultad:</strong> @docente.Facultad</p>
+                                    <p><strong>Departamento:</strong> @docente.Departamento</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información Académica -->
+                        <div class="col-md-8">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-mortarboard"></i>
+                                        Información Académica
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Nivel Actual:</strong> 
+                                                <span class="badge bg-primary">Titular @docente.NivelActual</span>
+                                            </p>
+                                            <p><strong>Tiempo en Nivel:</strong> @docente.TiempoEnNivelAnios años</p>
+                                            <p><strong>Fecha Nombramiento:</strong> @docente.FechaNombramiento?.ToString("dd/MM/yyyy")</p>
+                                            <p><strong>Último Ascenso:</strong> @docente.FechaUltimoAscenso?.ToString("dd/MM/yyyy")</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Promedio Evaluaciones:</strong> @docente.PromedioEvaluaciones.ToString("F2")</p>
+                                            <p><strong>Horas Capacitación:</strong> @docente.HorasCapacitacion</p>
+                                            <p><strong>Obras Académicas:</strong> @docente.NumeroObrasAcademicas</p>
+                                            <p><strong>Meses Investigación:</strong> @docente.MesesInvestigacion</p>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <p><strong>Puede Ascender:</strong> 
+                                                @if (docente.PuedeAscender)
+                                                {
+                                                    <span class="badge bg-success">Sí - @docente.SiguienteNivel</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">No cumple requisitos</span>
+                                                }
+                                            </p>
+                                            <p><strong>Última Importación:</strong> @docente.FechaUltimaImportacion?.ToString("dd/MM/yyyy HH:mm")</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas de Solicitudes -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-bar-chart"></i>
+                                        Estadísticas de Solicitudes
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h5 class="text-warning">@docente.SolicitudesPendientes</h5>
+                                                <small class="text-muted">Pendientes</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h5 class="text-success">@docente.SolicitudesAprobadas</h5>
+                                                <small class="text-muted">Aprobadas</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h5 class="text-danger">@docente.SolicitudesRechazadas</h5>
+                                                <small class="text-muted">Rechazadas</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <h5 class="text-info">@(docente.SolicitudesPendientes + docente.SolicitudesAprobadas + docente.SolicitudesRechazadas)</h5>
+                                                <small class="text-muted">Total</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Solicitudes Recientes -->
+                    @if (docente.SolicitudesRecientes.Any())
+                    {
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-clock-history"></i>
+                                            Solicitudes Recientes
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Desde</th>
+                                                        <th>Hacia</th>
+                                                        <th>Estado</th>
+                                                        <th>Observaciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var solicitud in docente.SolicitudesRecientes)
+                                                    {
+                                                        <tr>
+                                                            <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                                            <td>@solicitud.NivelActual</td>
+                                                            <td>@solicitud.NivelSolicitado</td>
+                                                            <td>
+                                                                <span class="badge @GetEstadoBadgeClass(solicitud.Estado)">
+                                                                    @solicitud.Estado
+                                                                </span>
+                                                            </td>
+                                                            <td>@solicitud.Observaciones</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        No se pudo cargar la información del docente.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Cerrar">Cerrar</button>
+                @if (docente != null)
+                {
+                    <button type="button" class="btn btn-primary" @onclick="GenerarReporte">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                        Generar Reporte
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (mostrar)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool mostrar { get; set; } = false;
+    [Parameter] public Guid? docenteId { get; set; }
+    [Parameter] public EventCallback OnCerrar { get; set; }
+
+    private bool cargando = false;
+    private DocenteDetalleModel? docente;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (mostrar && docenteId.HasValue)
+        {
+            await CargarDocenteDetalle();
+        }
+    }
+
+    private async Task CargarDocenteDetalle()
+    {
+        try
+        {
+            cargando = true;
+            docente = await Http.GetFromJsonAsync<DocenteDetalleModel>($"api/admin/docentes/{docenteId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar detalle del docente: {ex.Message}");
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        mostrar = false;
+        docente = null;
+        await OnCerrar.InvokeAsync();
+    }
+
+    private async Task GenerarReporte()
+    {
+        if (docente == null) return;
+
+        try
+        {
+            var response = await Http.GetAsync($"api/admin/docentes/{docente.Id}/reporte");
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"reporte-docente-{docente.Cedula}.pdf";
+                
+                // Implementar descarga del archivo
+                Console.WriteLine($"Generando reporte para {docente.Nombres} {docente.Apellidos}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al generar reporte: {ex.Message}");
+        }
+    }
+
+    private string GetEstadoBadgeClass(object estado)
+    {
+        return estado.ToString() switch
+        {
+            "Pendiente" => "bg-warning",
+            "Aprobada" => "bg-success",
+            "Rechazada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    // Modelo para el detalle del docente
+    public class DocenteDetalleModel
+    {
+        public Guid Id { get; set; }
+        public string Cedula { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public string Apellidos { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Facultad { get; set; }
+        public string? Departamento { get; set; }
+        public int NivelActual { get; set; }
+        public DateTime FechaInicioNivelActual { get; set; }
+        public double TiempoEnNivelAnios { get; set; }
+        public string? Celular { get; set; }
+        public DateTime? FechaNombramiento { get; set; }
+        public DateTime? FechaUltimoAscenso { get; set; }
+        public double PromedioEvaluaciones { get; set; }
+        public int HorasCapacitacion { get; set; }
+        public int NumeroObrasAcademicas { get; set; }
+        public int MesesInvestigacion { get; set; }
+        public DateTime? FechaUltimaImportacion { get; set; }
+        public string? FotoPerfilBase64 { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public bool PuedeAscender { get; set; }
+        public string? SiguienteNivel { get; set; }
+        public List<SolicitudRecienteModel> SolicitudesRecientes { get; set; } = new();
+    }
+
+    public class SolicitudRecienteModel
+    {
+        public Guid Id { get; set; }
+        public string NivelActual { get; set; } = string.Empty;
+        public string NivelSolicitado { get; set; } = string.Empty;
+        public object Estado { get; set; } = null!;
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaRespuesta { get; set; }
+        public string? Observaciones { get; set; }
+    }
+}

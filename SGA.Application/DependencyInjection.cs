@@ -50,6 +50,9 @@ public static class DependencyInjection
         services.AddScoped<IConfiguracionRequisitoService, ConfiguracionRequisitoService>();
         services.AddScoped<ITituloAcademicoService, TituloAcademicoService>();
         
+        // Servicio de administración de docentes
+        services.AddScoped<IAdminDocenteService, AdminDocenteService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         
