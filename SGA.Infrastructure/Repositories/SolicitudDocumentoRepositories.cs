@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SGA.Application.DTOs.DocumentoImportacion;
 using SGA.Application.Interfaces.Repositories;
 using SGA.Domain.Entities;
 using SGA.Domain.Enums;
@@ -143,6 +144,127 @@ public class DocumentoRepository : IDocumentoRepository
         _context.Documentos.Remove(documento);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>
+    /// Obtener documentos disponibles para importación
+    /// </summary>
+    public async Task<List<Documento>> GetDocumentosImportablesAsync(Guid docenteId, FiltrosImportacionDto filtros)
+    {
+        var query = _context.Documentos
+            .Include(d => d.SolicitudAscenso)
+            .Include(d => d.Docente)
+            .Where(d => d.DocenteId == docenteId || 
+                       (d.SolicitudAscenso != null && d.SolicitudAscenso.DocenteId == docenteId));
+
+        // Log para debug
+        Console.WriteLine($"[DEBUG] Filtros recibidos: TipoDocumento='{filtros.TipoDocumento}', FechaDesde={filtros.FechaDesde}, FechaHasta={filtros.FechaHasta}, TextoBusqueda='{filtros.TextoBusqueda}', SoloImportables={filtros.SoloImportables}");
+
+        // Aplicar filtros
+        if (!string.IsNullOrEmpty(filtros.TipoDocumento))
+        {
+            if (Enum.TryParse<TipoDocumento>(filtros.TipoDocumento, out var tipoEnum))
+            {
+                Console.WriteLine($"[DEBUG] Aplicando filtro de tipo: {tipoEnum}");
+                query = query.Where(d => d.TipoDocumento == tipoEnum);
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] No se pudo parsear el tipo de documento: {filtros.TipoDocumento}");
+            }
+        }
+
+        if (filtros.FechaDesde.HasValue)
+        {
+            query = query.Where(d => d.FechaCreacion >= filtros.FechaDesde.Value);
+        }
+
+        if (filtros.FechaHasta.HasValue)
+        {
+            query = query.Where(d => d.FechaCreacion <= filtros.FechaHasta.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filtros.TextoBusqueda))
+        {
+            var textoBusqueda = filtros.TextoBusqueda.ToLower();
+            query = query.Where(d => d.NombreArchivo.ToLower().Contains(textoBusqueda));
+        }
+
+        if (filtros.SoloImportables)
+        {
+            query = query.Where(d => !d.FueUtilizadoEnSolicitudAprobada);
+        }
+
+        var resultados = await query
+            .OrderByDescending(d => d.FechaCreacion)
+            .ToListAsync();
+
+        Console.WriteLine($"[DEBUG] Documentos encontrados después de filtros: {resultados.Count}");
+        
+        return resultados;
+    }
+
+    /// <summary>
+    /// Obtener documentos no utilizados en solicitudes aprobadas
+    /// </summary>
+    public async Task<List<Documento>> GetDocumentosNoUtilizadosAsync(Guid docenteId)
+    {
+        return await _context.Documentos
+            .Include(d => d.SolicitudAscenso)
+            .Where(d => (d.DocenteId == docenteId || 
+                        (d.SolicitudAscenso != null && d.SolicitudAscenso.DocenteId == docenteId)) &&
+                       !d.FueUtilizadoEnSolicitudAprobada)
+            .OrderByDescending(d => d.FechaCreacion)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Clonar un documento existente
+    /// </summary>
+    public async Task<Documento> ClonarDocumentoAsync(Documento documentoOriginal, Guid? nuevaSolicitudId = null)
+    {
+        var documentoClonado = new Documento
+        {
+            Id = Guid.NewGuid(),
+            NombreArchivo = documentoOriginal.NombreArchivo,
+            RutaArchivo = documentoOriginal.RutaArchivo,
+            TamanoArchivo = documentoOriginal.TamanoArchivo,
+            TipoDocumento = documentoOriginal.TipoDocumento,
+            ContenidoArchivo = documentoOriginal.ContenidoArchivo,
+            ContentType = documentoOriginal.ContentType,
+            SolicitudAscensoId = nuevaSolicitudId,
+            DocenteId = documentoOriginal.DocenteId,
+            FueUtilizadoEnSolicitudAprobada = false,
+            SolicitudAprobadaId = null,
+            FechaUtilizacion = null,
+            FechaCreacion = DateTime.UtcNow,
+            FechaModificacion = DateTime.UtcNow
+        };
+
+        _context.Documentos.Add(documentoClonado);
+        await _context.SaveChangesAsync();
+        return documentoClonado;
+    }
+
+    /// <summary>
+    /// Verificar si un documento está disponible para importación
+    /// </summary>
+    public async Task<bool> EsDocumentoDisponibleParaImportacionAsync(Guid documentoId, Guid docenteId)
+    {
+        var documento = await _context.Documentos
+            .Include(d => d.SolicitudAscenso)
+            .FirstOrDefaultAsync(d => d.Id == documentoId);
+
+        if (documento == null) return false;
+
+        // Verificar que el documento pertenece al docente
+        var perteneceAlDocente = documento.DocenteId == docenteId || 
+                                (documento.SolicitudAscenso != null && documento.SolicitudAscenso.DocenteId == docenteId);
+
+        if (!perteneceAlDocente) return false;
+
+        // Verificar que no haya sido utilizado en solicitud aprobada
+        return !documento.FueUtilizadoEnSolicitudAprobada;
     }
 }
 

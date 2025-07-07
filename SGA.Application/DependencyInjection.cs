@@ -48,6 +48,9 @@ public static class DependencyInjection
         // Servicio de utilización de documentos
         services.AddScoped<IDocumentoUtilizacionService, DocumentoUtilizacionService>();
         
+        // Servicio de importación de documentos
+        services.AddScoped<IDocumentoImportacionService, DocumentoImportacionService>();
+        
         // Servicio de configuración dinámica de requisitos y títulos académicos
         services.AddScoped<IRequisitosDinamicosService, RequisitosDinamicosService>();
         services.AddScoped<IConfiguracionRequisitoService, ConfiguracionRequisitoService>();

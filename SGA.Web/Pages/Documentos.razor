@@ -12,7 +12,14 @@
 @inject IJSRuntime JSRuntime
 
 <div class="container mt-4">
-    <h3>Gestión de Documentos</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Gestión de Documentos</h3>
+        <div>
+            <button class="btn btn-success me-2" @onclick="MostrarModalImportacion">
+                <i class="bi bi-download"></i> Importar Documentos Existentes
+            </button>
+        </div>
+    </div>
     
     <!-- Componente Acordeón de Documentos -->
     <SGA.Web.Pages.Components.DocumentosAccordion 
@@ -718,6 +725,14 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- Modal de Importación de Documentos -->
+@if (showImportacionModal)
+{
+    <SGA.Web.Components.DocumentoImportacionModal 
+        OnCerrar="CerrarModalImportacion" 
+        OnDocumentosImportados="OnDocumentosImportados" />
+}
+
 @code {
     // Referencias a los componentes modales
     private ObrasAcademicasModal? obrasModal;
@@ -734,6 +749,9 @@
     private bool isLoadingCertificados = false;
     private bool showCertificadosModal = false;
     
+    // Variables para importación de documentos
+    private bool showImportacionModal = false;
+
     // Variables para evidencias de investigación
     private List<EvidenciaInvestigacionViewModel>? todasSolicitudesEvidencias;
     private bool isLoadingEvidencias = true;
@@ -1698,5 +1716,32 @@
     private async Task ActualizarEvidencias()
     {
         await LoadTodasSolicitudesEvidencias();
+    }
+
+    // Métodos para modal de importación de documentos
+    private void MostrarModalImportacion()
+    {
+        showImportacionModal = true;
+        StateHasChanged();
+    }
+
+    private async Task CerrarModalImportacion()
+    {
+        showImportacionModal = false;
+        StateHasChanged();
+    }
+
+    private async Task OnDocumentosImportados(List<Guid> documentosImportados)
+    {
+        // Recargar todas las secciones de documentos
+        await Task.WhenAll(
+            LoadTodasSolicitudesObras(),
+            LoadTodasSolicitudesCertificados(),
+            LoadTodasSolicitudesEvidencias()
+        );
+        
+        ToastService.ShowSuccess($"Se importaron {documentosImportados.Count} documentos exitosamente");
+        showImportacionModal = false;
+        StateHasChanged();
     }
 }

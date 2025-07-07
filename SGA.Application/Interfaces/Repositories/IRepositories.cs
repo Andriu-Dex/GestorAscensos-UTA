@@ -1,3 +1,4 @@
+using SGA.Application.DTOs.DocumentoImportacion;
 using SGA.Domain.Entities;
 
 namespace SGA.Application.Interfaces.Repositories;
@@ -47,6 +48,12 @@ public interface IDocumentoRepository
     Task<Documento> CreateAsync(Documento documento);
     Task<Documento> UpdateAsync(Documento documento);
     Task<bool> DeleteAsync(Guid id);
+    
+    // Métodos para importación de documentos
+    Task<List<Documento>> GetDocumentosImportablesAsync(Guid docenteId, FiltrosImportacionDto filtros);
+    Task<List<Documento>> GetDocumentosNoUtilizadosAsync(Guid docenteId);
+    Task<Documento> ClonarDocumentoAsync(Documento documentoOriginal, Guid? nuevaSolicitudId = null);
+    Task<bool> EsDocumentoDisponibleParaImportacionAsync(Guid documentoId, Guid docenteId);
 }
 
 public interface ILogAuditoriaRepository

@@ -1,0 +1,538 @@
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
+@using SGA.Web.Models
+@using SGA.Web.Shared
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject IToastService ToastService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<div class="modal fade show modal-importacion" style="display: block;" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-download"></i> Importar Documentos Existentes
+                </h5>
+                <button type="button" class="btn-close" @onclick="CerrarModal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Filtros de búsqueda -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo de Documento</label>
+                        <select class="form-select" @bind="filtros.TipoDocumento" @bind:after="OnFiltroChanged">
+                            <option value="">Todos los tipos</option>
+                            <option value="ObrasAcademicas">Obras Académicas</option>
+                            <option value="CertificadosCapacitacion">Certificados de Capacitación</option>
+                            <option value="CertificadoInvestigacion">Evidencias de Investigación</option>
+                            <option value="CertificadoTrabajo">Certificados de Trabajo</option>
+                            <option value="EvaluacionesDocentes">Evaluaciones Docentes</option>
+                            <option value="Otro">Otros</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Desde</label>
+                        <input type="date" class="form-control" @bind="filtros.FechaDesde" @bind:after="OnFiltroChanged" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Hasta</label>
+                        <input type="date" class="form-control" @bind="filtros.FechaHasta" @bind:after="OnFiltroChanged" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Buscar por nombre..." 
+                                   @bind="filtros.TextoBusqueda" @onkeypress="BuscarAlPresionarEnter" />
+                            <button class="btn btn-outline-primary" type="button" @onclick="BuscarDocumentos">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opciones adicionales -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="filtros.SoloImportables" @bind:after="OnFiltroChanged" id="soloImportables" />
+                            <label class="form-check-label" for="soloImportables">
+                                Solo mostrar documentos importables
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="LimpiarFiltros">
+                            <i class="bi bi-x-circle"></i> Limpiar Filtros
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estado de carga -->
+                @if (isLoading)
+                {
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Buscando documentos...</p>
+                    </div>
+                }
+                else if (documentosEncontrados.Any())
+                {
+                    <!-- Controles de selección -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @onchange="ToggleSeleccionarTodos" id="seleccionarTodos" />
+                                <label class="form-check-label" for="seleccionarTodos">
+                                    Seleccionar todos (@documentosImportables.Count disponibles)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-primary">@documentosSeleccionados.Count seleccionados</span>
+                        </div>
+                    </div>
+
+                    <!-- Lista de documentos -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 50px;">
+                                        <input type="checkbox" @onchange="ToggleSeleccionarTodos" />
+                                    </th>
+                                    <th>Nombre del Archivo</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha</th>
+                                    <th>Tamaño</th>
+                                    <th>Estado</th>
+                                    <th style="width: 100px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var documento in documentosEncontrados)
+                                {
+                                    <tr class="@(documento.EsImportable ? "" : "table-warning")">
+                                        <td>
+                                            @if (documento.EsImportable)
+                                            {
+                                                <input type="checkbox" 
+                                                       @onchange="@((ChangeEventArgs e) => ToggleSeleccionDocumento(documento.Id, e))" 
+                                                       checked="@documentosSeleccionados.Contains(documento.Id)" />
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-lock text-muted" title="@documento.MotivoNoImportable"></i>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                                <span>@documento.Nombre</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">@documento.TipoDocumentoTexto</span>
+                                        </td>
+                                        <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                        <td>@documento.TamanoFormateado</td>
+                                        <td>
+                                            @if (documento.EsImportable)
+                                            {
+                                                <span class="badge bg-success">Disponible</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning" title="@documento.MotivoNoImportable">
+                                                    No disponible
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="@(() => VisualizarDocumento(documento.Id))"
+                                                    title="Visualizar documento">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else if (!isLoading && documentosEncontrados.Count == 0)
+                {
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-1 text-muted"></i>
+                        <h5 class="mt-3 text-muted">No se encontraron documentos</h5>
+                        <p class="text-muted">Intenta ajustar los filtros de búsqueda o crear nuevos documentos.</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CerrarModal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" @onclick="ImportarSeleccionados" 
+                        disabled="@(!documentosSeleccionados.Any() || isImporting)">
+                    @if (isImporting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Importando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-download"></i>
+                        <span>Importar Seleccionados (@documentosSeleccionados.Count)</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backdrop -->
+<div class="modal-backdrop fade show"></div>
+
+<!-- Modal de visualización de PDF -->
+<PdfViewerModal IsVisible="mostrarPdfViewer"
+                PdfUrl="@pdfUrl"
+                FileName="@nombreDocumentoVisualizando"
+                IsLoading="@cargandoPdf"
+                ErrorMessage="@errorPdf"
+                OnClose="CerrarPdfViewer"
+                OnDownload="DescargarDocumento"
+                OnRetry="ReintentarCargaPdf" />
+
+@code {
+    [Parameter] public EventCallback OnCerrar { get; set; }
+    [Parameter] public EventCallback<List<Guid>> OnDocumentosImportados { get; set; }
+
+    private SGA.Web.Models.FiltrosImportacionDto filtros = new();
+    private List<SGA.Web.Models.DocumentoImportacionDto> documentosEncontrados = new();
+    private HashSet<Guid> documentosSeleccionados = new();
+    private bool isLoading = false;
+    private bool isImporting = false;
+
+    // Variables para el modal de visualización de PDF
+    private bool mostrarPdfViewer = false;
+    private string? pdfUrl = null;
+    private string? nombreDocumentoVisualizando = null;
+    private bool cargandoPdf = false;
+    private string? errorPdf = null;
+    private Guid documentoVisualizandoId = Guid.Empty;
+
+    private List<SGA.Web.Models.DocumentoImportacionDto> documentosImportables => 
+        documentosEncontrados.Where(d => d.EsImportable).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await BuscarDocumentos();
+    }
+
+    private async Task BuscarDocumentos()
+    {
+        try
+        {
+            isLoading = true;
+            documentosSeleccionados.Clear();
+
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var queryParams = new List<string>();
+            
+            if (!string.IsNullOrEmpty(filtros.TipoDocumento))
+                queryParams.Add($"tipoDocumento={filtros.TipoDocumento}");
+            
+            if (filtros.FechaDesde.HasValue)
+                queryParams.Add($"fechaDesde={filtros.FechaDesde.Value:yyyy-MM-dd}");
+            
+            if (filtros.FechaHasta.HasValue)
+                queryParams.Add($"fechaHasta={filtros.FechaHasta.Value:yyyy-MM-dd}");
+            
+            if (!string.IsNullOrWhiteSpace(filtros.TextoBusqueda))
+                queryParams.Add($"textoBusqueda={Uri.EscapeDataString(filtros.TextoBusqueda)}");
+            
+            queryParams.Add($"soloImportables={filtros.SoloImportables}");
+
+            var query = string.Join("&", queryParams);
+            var url = $"api/documentos-importacion/buscar?{query}";
+
+            var response = await Http.GetFromJsonAsync<List<SGA.Web.Models.DocumentoImportacionDto>>(url);
+            documentosEncontrados = response ?? new List<SGA.Web.Models.DocumentoImportacionDto>();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al buscar documentos: {ex.Message}");
+            documentosEncontrados = new List<SGA.Web.Models.DocumentoImportacionDto>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ImportarSeleccionados()
+    {
+        if (!documentosSeleccionados.Any())
+        {
+            ToastService.ShowWarning("Debe seleccionar al menos un documento para importar");
+            return;
+        }
+
+        try
+        {
+            isImporting = true;
+
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await Http.PostAsJsonAsync("api/documentos-importacion/importar", documentosSeleccionados.ToList());
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var resultado = await response.Content.ReadFromJsonAsync<ImportarDocumentosResponseDto>();
+                
+                if (resultado?.Exitoso == true)
+                {
+                    ToastService.ShowSuccess(resultado.Mensaje);
+                    await OnDocumentosImportados.InvokeAsync(resultado.DocumentosImportados);
+                    await CerrarModal();
+                }
+                else
+                {
+                    ToastService.ShowError(resultado?.Mensaje ?? "Error al importar documentos");
+                    
+                    // Mostrar errores específicos si los hay
+                    if (resultado?.Errores != null && resultado.Errores.Any())
+                    {
+                        foreach (var error in resultado.Errores)
+                        {
+                            ToastService.ShowWarning(error);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error del servidor: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al importar documentos: {ex.Message}");
+        }
+        finally
+        {
+            isImporting = false;
+        }
+    }
+
+    private void ToggleSeleccionDocumento(Guid documentoId, ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+                documentosSeleccionados.Add(documentoId);
+            else
+                documentosSeleccionados.Remove(documentoId);
+        }
+    }
+
+    private void ToggleSeleccionarTodos(ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                foreach (var doc in documentosImportables)
+                {
+                    documentosSeleccionados.Add(doc.Id);
+                }
+            }
+            else
+            {
+                documentosSeleccionados.Clear();
+            }
+        }
+    }
+
+    private async Task BuscarAlPresionarEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await BuscarDocumentos();
+        }
+    }
+
+    private async Task OnFiltroChanged()
+    {
+        // Ejecutar búsqueda cuando cambie cualquier filtro
+        await BuscarDocumentos();
+        StateHasChanged();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        filtros = new FiltrosImportacionDto();
+        // Ejecutar búsqueda después de limpiar filtros
+        await BuscarDocumentos();
+        StateHasChanged();
+    }
+
+    private async Task VisualizarDocumento(Guid documentoId)
+    {
+        try
+        {
+            var documento = documentosEncontrados.FirstOrDefault(d => d.Id == documentoId);
+            if (documento == null)
+            {
+                ToastService.ShowError("Documento no encontrado");
+                return;
+            }
+
+            // Configurar variables para el modal
+            documentoVisualizandoId = documentoId;
+            nombreDocumentoVisualizando = documento.Nombre;
+            mostrarPdfViewer = true;
+            cargandoPdf = true;
+            errorPdf = null;
+            pdfUrl = null;
+            StateHasChanged();
+
+            // Obtener el contenido del documento
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            Http.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var url = $"api/documentos-importacion/{documentoId}/descargar";
+            Console.WriteLine($"Intentando descargar documento desde: {url}");
+            
+            var response = await Http.GetAsync(url);
+            Console.WriteLine($"Respuesta del servidor: {response.StatusCode}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                Console.WriteLine($"Contenido recibido: {contenido.Length} bytes");
+                
+                if (contenido.Length == 0)
+                {
+                    cargandoPdf = false;
+                    errorPdf = "El documento está vacío o no se pudo cargar";
+                    Console.WriteLine($"Documento vacío recibido para ID: {documentoId}");
+                }
+                else
+                {
+                    var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/pdf";
+                    
+                    // Crear URL temporal para visualizar el PDF
+                    var base64 = Convert.ToBase64String(contenido);
+                    pdfUrl = $"data:{contentType};base64,{base64}";
+                    cargandoPdf = false;
+                    errorPdf = null;
+                    Console.WriteLine($"PDF cargado exitosamente para documento: {documentoId}");
+                }
+            }
+            else
+            {
+                cargandoPdf = false;
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorPdf = $"Error al cargar el documento: {response.StatusCode}";
+                Console.WriteLine($"Error al descargar documento {documentoId}: {response.StatusCode} - {errorContent}");
+                
+                // Mostrar error más específico según el código de estado
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    errorPdf = "El documento no se encuentra disponible";
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    errorPdf = "No tiene permisos para ver este documento";
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    errorPdf = "Acceso denegado al documento";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            cargandoPdf = false;
+            errorPdf = $"Error inesperado al visualizar documento: {ex.Message}";
+            Console.WriteLine($"Error inesperado al visualizar documento {documentoId}: {ex.Message}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task CerrarModal()
+    {
+        await OnCerrar.InvokeAsync();
+    }
+
+    private Task CerrarPdfViewer()
+    {
+        mostrarPdfViewer = false;
+        pdfUrl = null;
+        nombreDocumentoVisualizando = null;
+        cargandoPdf = false;
+        errorPdf = null;
+        documentoVisualizandoId = Guid.Empty;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task DescargarDocumento()
+    {
+        if (documentoVisualizandoId != Guid.Empty)
+        {
+            try
+            {
+                var token = await LocalStorage.GetItemAsync<string>("authToken");
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                var url = $"api/documentos-importacion/{documentoVisualizandoId}/descargar";
+                var response = await Http.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var contenido = await response.Content.ReadAsByteArrayAsync();
+                    var fileName = nombreDocumentoVisualizando ?? "documento.pdf";
+                    
+                    // Descargar archivo usando la función correcta
+                    await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, contenido);
+                    ToastService.ShowSuccess($"Documento {fileName} descargado exitosamente");
+                }
+                else
+                {
+                    ToastService.ShowError("Error al descargar el documento");
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastService.ShowError($"Error al descargar documento: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ReintentarCargaPdf()
+    {
+        if (documentoVisualizandoId != Guid.Empty)
+        {
+            await VisualizarDocumento(documentoVisualizandoId);
+        }
+    }
+}

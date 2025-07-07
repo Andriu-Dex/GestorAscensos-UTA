@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configurar logging para suprimir logs no críticos
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Warning);
+builder.Logging.SetMinimumLevel(LogLevel.Debug); // Cambiar a Debug temporalmente
 
 // Cargar archivo .env si existe
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
