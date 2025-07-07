@@ -18,6 +18,84 @@
 
 <link href="css/index-modal.css" rel="stylesheet" />
 
+<script>
+window.addKeyboardShortcuts = function(dotNetHelper) {
+    console.log("addKeyboardShortcuts llamado con dotNetHelper:", dotNetHelper);
+    
+    // Remover listener anterior si existe
+    if (window.keydownHandler) {
+        document.removeEventListener("keydown", window.keydownHandler);
+        console.log("Listener anterior removido");
+    }
+    
+    // Crear nueva función handler
+    window.keydownHandler = function(event) {
+        // Log más detallado para debug
+        console.log("Evento keydown detectado:", {
+            key: event.key,
+            code: event.code,
+            keyCode: event.keyCode,
+            altKey: event.altKey,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            target: event.target.tagName
+        });
+        
+        // Verificar si se presionó Alt+0 (múltiples verificaciones para compatibilidad)
+        if (event.altKey && (event.key === "0" || event.code === "Digit0" || event.keyCode === 48)) {
+            event.preventDefault(); // Prevenir el comportamiento por defecto
+            event.stopPropagation(); // Detener la propagación del evento
+            
+            console.log("🎯 Alt+0 detectado! Ejecutando reinicio visual...");
+            
+            try {
+                if (dotNetHelper && typeof dotNetHelper.invokeMethodAsync === 'function') {
+                    dotNetHelper.invokeMethodAsync("ReiniciarCardsVisualmente")
+                        .then(() => {
+                            console.log("✅ Método C# ReiniciarCardsVisualmente ejecutado exitosamente");
+                        })
+                        .catch((error) => {
+                            console.error("❌ Error al ejecutar método C#:", error);
+                        });
+                } else {
+                    console.error("❌ dotNetHelper no está disponible o no tiene invokeMethodAsync");
+                    console.log("dotNetHelper:", dotNetHelper);
+                }
+            } catch (error) {
+                console.error("❌ Error al invocar método C#:", error);
+            }
+        }
+    };
+    
+    // Agregar el nuevo listener
+    document.addEventListener("keydown", window.keydownHandler, { capture: true });
+    console.log("✅ Event listener para Alt+0 registrado correctamente");
+    
+    // Función de prueba para verificar que el shortcut funciona
+    window.testShortcut = function() {
+        console.log("🧪 Probando shortcut manualmente...");
+        try {
+            if (dotNetHelper && typeof dotNetHelper.invokeMethodAsync === 'function') {
+                dotNetHelper.invokeMethodAsync("ReiniciarCardsVisualmente")
+                    .then(() => {
+                        console.log("✅ Método C# invocado exitosamente desde test");
+                    })
+                    .catch((error) => {
+                        console.error("❌ Error al invocar método C# desde test:", error);
+                    });
+            } else {
+                console.error("❌ dotNetHelper no está disponible en test");
+            }
+        } catch (error) {
+            console.error("❌ Error al invocar método C# desde test:", error);
+        }
+    };
+    
+    // Mensaje de confirmación
+    console.log("🚀 Sistema de shortcuts inicializado. Presiona Alt+0 para reiniciar cards o ejecuta window.testShortcut() para probar.");
+};
+</script>
+
 <div class="container dashboard-container">
     <div class="welcome-section animate__animated animate__fadeInDown">
         <div class="welcome-header">
@@ -233,15 +311,15 @@
                                 </div>
                                 <div class="card-body">
                                     <h6 class="indicator-title">Obras académicas</h6>
-                                    <div class="indicator-value">@(indicadores?.NumeroObras ?? 0)</div>
+                                    <div class="indicator-value">@(reinicioVisual ? 0 : (indicadores?.NumeroObras ?? 0))</div>
                                     <div class="text-muted">obras</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas())%;"></div>
+                                             style="width: @(reinicioVisual ? 0 : GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas()))%;"></div>
                                     </div>
                                     <div class="indicator-meta">
                                         <span>Meta: @GetObrasRequeridas() obras</span>
-                                        <span>@GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas())%</span>
+                                        <span>@(reinicioVisual ? 0 : GetPercentage((indicadores?.NumeroObras ?? 0), GetObrasRequeridas()))%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(2)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -258,7 +336,7 @@
                                 <div class="card-body">
                                     <h6 class="indicator-title">Evaluación docente</h6>
                                     <div class="indicator-value">
-                                        <div class="evaluation-score">@string.Format("{0:F2}", indicadores?.PuntajeEvaluacion ?? 0)%</div>
+                                        <div class="evaluation-score">@(reinicioVisual ? "0.00" : string.Format("{0:F2}", indicadores?.PuntajeEvaluacion ?? 0))%</div>
                                         @if (indicadores?.PeriodosEvaluados > 0)
                                         {
                                             <div class="evaluation-detail text-muted">
@@ -287,12 +365,12 @@
                                         </div>
                                     }
                                     <div class="indicator-progress">
-                                        <div class="indicator-progress-bar @GetEvaluationColorClass(indicadores?.PuntajeEvaluacion ?? 0)" 
-                                             style="width: @(indicadores?.PuntajeEvaluacion ?? 0)%;"></div>
+                                        <div class="indicator-progress-bar @(reinicioVisual ? "" : GetEvaluationColorClass(indicadores?.PuntajeEvaluacion ?? 0))" 
+                                             style="width: @(reinicioVisual ? 0 : (indicadores?.PuntajeEvaluacion ?? 0))%;"></div>
                                     </div>
                                     <div class="indicator-meta">
                                         <span>Meta: @GetEvaluacionRequerida()%</span>
-                                        <span>@string.Format("{0:F2}", indicadores?.PuntajeEvaluacion ?? 0)%</span>
+                                        <span>@(reinicioVisual ? "0.00" : string.Format("{0:F2}", indicadores?.PuntajeEvaluacion ?? 0))%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(3)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -308,15 +386,15 @@
                                 </div>
                                 <div class="card-body">
                                     <h6 class="indicator-title">Horas de capacitación</h6>
-                                    <div class="indicator-value">@(indicadores?.HorasCapacitacion ?? 0)</div>
+                                    <div class="indicator-value">@(reinicioVisual ? 0 : (indicadores?.HorasCapacitacion ?? 0))</div>
                                     <div class="text-muted">horas</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida())%;"></div>
+                                             style="width: @(reinicioVisual ? 0 : GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida()))%;"></div>
                                     </div>
                                     <div class="indicator-meta">
                                         <span>Meta: @GetCapacitacionRequerida() horas</span>
-                                        <span>@GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida())%</span>
+                                        <span>@(reinicioVisual ? 0 : GetPercentage((indicadores?.HorasCapacitacion ?? 0), GetCapacitacionRequerida()))%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(4)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -331,15 +409,15 @@
                                 </div>
                                 <div class="card-body">
                                     <h6 class="indicator-title">Tiempo en investigación</h6>
-                                    <div class="indicator-value">@(indicadores?.TiempoInvestigacion ?? 0)</div>
+                                    <div class="indicator-value">@(reinicioVisual ? 0 : (indicadores?.TiempoInvestigacion ?? 0))</div>
                                     <div class="text-muted">meses</div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar" 
-                                             style="width: @GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida())%;"></div>
+                                             style="width: @(reinicioVisual ? 0 : GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida()))%;"></div>
                                     </div>
                                     <div class="indicator-meta">
                                         <span>Meta: @GetInvestigacionRequerida() meses</span>
-                                        <span>@GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida())%</span>
+                                        <span>@(reinicioVisual ? 0 : GetPercentage((indicadores?.TiempoInvestigacion ?? 0), GetInvestigacionRequerida()))%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(5)">
                                         <i class="bi bi-arrow-repeat"></i> Importar
@@ -692,7 +770,10 @@
     private bool mostrarModalRequisitos = false;
     private bool cargandoRequisitosModal = false;
     private bool guardandoCambios = false;
-    private ConfiguracionRequisitoDto? configuracionRequisitos = null;    protected override async Task OnInitializedAsync()
+    private ConfiguracionRequisitoDto? configuracionRequisitos = null;
+    
+    // Variables para el reinicio visual de las cards
+    private bool reinicioVisual = false;    protected override async Task OnInitializedAsync()
     {
         try
         {
@@ -742,9 +823,36 @@
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !isLoading)
+        if (firstRender)
         {
-            await JSRuntime.InvokeVoidAsync("initializeAnimations");
+            try
+            {
+                // Esperar un poco para que el DOM esté completamente cargado
+                await Task.Delay(100);
+                
+                await JSRuntime.InvokeVoidAsync("initializeAnimations");
+                await JSRuntime.InvokeVoidAsync("addKeyboardShortcuts", DotNetObjectReference.Create(this));
+                Console.WriteLine("Shortcuts de teclado inicializados correctamente");
+                
+                // Verificar que el shortcut funciona
+                await JSRuntime.InvokeVoidAsync("eval", "console.log('Verificando shortcut: presiona Alt+0 para probar')");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al inicializar shortcuts: {ex.Message}");
+                
+                // Intentar nuevamente después de un delay más largo
+                await Task.Delay(1000);
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("addKeyboardShortcuts", DotNetObjectReference.Create(this));
+                    Console.WriteLine("Shortcuts de teclado inicializados en segundo intento");
+                }
+                catch (Exception ex2)
+                {
+                    Console.WriteLine($"Error en segundo intento: {ex2.Message}");
+                }
+            }
         }
     }
     
@@ -796,6 +904,8 @@
             if (response.IsSuccessStatusCode)
             {
                 indicadores = await response.Content.ReadFromJsonAsync<IndicadoresModel>();
+                // Resetear el reinicio visual cuando se cargan nuevos datos
+                reinicioVisual = false;
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -890,6 +1000,9 @@
                 await LoadIndicadores();
                 await LoadRequisitos();
                 
+                // Resetear el reinicio visual cuando se actualizan los datos
+                reinicioVisual = false;
+                
                 // Recalcular tiempo detallado para actualizar la barra de progreso
                 CalcularTiempoDetallado();
                 
@@ -967,6 +1080,9 @@
                     // Para todos los tipos de indicadores, actualizar los datos completos
                     await LoadIndicadores();
                     await LoadRequisitos();
+                    
+                    // Resetear el reinicio visual cuando se importan nuevos datos
+                    reinicioVisual = false;
                     
                     // Si es tiempo en rol, recalcular tiempo detallado
                     if (tipo == 1)
@@ -1395,5 +1511,17 @@
     public void Dispose()
     {
         DetenerTimer();
+    }
+    
+    /// <summary>
+    /// Método público para reiniciar visualmente las cards a 0 mediante el atajo Alt+0
+    /// Establece todas las cards en cero visualmente
+    /// </summary>
+    [JSInvokable]
+    public void ReiniciarCardsVisualmente()
+    {
+        Console.WriteLine("ReiniciarCardsVisualmente ejecutado - estableciendo reinicioVisual = true");
+        reinicioVisual = true;
+        StateHasChanged();
     }
 }
