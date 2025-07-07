@@ -85,7 +85,6 @@ public class SolicitudService : ISolicitudService
         // Si hay documentos seleccionados por tipo, convertirlos a documentos genéricos
         if (request.DocumentosSeleccionados != null && request.DocumentosSeleccionados.Any())
         {
-            Console.WriteLine($"[SolicitudService] Convirtiendo {request.DocumentosSeleccionados.Count} tipos de documentos seleccionados");
             var documentosConvertidos = await _documentoConversionService.ConvertirYCrearDocumentosAsync(request.DocumentosSeleccionados);
             documentosIds.AddRange(documentosConvertidos);
         }
@@ -93,13 +92,11 @@ public class SolicitudService : ISolicitudService
         // También incluir documentos genéricos si están presentes (legacy)
         if (request.DocumentosIds != null && request.DocumentosIds.Any())
         {
-            Console.WriteLine($"[SolicitudService] Agregando {request.DocumentosIds.Count} documentos genéricos");
             documentosIds.AddRange(request.DocumentosIds);
         }
         
         if (documentosIds.Any())
         {
-            Console.WriteLine($"[SolicitudService] Creando solicitud {solicitud.Id} con {documentosIds.Count} documentos totales");
             await AsociarDocumentosASolicitudAsync(solicitud.Id, documentosIds);
             
             // Recargar la solicitud desde la base de datos para asegurar que los documentos están disponibles
@@ -107,12 +104,7 @@ public class SolicitudService : ISolicitudService
             if (solicitudRecargada != null)
             {
                 solicitud = solicitudRecargada;
-                Console.WriteLine($"[SolicitudService] Solicitud recargada con {solicitud.Documentos?.Count ?? 0} documentos desde navegación");
             }
-        }
-        else
-        {
-            Console.WriteLine($"[SolicitudService] Creando solicitud {solicitud.Id} sin documentos asociados");
         }
 
         await _auditoriaService.RegistrarAccionAsync("CREAR_SOLICITUD", 
@@ -160,24 +152,16 @@ public class SolicitudService : ISolicitudService
 
     public async Task<SolicitudAscensoDto?> GetSolicitudByIdAsync(Guid solicitudId)
     {
-        Console.WriteLine($"[SolicitudService] Buscando solicitud: {solicitudId}");
-        
         var solicitud = await _solicitudRepository.GetByIdAsync(solicitudId);
         if (solicitud == null) 
         {
-            Console.WriteLine($"[SolicitudService] Solicitud {solicitudId} no encontrada");
             return null;
         }
 
-        Console.WriteLine($"[SolicitudService] Solicitud encontrada: {solicitud.Id}");
-        Console.WriteLine($"[SolicitudService] Documentos desde navegación: {solicitud.Documentos?.Count ?? 0}");
-        
         // Cargar documentos directamente para asegurar completitud
         var documentosDirectos = await _documentoRepository.GetBySolicitudIdAsync(solicitudId);
-        Console.WriteLine($"[SolicitudService] Documentos desde consulta directa: {documentosDirectos.Count}");
         
         var dto = await ConvertToDto(solicitud);
-        Console.WriteLine($"[SolicitudService] DTO final con {dto.Documentos.Count} documentos");
         
         return dto;
     }
@@ -309,13 +293,9 @@ public class SolicitudService : ISolicitudService
         var documentosEntity = await _documentoRepository.GetBySolicitudIdAsync(solicitud.Id);
         var documentos = new List<DocumentoDto>();
         
-        Console.WriteLine($"ConvertToDto: Solicitud {solicitud.Id} - Documentos desde navegación: {solicitud.Documentos?.Count ?? 0}");
-        Console.WriteLine($"ConvertToDto: Solicitud {solicitud.Id} - Documentos desde consulta directa: {documentosEntity.Count}");
-        
         // Usar los documentos de la consulta directa
         foreach (var doc in documentosEntity)
         {
-            Console.WriteLine($"  - Documento: {doc.Id}, Nombre: {doc.NombreArchivo}, SolicitudId: {doc.SolicitudAscensoId}");
             documentos.Add(new DocumentoDto
             {
                 Id = doc.Id,
@@ -326,8 +306,6 @@ public class SolicitudService : ISolicitudService
                 FechaCreacion = doc.FechaCreacion
             });
         }
-        
-        Console.WriteLine($"ConvertToDto: Total documentos convertidos: {documentos.Count}");
         
         return new SolicitudAscensoDto
         {
@@ -356,18 +334,13 @@ public class SolicitudService : ISolicitudService
 
     private async Task AsociarDocumentosASolicitudAsync(Guid solicitudId, List<Guid> documentosIds)
     {
-        Console.WriteLine($"[SolicitudService] Asociando {documentosIds.Count} documentos a solicitud {solicitudId}");
         var documentosAsociados = 0;
         
         foreach (var documentoId in documentosIds)
         {
-            Console.WriteLine($"[SolicitudService] Procesando documento {documentoId}");
             var documento = await _documentoRepository.GetByIdAsync(documentoId);
             if (documento != null)
             {
-                Console.WriteLine($"[SolicitudService] Documento encontrado: {documento.NombreArchivo}");
-                Console.WriteLine($"[SolicitudService] SolicitudAscensoId actual: {documento.SolicitudAscensoId}");
-                
                 // Verificar que el documento no esté ya asociado a otra solicitud
                 if (!documento.SolicitudAscensoId.HasValue || documento.SolicitudAscensoId == solicitudId)
                 {
@@ -375,24 +348,12 @@ public class SolicitudService : ISolicitudService
                     documento.SolicitudAscensoId = solicitudId;
                     await _documentoRepository.UpdateAsync(documento);
                     documentosAsociados++;
-                    Console.WriteLine($"[SolicitudService] Documento {documentoId} asociado exitosamente a solicitud {solicitudId}");
                 }
-                else
-                {
-                    Console.WriteLine($"[SolicitudService] Documento {documentoId} ya está asociado a otra solicitud: {documento.SolicitudAscensoId}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"[SolicitudService] Documento {documentoId} no encontrado en base de datos");
             }
         }
         
-        Console.WriteLine($"[SolicitudService] Asociados {documentosAsociados} de {documentosIds.Count} documentos a la solicitud {solicitudId}");
-        
         // Verificar que los documentos se asociaron correctamente
         var documentosVerificacion = await _documentoRepository.GetBySolicitudIdAsync(solicitudId);
-        Console.WriteLine($"[SolicitudService] Verificación: {documentosVerificacion.Count} documentos encontrados para solicitud {solicitudId}");
     }
 
     public async Task<bool> ReenviarSolicitudAsync(Guid solicitudId, Guid docenteId)
@@ -445,9 +406,8 @@ public class SolicitudService : ISolicitudService
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error al reenviar solicitud {solicitudId}: {ex.Message}");
             return false;
         }
     }
@@ -524,9 +484,8 @@ public class SolicitudService : ISolicitudService
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error al reenviar solicitud con documentos {solicitudId}: {ex.Message}");
             return false;
         }
     }

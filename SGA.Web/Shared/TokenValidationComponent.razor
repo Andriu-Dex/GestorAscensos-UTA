@@ -20,18 +20,11 @@
     {
         _apiAuthStateProvider = AuthStateProvider as ApiAuthenticationStateProvider;
         
-        Console.WriteLine("[TOKEN VALIDATION] Iniciando TokenValidationComponent");
-        
         // Solo iniciar la validación si el usuario está autenticado
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            Console.WriteLine("[TOKEN VALIDATION] Usuario autenticado, iniciando validación");
             StartTokenValidation();
-        }
-        else
-        {
-            Console.WriteLine("[TOKEN VALIDATION] Usuario no autenticado, no iniciando validación");
         }
 
         // Suscribirse a cambios de estado de autenticación
@@ -43,15 +36,12 @@
         // Verificar el token cada 15 segundos (más frecuente para mejor detección)
         _tokenCheckTimer = new Timer(async _ => await CheckTokenValidity(), 
             null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
-        
-        Console.WriteLine("[TOKEN VALIDATION] Timer de validación iniciado");
     }
 
     private void StopTokenValidation()
     {
         _tokenCheckTimer?.Dispose();
         _tokenCheckTimer = null;
-        Console.WriteLine("[TOKEN VALIDATION] Timer de validación detenido");
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -79,11 +69,8 @@
         {
             var token = await LocalStorage.GetItemAsync<string>("authToken");
             
-            Console.WriteLine($"[TOKEN VALIDATION] Verificando token: {!string.IsNullOrWhiteSpace(token)}");
-            
             if (string.IsNullOrWhiteSpace(token))
             {
-                Console.WriteLine("[TOKEN VALIDATION] Token no encontrado, manejando expiración");
                 await HandleTokenExpiration();
                 return;
             }
@@ -91,13 +78,12 @@
             // Verificar si el token ha expirado usando validación local
             if (IsTokenExpired(token))
             {
-                Console.WriteLine("[TOKEN VALIDATION] Token expirado detectado en verificación periódica");
                 await HandleTokenExpiration();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[TOKEN VALIDATION] Error verificando token: {ex.Message}");
+            // Silenciar errores de validación
         }
         finally
         {
@@ -150,9 +136,8 @@
             
             return false;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[TOKEN VALIDATION] Error verificando expiración: {ex.Message}");
             return true;
         }
     }
@@ -161,7 +146,6 @@
     {
         try
         {
-            Console.WriteLine("[TOKEN VALIDATION] Manejando expiración de token desde componente");
             
             // Parar la validación para evitar bucles
             StopTokenValidation();
@@ -173,12 +157,6 @@
                 var authState = await AuthStateProvider.GetAuthenticationStateAsync();
                 if (authState.User.Identity?.IsAuthenticated == true)
                 {
-                    Console.WriteLine("[TOKEN VALIDATION] Claims disponibles:");
-                    foreach (var claim in authState.User.Claims)
-                    {
-                        Console.WriteLine($"[TOKEN VALIDATION] Claim: {claim.Type} = {claim.Value}");
-                    }
-                    
                     // Buscar el nombre real del usuario con prioridad específica
                     // Primero buscar los claims estándar de nombres que ahora incluimos en el token
                     var nombreClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName) ??     // GivenName estándar (más común)
@@ -195,7 +173,6 @@
                         // Si el nombre contiene espacios, tomar solo el primer nombre
                         var nombreCompleto = nombreClaim.Value.Trim();
                         userName = nombreCompleto.Split(' ')[0];
-                        Console.WriteLine($"[TOKEN VALIDATION] Nombre obtenido del claim '{nombreClaim.Type}': {userName}");
                     }
                     else
                     {
@@ -207,7 +184,6 @@
                         if (emailClaim != null && !string.IsNullOrWhiteSpace(emailClaim.Value))
                         {
                             var emailPart = emailClaim.Value.Split('@')[0];
-                            Console.WriteLine($"[TOKEN VALIDATION] Procesando email parte: {emailPart}");
                             
                             // Si el email tiene un patrón como "nombre.apellido" usar solo el nombre
                             if (emailPart.Contains('.'))

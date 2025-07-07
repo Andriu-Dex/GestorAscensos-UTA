@@ -26,8 +26,6 @@ public class DocumentoConversionService
     {
         var documentosCreados = new List<Guid>();
 
-        Console.WriteLine($"[DocumentoConversion] Iniciando conversión de documentos");
-
         // Procesar obras académicas
         if (documentosSeleccionados.ContainsKey("obras"))
         {
@@ -39,7 +37,6 @@ public class DocumentoConversionService
                     if (documento != null)
                     {
                         documentosCreados.Add(documento.Id);
-                        Console.WriteLine($"[DocumentoConversion] Obra {obraId} convertida a documento {documento.Id}");
                     }
                 }
             }
@@ -56,7 +53,6 @@ public class DocumentoConversionService
                     if (documento != null)
                     {
                         documentosCreados.Add(documento.Id);
-                        Console.WriteLine($"[DocumentoConversion] Certificado {certId} convertido a documento {documento.Id}");
                     }
                 }
             }
@@ -73,13 +69,11 @@ public class DocumentoConversionService
                     if (documento != null)
                     {
                         documentosCreados.Add(documento.Id);
-                        Console.WriteLine($"[DocumentoConversion] Evidencia {evidenciaId} convertida a documento {documento.Id}");
                     }
                 }
             }
         }
 
-        Console.WriteLine($"[DocumentoConversion] Conversión completada: {documentosCreados.Count} documentos creados");
         return documentosCreados;
     }
 
@@ -87,15 +81,12 @@ public class DocumentoConversionService
     {
         try
         {
-            Console.WriteLine($"[DocumentoConversion] Convirtiendo solicitud de obra académica {solicitudId}");
-            
             // Buscar la solicitud de obra académica aprobada
             var solicitud = await _context.SolicitudesObrasAcademicas
                 .FirstOrDefaultAsync(s => s.Id == solicitudId && s.Estado == "Aprobada");
                 
             if (solicitud == null)
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de obra académica {solicitudId} no encontrada o no aprobada");
                 return null;
             }
             
@@ -106,28 +97,24 @@ public class DocumentoConversionService
             if (solicitud.ArchivoContenido != null && solicitud.ArchivoContenido.Length > 0)
             {
                 // Usar archivo de BD (migración completa)
-                Console.WriteLine($"[DocumentoConversion] Usando archivo desde BD para solicitud {solicitudId}");
                 contenidoArchivo = solicitud.ArchivoContenido;
                 tamanoArchivo = solicitud.ArchivoTamano ?? contenidoArchivo.Length;
             }
             else if (!string.IsNullOrEmpty(solicitud.ArchivoRuta))
             {
                 // Fallback a archivo físico (compatibilidad)
-                Console.WriteLine($"[DocumentoConversion] Usando archivo físico para solicitud {solicitudId}: {solicitud.ArchivoRuta}");
                 try
                 {
                     contenidoArchivo = await File.ReadAllBytesAsync(solicitud.ArchivoRuta);
                     tamanoArchivo = contenidoArchivo.Length;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.WriteLine($"[DocumentoConversion] Error al leer archivo físico {solicitud.ArchivoRuta}: {ex.Message}");
                     return null;
                 }
             }
             else
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de obra académica {solicitudId} no tiene archivo en BD ni ruta física");
                 return null;
             }
             
@@ -142,16 +129,12 @@ public class DocumentoConversionService
                 DocenteId = solicitud.DocenteId
             };
 
-            Console.WriteLine($"[DocumentoConversion] Creando documento: {documento.NombreArchivo}, Tamaño: {documento.TamanoArchivo}");
             var resultado = await _documentoRepository.CreateAsync(documento);
-            Console.WriteLine($"[DocumentoConversion] Documento creado con ID: {resultado.Id}");
             
             return resultado;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DocumentoConversion] Error convirtiendo solicitud de obra {solicitudId}: {ex.Message}");
-            Console.WriteLine($"[DocumentoConversion] StackTrace: {ex.StackTrace}");
             return null;
         }
     }
@@ -160,22 +143,18 @@ public class DocumentoConversionService
     {
         try
         {
-            Console.WriteLine($"[DocumentoConversion] Convirtiendo certificado de capacitación {certificadoId}");
-            
             // Buscar la solicitud de certificado de capacitación aprobada
             var solicitudCertificado = await _context.SolicitudesCertificadosCapacitacion
                 .FirstOrDefaultAsync(c => c.Id == certificadoId && c.Estado == "Aprobada");
                 
             if (solicitudCertificado == null)
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de certificado {certificadoId} no encontrada o no aprobada");
                 return null;
             }
             
             // Verificar que tenga archivo
             if (solicitudCertificado.ArchivoContenido == null || solicitudCertificado.ArchivoContenido.Length == 0)
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de certificado {certificadoId} no tiene archivo adjunto");
                 return null;
             }
             
@@ -190,16 +169,12 @@ public class DocumentoConversionService
                 DocenteId = solicitudCertificado.DocenteId // Asignar el DocenteId del certificado
             };
 
-            Console.WriteLine($"[DocumentoConversion] Creando documento certificado: {documento.NombreArchivo}, Tamaño: {documento.TamanoArchivo}");
             var resultado = await _documentoRepository.CreateAsync(documento);
-            Console.WriteLine($"[DocumentoConversion] Documento certificado creado con ID: {resultado.Id}");
             
             return resultado;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DocumentoConversion] Error convirtiendo certificado {certificadoId}: {ex.Message}");
-            Console.WriteLine($"[DocumentoConversion] StackTrace: {ex.StackTrace}");
             return null;
         }
     }
@@ -208,7 +183,6 @@ public class DocumentoConversionService
     {
         try
         {
-            Console.WriteLine($"[DocumentoConversion] Convirtiendo evidencia de investigación {evidenciaId}");
             
             // Buscar la solicitud de evidencia de investigación aprobada
             var solicitudEvidencia = await _context.SolicitudesEvidenciasInvestigacion
@@ -216,14 +190,12 @@ public class DocumentoConversionService
                 
             if (solicitudEvidencia == null)
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de evidencia {evidenciaId} no encontrada o no aprobada");
                 return null;
             }
             
             // Verificar que tenga archivo
             if (solicitudEvidencia.ArchivoContenido == null || solicitudEvidencia.ArchivoContenido.Length == 0)
             {
-                Console.WriteLine($"[DocumentoConversion] Solicitud de evidencia {evidenciaId} no tiene archivo adjunto");
                 return null;
             }
             
@@ -238,16 +210,12 @@ public class DocumentoConversionService
                 DocenteId = solicitudEvidencia.DocenteId // Asignar el DocenteId de la evidencia
             };
 
-            Console.WriteLine($"[DocumentoConversion] Creando documento evidencia: {documento.NombreArchivo}, Tamaño: {documento.TamanoArchivo}");
             var resultado = await _documentoRepository.CreateAsync(documento);
-            Console.WriteLine($"[DocumentoConversion] Documento evidencia creado con ID: {resultado.Id}");
             
             return resultado;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DocumentoConversion] Error convirtiendo evidencia {evidenciaId}: {ex.Message}");
-            Console.WriteLine($"[DocumentoConversion] StackTrace: {ex.StackTrace}");
             return null;
         }
     }

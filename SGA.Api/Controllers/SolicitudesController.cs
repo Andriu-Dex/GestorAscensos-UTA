@@ -64,15 +64,12 @@ public class SolicitudesController : ControllerBase
             if (docente == null)
                 return NotFound("Docente no encontrado");
 
-            Console.WriteLine($"Cargando solicitudes para docente: {docente.Id} - {email}");
             var solicitudes = await _solicitudService.GetSolicitudesByDocenteAsync(docente.Id);
-            Console.WriteLine($"Solicitudes encontradas: {solicitudes.Count}");
             
             return Ok(solicitudes);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error en GetMisSolicitudes: {ex}");
             return StatusCode(500, new { message = ex.Message });
         }
     }
@@ -97,17 +94,12 @@ public class SolicitudesController : ControllerBase
     {
         try
         {
-            Console.WriteLine($"Solicitando detalles de solicitud: {id}");
-            
             var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
             if (solicitud == null)
             {
-                Console.WriteLine($"Solicitud {id} no encontrada");
                 return NotFound("Solicitud no encontrada");
             }
 
-            Console.WriteLine($"Solicitud {id} encontrada con {solicitud.Documentos?.Count ?? 0} documentos");
-            
             // Verificar permisos: solo el docente propietario o administrador pueden ver la solicitud
             var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
             if (userRole != "Administrador")
@@ -122,7 +114,6 @@ public class SolicitudesController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al obtener solicitud {id}: {ex.Message}");
             return StatusCode(500, new { message = ex.Message });
         }
     }
@@ -234,12 +225,9 @@ public class SolicitudesController : ControllerBase
     {
         try
         {
-            Console.WriteLine($"[SolicitudesController] GetDocumentosSolicitud llamado para solicitud: {id}");
-            
             var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
             if (solicitud == null)
             {
-                Console.WriteLine($"[SolicitudesController] Solicitud {id} no encontrada");
                 return NotFound("Solicitud no encontrada");
             }
 
@@ -251,23 +239,14 @@ public class SolicitudesController : ControllerBase
                 var docente = await _docenteService.GetDocenteByEmailAsync(email!);
                 if (docente == null || docente.Id != solicitud.DocenteId)
                 {
-                    Console.WriteLine($"[SolicitudesController] Acceso denegado para docente {docente?.Id} a solicitud {id}");
                     return Forbid();
                 }
             }
 
-            Console.WriteLine($"[SolicitudesController] Retornando {solicitud.Documentos.Count} documentos para solicitud {id}");
-            foreach (var doc in solicitud.Documentos)
-            {
-                Console.WriteLine($"  - Documento: {doc.Id}, Nombre: {doc.NombreArchivo}, Tipo: {doc.TipoDocumento}");
-            }
-            
             return Ok(solicitud.Documentos);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SolicitudesController] Error en GetDocumentosSolicitud: {ex.Message}");
-            Console.WriteLine($"[SolicitudesController] StackTrace: {ex.StackTrace}");
             return StatusCode(500, new { message = ex.Message });
         }
     }
@@ -344,7 +323,6 @@ public class SolicitudesController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SolicitudesController] Error al reenviar solicitud con documentos: {ex.Message}");
             return StatusCode(500, new { message = ex.Message });
         }
     }
@@ -354,8 +332,6 @@ public class SolicitudesController : ControllerBase
     {
         try
         {
-            Console.WriteLine($"[DEBUG] Iniciando depuración de documentos para solicitud: {id}");
-            
             // Verificar si la solicitud existe
             var solicitud = await _solicitudService.GetSolicitudByIdAsync(id);
             if (solicitud == null)
@@ -384,14 +360,11 @@ public class SolicitudesController : ControllerBase
                 }) ?? Enumerable.Empty<object>(),
                 Timestamp = DateTime.Now
             };
-
-            Console.WriteLine($"[DEBUG] Info: {System.Text.Json.JsonSerializer.Serialize(debugInfo)}");
             
             return Ok(debugInfo);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DEBUG] Error: {ex.Message}");
             return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
         }
     }
