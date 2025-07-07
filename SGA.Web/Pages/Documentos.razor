@@ -1355,12 +1355,22 @@
             
             if (response.IsSuccessStatusCode)
             {
+                // Eliminar inmediatamente de la lista local para actualizar la UI
+                if (todasSolicitudesCertificados != null)
+                {
+                    todasSolicitudesCertificados.RemoveAll(c => c.Id == certificadoIdParaEliminar);
+                    StateHasChanged(); // Forzar actualización de la UI
+                }
+                
                 ToastService.ShowSuccess("Certificado eliminado correctamente");
+                
+                // Recargar la lista desde el servidor para asegurar consistencia
                 await LoadTodasSolicitudesCertificados();
             }
             else
             {
-                ToastService.ShowError("Error al eliminar el certificado");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al eliminar el certificado: {errorContent}");
             }
         }
         catch (Exception ex)
@@ -1400,12 +1410,22 @@
             
             if (response.IsSuccessStatusCode)
             {
+                // Eliminar inmediatamente de la lista local para actualizar la UI
+                if (todasSolicitudesEvidencias != null)
+                {
+                    todasSolicitudesEvidencias.RemoveAll(e => e.Id == evidenciaIdParaEliminar);
+                    StateHasChanged(); // Forzar actualización de la UI
+                }
+                
                 ToastService.ShowSuccess("Evidencia eliminada correctamente");
+                
+                // Recargar la lista desde el servidor para asegurar consistencia
                 await LoadTodasSolicitudesEvidencias();
             }
             else
             {
-                ToastService.ShowError("Error al eliminar la evidencia");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                ToastService.ShowError($"Error al eliminar la evidencia: {errorContent}");
             }
         }
         catch (Exception ex)

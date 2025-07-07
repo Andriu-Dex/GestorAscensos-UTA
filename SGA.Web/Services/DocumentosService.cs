@@ -49,7 +49,10 @@ namespace SGA.Web.Services
             try
             {
                 await SetAuthorizationHeader();
-                var response = await _http.GetFromJsonAsync<ResponseObrasAcademicasDto>("api/obraacademicas/mis-solicitudes");
+                
+                // Agregar timestamp para evitar caché
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var response = await _http.GetFromJsonAsync<ResponseObrasAcademicasDto>($"api/obraacademicas/mis-solicitudes?t={timestamp}");
                 return response?.Exitoso == true ? response.Obras : null;
             }
             catch (Exception ex)
@@ -100,7 +103,10 @@ namespace SGA.Web.Services
             try
             {
                 await SetAuthorizationHeader();
-                var response = await _http.GetAsync("api/certificados-capacitacion/mis-solicitudes");
+                
+                // Agregar timestamp para evitar caché
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var response = await _http.GetAsync($"api/certificados-capacitacion/mis-solicitudes?t={timestamp}");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -259,7 +265,10 @@ namespace SGA.Web.Services
             try
             {
                 await SetAuthorizationHeader();
-                var response = await _http.GetAsync("api/evidencias-investigacion/mis-evidencias");
+                
+                // Agregar timestamp para evitar caché
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var response = await _http.GetAsync($"api/evidencias-investigacion/mis-evidencias?t={timestamp}");
                 
                 if (response.IsSuccessStatusCode)
                 {
