@@ -17,12 +17,17 @@
                     <i class="bi bi-clipboard-check"></i> 
                     Gestión de Solicitudes de Ascenso
                 </h3>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="/admin">Panel Admin</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Solicitudes</li>
-                    </ol>
-                </nav>
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn" style="background-color: #8a1538; border-color: #8a1538; color: white;" @onclick="ActualizarSolicitudes">
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                    </button>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="/admin">Panel Admin</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Solicitudes</li>
+                        </ol>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
@@ -188,6 +193,13 @@
                                                     <i class="bi bi-x-circle"></i>
                                                 </button>
                                             }
+                                            @if (solicitud.Estado == "Rechazada" && !string.IsNullOrWhiteSpace(solicitud.MotivoRechazo))
+                                            {
+                                                <button @onclick="() => VerMotivoRechazo(solicitud.Id)" 
+                                                        class="btn btn-outline-warning" title="Ver motivo de rechazo">
+                                                    <i class="bi bi-exclamation-triangle"></i>
+                                                </button>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -337,6 +349,60 @@
     </div>
 }
 
+<!-- Modal para mostrar motivo de rechazo -->
+@if (showMotivoRechazoModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle"></i> Motivo de Rechazo
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalMotivoRechazo"></button>
+                </div>
+                <div class="modal-body">
+                    @if (solicitudParaModal != null)
+                    {
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información de la Solicitud
+                            </h6>
+                            <p class="mb-2">
+                                <strong>Docente:</strong> @solicitudParaModal.DocenteNombres @solicitudParaModal.DocenteApellidos
+                            </p>
+                            <p class="mb-2">
+                                <strong>Cédula:</strong> @solicitudParaModal.DocenteCedula
+                            </p>
+                            <p class="mb-2">
+                                <strong>Nivel solicitado:</strong> 
+                                <span class="badge bg-primary">@solicitudParaModal.NivelSolicitado</span>
+                            </p>
+                            <p class="mb-0">
+                                <strong>Fecha de solicitud:</strong> @solicitudParaModal.FechaSolicitud.ToString("dd/MM/yyyy")
+                            </p>
+                        </div>
+                        
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-x-circle"></i> Motivo del Rechazo
+                            </h6>
+                            <div class="mt-2">
+                                <p class="mb-0" style="white-space: pre-wrap;">@solicitudParaModal.MotivoRechazo</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalMotivoRechazo">
+                        <i class="bi bi-x-lg"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- Modal para mostrar lista de documentos -->
 @if (showDocumentosModal)
 {
@@ -373,9 +439,7 @@
                                             <small class="text-muted">
                                                 Tipo: @documento.TipoDocumento | 
                                                 Tamaño: @FormatFileSize(documento.TamanoArchivo) |
-                                                Fecha: <EcuadorDateDisplay Date="documento.FechaCreacion" 
-                                                                      Format="datetime" 
-                                                                      CssClass="fw-bold" />
+                                                Fecha: @documento.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
                                             </small>
                                         </div>
                                     </div>
@@ -507,6 +571,7 @@
     // Variables para modales de aprobación/rechazo
     private bool showApprovalModal = false;
     private bool showRejectionModal = false;
+    private bool showMotivoRechazoModal = false;
     private bool isProcessing = false;
     private SolicitudAscensoDto? solicitudParaModal = null;
     private string observacionesAprobacion = "";
@@ -583,6 +648,12 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ActualizarSolicitudes()
+    {
+        await CargarSolicitudes();
+        ShowToast("Éxito", "Solicitudes actualizadas", ToastType.Success);
     }
 
     private void FiltrarPorEstado(ChangeEventArgs e)
@@ -772,10 +843,29 @@
         }
     }
 
+    private void VerMotivoRechazo(Guid solicitudId)
+    {
+        var solicitud = solicitudes.FirstOrDefault(s => s.Id == solicitudId);
+        if (solicitud != null)
+        {
+            solicitudParaModal = solicitud;
+            showMotivoRechazoModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarModalMotivoRechazo()
+    {
+        showMotivoRechazoModal = false;
+        solicitudParaModal = null;
+        StateHasChanged();
+    }
+
     private void CerrarModal()
     {
         showApprovalModal = false;
         showRejectionModal = false;
+        showMotivoRechazoModal = false;
         solicitudParaModal = null;
         observacionesAprobacion = "";
         motivoRechazo = "";

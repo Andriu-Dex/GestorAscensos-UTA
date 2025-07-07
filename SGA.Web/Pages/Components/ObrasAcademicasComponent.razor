@@ -10,7 +10,10 @@
 <!-- Contenido sin encabezado de tarjeta -->
 <div class="px-3 py-2">
     <!-- Botón Agregar Obras -->
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn" style="background-color: #8a1538; border-color: #8a1538; color: white;" @onclick="ActualizarObras">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
         <button class="btn btn-success" @onclick="() => ShowObrasModal()">
             <i class="bi bi-plus-circle"></i> Agregar Obras
         </button>
@@ -213,6 +216,7 @@
     [Parameter] public EventCallback<ObraAcademicaDetalleDto> OnAgregarComentario { get; set; }
     [Parameter] public EventCallback<Guid> OnReenviarSolicitud { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarSolicitud { get; set; }
+    [Parameter] public EventCallback OnActualizarObras { get; set; }
 
     // Variables para filtrado
     private string selectedEstado = "";
@@ -283,6 +287,11 @@
     private void EliminarSolicitud(Guid solicitudId)
     {
         OnEliminarSolicitud.InvokeAsync(solicitudId);
+    }
+
+    private async Task ActualizarObras()
+    {
+        await OnActualizarObras.InvokeAsync();
     }
 
     // Métodos para verificar permisos según estado

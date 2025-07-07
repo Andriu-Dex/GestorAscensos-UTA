@@ -19,7 +19,11 @@
                     <i class="bi bi-journal-check"></i> 
                     Panel de Administración - Obras Académicas
                 </h3>
-                <div class="btn-group" role="group">
+                <div class="d-flex gap-2">
+                    <button class="btn" style="background-color: #8a1538; border-color: #8a1538; color: white;" @onclick="ActualizarSolicitudes">
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                    </button>
+                    <div class="btn-group" role="group">
                     <button type="button" class="btn @(filtroEstado == "Pendiente" ? "btn-primary" : "btn-outline-primary")" 
                             @onclick="FiltrarPendientes">
                         <i class="bi bi-hourglass-split"></i> Pendientes (@cantidadPendientes)
@@ -36,6 +40,7 @@
                             @onclick="FiltrarTodas">
                         <i class="bi bi-list"></i> Todas (@totalSolicitudes)
                     </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -349,6 +354,12 @@
         {
             isLoading = false;
         }
+    }
+
+    private async Task ActualizarSolicitudes()
+    {
+        await CargarSolicitudes();
+        ToastService.ShowSuccess("Solicitudes actualizadas");
     }
 
     private void ActualizarContadores()

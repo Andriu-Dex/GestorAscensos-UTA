@@ -16,6 +16,7 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
     [Parameter] public bool isLoadingEvidenciasParam { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
     [Parameter] public EventCallback<Guid> OnReenviarEvidencia { get; set; }
+    [Parameter] public EventCallback OnActualizarEvidencias { get; set; }
 
     private List<EvidenciaInvestigacionViewModel>? evidencias;
     private List<EvidenciaInvestigacionViewModel>? evidenciasFiltradas;
@@ -425,15 +426,18 @@ public partial class EvidenciasInvestigacionComponent : ComponentBase
         StateHasChanged();
     }
 
-    private async Task EliminarEvidencia(EvidenciaInvestigacionViewModel evidencia)
+    private async Task ActualizarEvidencias()
     {
-        // Invocar el callback del componente padre para mostrar el modal de confirmación
-        await OnEliminarEvidencia.InvokeAsync(evidencia.Id);
+        await OnActualizarEvidencias.InvokeAsync();
+    }
+
+    private async Task EliminarEvidencia(Guid evidenciaId)
+    {
+        await OnEliminarEvidencia.InvokeAsync(evidenciaId);
     }
 
     private async Task ReenviarEvidencia(Guid evidenciaId)
     {
-        // Invocar el callback del componente padre para manejar el reenvío
         await OnReenviarEvidencia.InvokeAsync(evidenciaId);
     }
 

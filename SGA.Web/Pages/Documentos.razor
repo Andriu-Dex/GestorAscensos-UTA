@@ -41,7 +41,10 @@
         OnReenviarCertificado="MostrarConfirmarReenvioCertificado"
         OnEvidenciasChanged="@(async () => await InvokeAsync(StateHasChanged))"
         OnEliminarEvidencia="MostrarConfirmarEliminarEvidencia"
-        OnReenviarEvidencia="MostrarConfirmarReenvioEvidencia" />
+        OnReenviarEvidencia="MostrarConfirmarReenvioEvidencia"
+        OnActualizarObras="ActualizarObras"
+        OnActualizarCertificados="ActualizarCertificados"
+        OnActualizarEvidencias="ActualizarEvidencias" />
 </div>
 
 <!-- Modales principales -->
@@ -1680,5 +1683,20 @@
         }
 
         return string.Empty;
+    }
+
+    private async Task ActualizarObras()
+    {
+        await LoadTodasSolicitudesObras();
+    }
+
+    private async Task ActualizarCertificados()
+    {
+        await LoadTodasSolicitudesCertificados();
+    }
+
+    private async Task ActualizarEvidencias()
+    {
+        await LoadTodasSolicitudesEvidencias();
     }
 }

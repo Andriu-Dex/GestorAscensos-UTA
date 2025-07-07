@@ -35,7 +35,8 @@
                         OnMostrarMotivoRechazo="OnMostrarMotivoRechazo"
                         OnAgregarComentario="OnAgregarComentario"
                         OnReenviarSolicitud="OnReenviarSolicitud"
-                        OnEliminarSolicitud="OnEliminarSolicitud" />
+                        OnEliminarSolicitud="OnEliminarSolicitud"
+                        OnActualizarObras="OnActualizarObras" />
                 }
             </div>
         </div>
@@ -73,7 +74,8 @@
                         OnReemplazarArchivoCertificado="OnReemplazarArchivoCertificado"
                         OnVerMotivoRechazoCertificado="OnVerMotivoRechazoCertificado"
                         OnEliminarCertificado="OnEliminarCertificado"
-                        OnReenviarCertificado="OnReenviarCertificado" />
+                        OnReenviarCertificado="OnReenviarCertificado"
+                        OnActualizarCertificados="OnActualizarCertificados" />
                 }
             </div>
         </div>
@@ -107,7 +109,8 @@
                         isLoadingEvidenciasParam="IsLoadingEvidencias"
                         OnEvidenciasChanged="OnEvidenciasChanged"
                         OnEliminarEvidencia="OnEliminarEvidencia"
-                        OnReenviarEvidencia="OnReenviarEvidencia" />
+                        OnReenviarEvidencia="OnReenviarEvidencia"
+                        OnActualizarEvidencias="OnActualizarEvidencias" />
                 }
             </div>
         </div>
@@ -152,6 +155,9 @@
     [Parameter] public EventCallback OnEvidenciasChanged { get; set; }
     [Parameter] public EventCallback<Guid> OnEliminarEvidencia { get; set; }
     [Parameter] public EventCallback<Guid> OnReenviarEvidencia { get; set; }
+    [Parameter] public EventCallback OnActualizarObras { get; set; }
+    [Parameter] public EventCallback OnActualizarCertificados { get; set; }
+    [Parameter] public EventCallback OnActualizarEvidencias { get; set; }
 
     private Dictionary<string, bool> collapsedSections = new()
     {

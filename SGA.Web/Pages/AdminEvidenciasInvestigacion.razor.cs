@@ -122,6 +122,12 @@ namespace SGA.Web.Pages
             }
         }
 
+        private async Task ActualizarEvidencias()
+        {
+            await CargarEvidencias();
+            ToastService.ShowSuccess("Evidencias actualizadas");
+        }
+
         private void ActualizarContadores()
         {
             if (evidencias == null) return;
