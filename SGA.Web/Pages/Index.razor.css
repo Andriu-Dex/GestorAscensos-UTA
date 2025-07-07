@@ -229,6 +229,10 @@
   border-radius: 2px;
 }
 
+.btn-primary {
+  color: white;
+}
+
 .btn-outline-primary {
   border-color: var(--uta-primary);
   transition: all 0.3s ease;

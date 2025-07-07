@@ -407,6 +407,19 @@
 
     private string FormatearFechaCompleta(DateTime fecha)
     {
-        return fecha.ToString("dd 'de' MMMM 'de' yyyy 'a las' HH:mm", new System.Globalization.CultureInfo("es-ES"));
+        // Zona horaria de Ecuador (UTC-5)
+        var ecuadorTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "Ecuador Standard Time",
+            TimeSpan.FromHours(-5),
+            "Ecuador Standard Time",
+            "ECT"
+        );
+        
+        // Convertir fecha UTC a hora de Ecuador
+        var fechaEcuador = fecha.Kind == DateTimeKind.Utc 
+            ? TimeZoneInfo.ConvertTimeFromUtc(fecha, ecuadorTimeZone)
+            : fecha;
+        
+        return fechaEcuador.ToString("dd 'de' MMMM 'de' yyyy 'a las' HH:mm", new System.Globalization.CultureInfo("es-ES"));
     }
 }

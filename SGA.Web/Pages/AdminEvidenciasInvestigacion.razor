@@ -8,6 +8,7 @@
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text
+@using SGA.Web.Shared
 @using SGA.Web.Models
 
 <div class="container-fluid mt-4">
@@ -164,7 +165,11 @@
                         <tr>
                             <td>
                                 <strong>@evidencia.DocenteCedula</strong>
-                                <br><small class="text-muted">@evidencia.FechaCreacion.ToString("dd/MM/yyyy")</small>
+                                <br><small class="text-muted">
+                                    <EcuadorDateDisplay Date="evidencia.FechaCreacion" 
+                                                       Format="date" 
+                                                       CssClass="text-muted" />
+                                </small>
                             </td>
                             <td>
                                 <span class="badge bg-light text-dark">@evidencia.TipoEvidencia</span>
@@ -198,7 +203,11 @@
                                 @if (evidencia.Estado != "Pendiente" && evidencia.FechaRevision.HasValue)
                                 {
                                     <div class="mt-1">
-                                        <small class="text-muted">@evidencia.FechaRevision.Value.ToString("dd/MM/yyyy")</small>
+                                        <small class="text-muted">
+                                            <EcuadorDateDisplay Date="evidencia.FechaRevision.Value" 
+                                                               Format="date" 
+                                                               CssClass="text-muted" />
+                                        </small>
                                     </div>
                                 }
                             </td>
@@ -439,7 +448,9 @@
                         <div class="text-muted mt-3">
                             <small>
                                 <i class="bi bi-calendar-check me-1"></i>
-                                Fecha de revisión: @evidenciaRechazada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                                Fecha de revisión: <EcuadorDateDisplay Date="evidenciaRechazada.FechaRevision.Value" 
+                                                                   Format="datetime" 
+                                                                   CssClass="fw-bold" />
                             </small>
                         </div>
                     }
@@ -482,7 +493,9 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>Evidencia ID:</strong> @evidenciaEnRevision.Id.ToString()[..8]...<br>
-                                <strong>Fecha:</strong> @evidenciaEnRevision.FechaCreacion.ToString("dd/MM/yyyy")
+                                <strong>Fecha:</strong> <EcuadorDateDisplay Date="evidenciaEnRevision.FechaCreacion" 
+                                                                       Format="date" 
+                                                                       CssClass="fw-bold" />
                             </div>
                         </div>
                         <div class="mt-2">
@@ -618,7 +631,9 @@
                             <i class="bi bi-search me-2"></i>Reporte de Evidencia de Investigación
                         </div>
                         <div class="detail-report-subtitle">
-                            Evidencia ID: @evidenciaSeleccionada.Id.ToString()[..8]... | Fecha de Solicitud: @evidenciaSeleccionada.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                            Evidencia ID: @evidenciaSeleccionada.Id.ToString()[..8]... | Fecha de Solicitud: <EcuadorDateDisplay Date="evidenciaSeleccionada.FechaCreacion" 
+                                                                                                                    Format="datetime" 
+                                                                                                                    CssClass="fw-bold" />
                         </div>
                     </div>
 
@@ -755,7 +770,9 @@
                                     </span>
                                     @if (evidenciaSeleccionada.Estado != "Pendiente" && evidenciaSeleccionada.FechaRevision.HasValue)
                                     {
-                                        <br><small class="text-muted">Revisado el @evidenciaSeleccionada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                        <br><small class="text-muted">Revisado el <EcuadorDateDisplay Date="evidenciaSeleccionada.FechaRevision.Value" 
+                                                                                                        Format="datetime" 
+                                                                                                        CssClass="text-muted" /></small>
                                     }
                                 </div>
                             </div>
@@ -766,7 +783,9 @@
                                     <i class="bi bi-calendar-plus me-2"></i>Fecha de Solicitud
                                 </div>
                                 <div class="detail-info-value">
-                                    @evidenciaSeleccionada.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                    <EcuadorDateDisplay Date="evidenciaSeleccionada.FechaCreacion" 
+                                                       Format="datetime" 
+                                                       CssClass="fw-bold" />
                                 </div>
                             </div>
                         </div>

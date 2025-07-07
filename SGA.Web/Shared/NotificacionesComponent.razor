@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using SGA.Web.Services
+@using Microsoft.JSInterop
 @inject NotificacionesService NotificacionesService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IJSRuntime JSRuntime
@@ -327,7 +328,20 @@
 
     private string FormatearTiempo(DateTime fecha)
     {
-        var diferencia = DateTime.Now - fecha;
+        // Zona horaria de Ecuador (UTC-5)
+        var ecuadorTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "Ecuador Standard Time",
+            TimeSpan.FromHours(-5),
+            "Ecuador Standard Time",
+            "ECT"
+        );
+        
+        // Convertir fecha UTC a hora de Ecuador para cálculo correcto
+        var fechaEcuador = fecha.Kind == DateTimeKind.Utc 
+            ? TimeZoneInfo.ConvertTimeFromUtc(fecha, ecuadorTimeZone)
+            : fecha;
+        var ahoraEcuador = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ecuadorTimeZone);
+        var diferencia = ahoraEcuador - fechaEcuador;
         
         if (diferencia.TotalMinutes < 1)
             return "Ahora";
@@ -338,7 +352,7 @@
         else if (diferencia.TotalDays < 7)
             return $"{(int)diferencia.TotalDays}d";
         else
-            return fecha.ToString("dd/MM");
+            return fechaEcuador.ToString("dd/MM");
     }
 
     public async ValueTask DisposeAsync()

@@ -1,4 +1,5 @@
 @using SGA.Web.Models
+@using SGA.Web.Shared
 @using Microsoft.JSInterop
 @using Blazored.Toast.Services
 @inject HttpClient Http
@@ -49,7 +50,11 @@
                                 <td>@documento.Nombre</td>
                                 <td>@documento.TipoDocumento</td>
                                 <td>@(documento.Descripcion ?? "Sin descripción")</td>
-                                <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <EcuadorDateDisplay Date="documento.FechaCreacion" 
+                                                       Format="date" 
+                                                       CssClass="text-muted" />
+                                </td>
                                 <td>
                                     @if (documento.Verificado)
                                     {

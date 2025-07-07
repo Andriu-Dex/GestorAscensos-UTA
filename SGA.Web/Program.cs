@@ -25,6 +25,7 @@ builder.Services.AddBlazoredToast();
 // Add custom services
 builder.Services.AddScoped<SGA.Web.Services.ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<IApiUrlService, ApiUrlService>();
+builder.Services.AddScoped<EcuadorDateService>(); // Servicio para manejo de fechas en zona horaria Ecuador
 builder.Services.AddScoped<AuthorizationMessageHandler>();
 
 // Configure HttpClient with authorization handler

@@ -1,0 +1,20 @@
+@* Componente para mostrar fechas formateadas en zona horaria de Ecuador *@
+
+@if (!string.IsNullOrEmpty(_formattedDate))
+{
+    <span class="@CssClass" title="@GetTooltipText()">@_formattedDate</span>
+}
+else if (!string.IsNullOrEmpty(DefaultText))
+{
+    <span class="@CssClass text-muted">@DefaultText</span>
+}
+
+@code {
+    private string GetTooltipText()
+    {
+        if (!Date.HasValue) return "";
+        
+        // Mostrar fecha completa como tooltip
+        return $"Fecha completa: {_formattedDate} (Hora de Ecuador - UTC-5)";
+    }
+}

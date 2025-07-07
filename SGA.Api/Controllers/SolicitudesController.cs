@@ -290,7 +290,7 @@ public class SolicitudesController : ControllerBase
     }
 
     [HttpPut("{id}/reenviar-con-documentos")]
-    public async Task<ActionResult> ReenviarSolicitudConDocumentos(Guid id, [FromBody] Dictionary<string, List<string>> documentosSeleccionados)
+    public async Task<ActionResult> ReenviarSolicitudConDocumentos(Guid id, [FromBody] ReenviarConDocumentosRequest request)
     {
         try
         {
@@ -314,7 +314,7 @@ public class SolicitudesController : ControllerBase
             if (solicitud.Estado != "Rechazada")
                 return BadRequest("Solo se pueden reenviar solicitudes rechazadas");
 
-            var resultado = await _solicitudService.ReenviarSolicitudConDocumentosAsync(id, docente.Id, documentosSeleccionados);
+            var resultado = await _solicitudService.ReenviarSolicitudConDocumentosAsync(id, docente.Id, request.DocumentosSeleccionados);
             
             if (!resultado)
                 return BadRequest("No se pudo reenviar la solicitud con los documentos seleccionados");

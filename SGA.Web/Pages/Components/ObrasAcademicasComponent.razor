@@ -1,4 +1,7 @@
 @using SGA.Web.Models
+@using SGA.Web.Shared
+@using Blazored.Toast.Services
+@using Microsoft.JSInterop
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
@@ -78,7 +81,11 @@
                             <tr>
                                 <td>@solicitud.Titulo</td>
                                 <td>@solicitud.TipoObra</td>
-                                <td>@solicitud.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <EcuadorDateDisplay Date="solicitud.FechaCreacion" 
+                                                       Format="date" 
+                                                       CssClass="text-muted" />
+                                </td>
                                 <td>
                                     @if (solicitud.Estado == "Pendiente")
                                     {

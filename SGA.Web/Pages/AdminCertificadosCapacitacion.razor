@@ -6,6 +6,7 @@
 @using Blazored.Toast.Services
 @using System.Net.Http.Json
 @using SGA.Web.Services
+@using SGA.Web.Shared
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
@@ -203,7 +204,11 @@
                                 @if (solicitud.Estado != "Pendiente" && solicitud.FechaRevision.HasValue)
                                 {
                                     <div class="mt-1">
-                                        <small class="text-muted">@solicitud.FechaRevision.Value.ToString("dd/MM/yyyy")</small>
+                                        <small class="text-muted">
+                                            <EcuadorDateDisplay Date="solicitud.FechaRevision.Value" 
+                                                               Format="date" 
+                                                               CssClass="text-muted" />
+                                        </small>
                                     </div>
                                 }
                             </td>
@@ -283,7 +288,9 @@
                             <i class="bi bi-award me-2"></i>Reporte de Certificado de Capacitación
                         </div>
                         <div class="detail-report-subtitle">
-                            Solicitud ID: @solicitudSeleccionada.Id.ToString()[..8]... | Fecha de Solicitud: @solicitudSeleccionada.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                            Solicitud ID: @solicitudSeleccionada.Id.ToString()[..8]... | Fecha de Solicitud: <EcuadorDateDisplay Date="solicitudSeleccionada.FechaCreacion" 
+                                                                                                                  Format="datetime" 
+                                                                                                                  CssClass="fw-bold" />
                         </div>
                     </div>
 
@@ -317,7 +324,9 @@
                                     {
                                         <div class="mt-2">
                                             <small class="text-muted">
-                                                Revisado: @solicitudSeleccionada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                                                Revisado: <EcuadorDateDisplay Date="solicitudSeleccionada.FechaRevision.Value" 
+                                                         Format="datetime" 
+                                                         CssClass="fw-bold" />
                                             </small>
                                         </div>
                                     }
@@ -551,7 +560,9 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>Solicitud ID:</strong> @solicitudParaRechazo.Id.ToString()[..8]...<br>
-                                <strong>Fecha:</strong> @solicitudParaRechazo.FechaCreacion.ToString("dd/MM/yyyy")
+                                <strong>Fecha:</strong> <EcuadorDateDisplay Date="solicitudParaRechazo.FechaCreacion" 
+                                                                       Format="date" 
+                                                                       CssClass="fw-bold" />
                             </div>
                         </div>
                         <div class="mt-2">
@@ -729,7 +740,9 @@
                         <div class="text-muted mt-3">
                             <small>
                                 <i class="bi bi-calendar-check me-1"></i>
-                                Fecha de revisión: @certificadoRechazado.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                                Fecha de revisión: <EcuadorDateDisplay Date="certificadoRechazado.FechaRevision.Value" 
+                                                                   Format="datetime" 
+                                                                   CssClass="fw-bold" />
                             </small>
                         </div>
                     }

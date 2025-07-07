@@ -57,6 +57,11 @@ public class ProcesarSolicitudRequest
     public string? MotivoRechazo { get; set; }
 }
 
+public class ReenviarConDocumentosRequest
+{
+    public Dictionary<string, List<string>> DocumentosSeleccionados { get; set; } = new();
+}
+
 public class DocumentoDto
 {
     public Guid Id { get; set; }

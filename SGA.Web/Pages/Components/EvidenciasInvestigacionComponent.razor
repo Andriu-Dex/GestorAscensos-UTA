@@ -1,4 +1,7 @@
 @using SGA.Web.Models
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using Blazored.Toast.Services
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
@@ -377,7 +380,9 @@
                     @if (evidenciaRechazada.FechaRevision.HasValue)
                     {
                         <small class="text-muted">
-                            Fecha de revisión: @evidenciaRechazada.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")
+                            Fecha de revisión: <EcuadorDateDisplay Date="evidenciaRechazada.FechaRevision.Value" 
+                                                                 Format="datetime" 
+                                                                 CssClass="fw-bold" />
                         </small>
                     }
                 </div>

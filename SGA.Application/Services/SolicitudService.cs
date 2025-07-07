@@ -466,8 +466,8 @@ public class SolicitudService : ISolicitudService
                 null,
                 "SolicitudAscenso",
                 "Rechazada",
-                "Pendiente",
-                $"Documentos actualizados: {documentosIds.Count} documentos asociados"
+                $"Pendiente - Documentos actualizados: {documentosIds.Count} documentos asociados",
+                null // DireccionIP - se puede obtener desde HttpContext si es necesario
             );
 
             // Enviar notificación a los administradores sobre el reenvío con documentos actualizados
@@ -484,8 +484,10 @@ public class SolicitudService : ISolicitudService
 
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Log the exception for debugging but don't expose internal details
+            Console.WriteLine($"Error in ReenviarSolicitudConDocumentosAsync: {ex.Message}");
             return false;
         }
     }

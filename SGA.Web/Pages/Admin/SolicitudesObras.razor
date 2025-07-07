@@ -3,6 +3,7 @@
 @using Microsoft.JSInterop
 @using Blazored.Toast.Services
 @using System.Net.Http.Json
+@using SGA.Web.Shared
 @attribute [Authorize(Roles = "Administrador")]
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
@@ -154,7 +155,9 @@
                                     <span class="text-muted">(@primeraObra.DocenteCedula)</span>
                                 </h6>
                                 <small class="text-muted">
-                                    Solicitud de @totalObrasGrupo obra(s) • @primeraObra.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                    Solicitud de @totalObrasGrupo obra(s) • <EcuadorDateDisplay Date="primeraObra.FechaCreacion" 
+                                                                                           Format="datetime" 
+                                                                                           CssClass="fw-bold" />
                                 </small>
                             </div>
                             <div class="col-md-4 text-end">
@@ -207,7 +210,11 @@
                                                 }
                                             </td>
                                             <td>@obra.TipoObra</td>
-                                            <td>@obra.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                <EcuadorDateDisplay Date="obra.FechaPublicacion" 
+                                                                   Format="date" 
+                                                                   CssClass="text-muted" />
+                                            </td>
                                             <td>@(obra.Revista ?? obra.Editorial ?? "N/A")</td>
                                             <td>
                                                 @if (!string.IsNullOrEmpty(obra.ArchivoNombre))
@@ -239,7 +246,9 @@
                                 {
                                     <div class="alert alert-success alert-sm mb-0">
                                         <i class="bi bi-check-circle"></i>
-                                        <strong>Aprobada</strong> el @primeraObra.FechaRevision?.ToString("dd/MM/yyyy HH:mm")
+                                        <strong>Aprobada</strong> el <EcuadorDateDisplay Date="primeraObra.FechaRevision.Value" 
+                                                                                                     Format="datetime" 
+                                                                                                     CssClass="fw-bold" />
                                         @if (!string.IsNullOrEmpty(primeraObra.ComentariosRevision))
                                         {
                                             <br><small><strong>Comentarios:</strong> @primeraObra.ComentariosRevision</small>
@@ -250,7 +259,9 @@
                                 {
                                     <div class="alert alert-danger alert-sm mb-0">
                                         <i class="bi bi-x-circle"></i>
-                                        <strong>Rechazada</strong> el @primeraObra.FechaRevision?.ToString("dd/MM/yyyy HH:mm")
+                                        <strong>Rechazada</strong> el <EcuadorDateDisplay Date="primeraObra.FechaRevision.Value" 
+                                                                                                      Format="datetime" 
+                                                                                                      CssClass="fw-bold" />
                                         @if (!string.IsNullOrEmpty(primeraObra.MotivoRechazo))
                                         {
                                             <br><small><strong>Motivo:</strong> @primeraObra.MotivoRechazo</small>

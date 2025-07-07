@@ -2,6 +2,7 @@
 @using Blazored.Toast.Services
 @using SGA.Web.Services
 @using SGA.Web.Models
+@using SGA.Web.Shared
 @inject DocumentVisualizationService DocumentService
 @inject IJSRuntime JSRuntime
 @inject IToastService ToastService
@@ -64,7 +65,11 @@
                                                     <span class="badge bg-info">@documento.TipoDocumento</span>
                                                 </td>
                                                 <td>@FormatFileSize(documento.TamanoArchivo)</td>
-                                                <td>@documento.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                                                <td>
+                                                    <EcuadorDateDisplay Date="documento.FechaCreacion" 
+                                                                       Format="date" 
+                                                                       CssClass="text-muted" />
+                                                </td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm" role="group">
                                                         <button type="button" 
@@ -107,7 +112,11 @@
                                                     <small>@FormatFileSize(documento.TamanoArchivo)</small>
                                                 </div>
                                                 <p class="mb-1">@documento.TipoDocumento</p>
-                                                <small>@documento.FechaCreacion.ToString("dd/MM/yyyy")</small>
+                                                <small>
+                                                    <EcuadorDateDisplay Date="documento.FechaCreacion" 
+                                                                       Format="date" 
+                                                                       CssClass="text-muted" />
+                                                </small>
                                             </button>
                                         }
                                     </div>
