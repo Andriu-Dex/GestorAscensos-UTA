@@ -258,7 +258,11 @@ window.addKeyboardShortcuts = function(dotNetHelper) {
                                     <h6 class="indicator-title">Tiempo en rol actual</h6>
                                     <div class="indicator-value">
                                         <div class="tiempo-transcurrido">
-                                            @if (indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoTranscurridoTexto))
+                                            @if (reinicioVisual)
+                                            {
+                                                <span class="tiempo-actual">0 meses</span>
+                                            }
+                                            else if (indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoTranscurridoTexto))
                                             {
                                                 <span class="tiempo-actual">@indicadores.TiempoTranscurridoTexto</span>
                                             }
@@ -267,7 +271,7 @@ window.addKeyboardShortcuts = function(dotNetHelper) {
                                                 <span class="tiempo-actual">@(indicadores?.TiempoRol ?? 0) meses</span>
                                             }
                                         </div>
-                                        @if (indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoRestanteTexto))
+                                        @if (!reinicioVisual && indicadores != null && !string.IsNullOrEmpty(indicadores.TiempoRestanteTexto))
                                         {
                                             <div class="tiempo-restante @(indicadores.CumpleTiempoMinimo ? "text-success" : "text-warning")">
                                                 @if (indicadores.CumpleTiempoMinimo)
@@ -291,11 +295,11 @@ window.addKeyboardShortcuts = function(dotNetHelper) {
                                     </div>
                                     <div class="indicator-progress">
                                         <div class="indicator-progress-bar @(indicadores?.CumpleTiempoMinimo == true ? "bg-success" : "")" 
-                                             style="width: @GetTiempoPercentage()%;"></div>
+                                             style="width: @(reinicioVisual ? 0 : GetTiempoPercentage())%;"></div>
                                     </div>
                                     <div class="indicator-meta">
                                         <span>Meta: @GetTiempoRequeritoTexto()</span>
-                                        <span>@GetTiempoPercentage()%</span>
+                                        <span>@(reinicioVisual ? 0 : GetTiempoPercentage())%</span>
                                     </div>
                                     <button class="btn action-btn import-btn mt-3" @onclick="() => UpdateIndicador(1)">
                                         <i class="bi bi-arrow-repeat"></i> Importar

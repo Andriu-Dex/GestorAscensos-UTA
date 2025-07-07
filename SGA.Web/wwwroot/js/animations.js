@@ -162,8 +162,8 @@ window.initializeAnimations = initializeAnimations;
 // Función para agregar atajos de teclado
 function addKeyboardShortcuts(dotNetHelper) {
   document.addEventListener("keydown", function (event) {
-    // Verificar si se presionó Ctrl+0
-    if (event.ctrlKey && event.key === "0") {
+    // Verificar si se presionó Alt+0
+    if (event.altKey && event.key === "0") {
       event.preventDefault(); // Prevenir el comportamiento por defecto
       dotNetHelper.invokeMethodAsync("ReiniciarCardsVisualmente");
     }
