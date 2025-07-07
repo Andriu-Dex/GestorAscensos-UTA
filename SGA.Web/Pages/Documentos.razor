@@ -1,17 +1,30 @@
 @page "/documentos"
+@page "/documentos/{archivoId:guid?}"
 @attribute [Authorize]
 @using SGA.Web.Models
 @using SGA.Web.Pages.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Web
 @inject DocumentosService DocumentosService
 @inject DocumentVisualizationService DocumentVisualizationService
+@inject ArchivosImportadosService ArchivosImportadosService
 @inject HttpClient Http
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject IToastService ToastService
+@inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
 <div class="container mt-4">
+    @if (!string.IsNullOrEmpty(archivoIdParam))
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Archivo precargado desde Archivos Importados</strong>
+            <p class="mb-0">Complete los datos del formulario para enviar el documento para validación.</p>
+        </div>
+    }
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3>Gestión de Documentos</h3>
         <div>
@@ -1743,5 +1756,101 @@
         ToastService.ShowSuccess($"Se importaron {documentosImportados.Count} documentos exitosamente");
         showImportacionModal = false;
         StateHasChanged();
+    }
+
+    // Variables para manejo de parámetros de URL (archivos importados)
+    [Parameter] public Guid? ArchivoId { get; set; }
+    private string? archivoIdParam;
+    private string? tipoParam;
+    private string? accionParam;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Obtener parámetros de la URL
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        
+        // Priorizar el parámetro de ruta sobre el query parameter
+        archivoIdParam = ArchivoId?.ToString() ?? query["archivo"];
+        tipoParam = query["tipo"];
+        accionParam = query["accion"];
+
+        // Si hay parámetros, mostrar el acordeón correspondiente y precargar el archivo
+        if (!string.IsNullOrEmpty(archivoIdParam) && !string.IsNullOrEmpty(tipoParam) && accionParam == "validar")
+        {
+            await Task.Delay(500); // Dar tiempo para que se carguen los datos
+            await PrecargarArchivoEnFormulario();
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task PrecargarArchivoEnFormulario()
+    {
+        if (string.IsNullOrEmpty(archivoIdParam) || string.IsNullOrEmpty(tipoParam))
+            return;
+
+        try
+        {
+            // Obtener información del archivo importado
+            if (!Guid.TryParse(archivoIdParam, out var archivoId))
+            {
+                ToastService.ShowError("ID de archivo inválido");
+                return;
+            }
+
+            // Obtener los archivos importados del usuario para encontrar el archivo específico
+            var archivosImportados = await ArchivosImportadosService.GetArchivosImportadosAsync();
+            var archivo = archivosImportados?.FirstOrDefault(a => a.Id == archivoId);
+
+            if (archivo == null)
+            {
+                ToastService.ShowError("Archivo no encontrado");
+                return;
+            }
+
+            // Abrir el modal correspondiente según el tipo y precargar el archivo
+            await Task.Delay(1000); // Dar tiempo para que se carguen los modales
+
+            switch (tipoParam.ToLower())
+            {
+                case "obra":
+                case "obras":
+                    ShowObrasModal();
+                    if (obrasModal != null)
+                    {
+                        await obrasModal.PrecargarArchivo(archivo);
+                    }
+                    break;
+                
+                case "certificado":
+                case "capacitacion":
+                    ShowCertificadosModal();
+                    if (certificadosModal != null)
+                    {
+                        await certificadosModal.PrecargarArchivo(archivo);
+                    }
+                    break;
+                
+                case "evidencia":
+                case "investigacion":
+                    // ShowEvidenciasModal(); // Si existe el modal de evidencias
+                    ToastService.ShowInfo("Modal de evidencias de investigación no implementado aún");
+                    break;
+                
+                default:
+                    ToastService.ShowWarning($"Tipo de documento no reconocido: {tipoParam}");
+                    break;
+            }
+
+            ToastService.ShowSuccess($"Archivo '{archivo.NombreArchivo}' precargado correctamente");
+
+            // Limpiar los parámetros de la URL para evitar que se ejecute múltiples veces
+            Navigation.NavigateTo("/documentos", false);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al precargar archivo: {ex.Message}");
+        }
     }
 }

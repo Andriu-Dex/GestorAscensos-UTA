@@ -1,0 +1,140 @@
+@using SGA.Web.Models
+
+<div class="section-archivos mb-4">
+    <div class="section-header" style="background: linear-gradient(135deg, @ColorHeader 0%, @($"{ColorHeader}cc") 100%);">
+        <h4>
+            <i class="@Icono"></i>
+            @Titulo
+        </h4>
+        <span class="section-count">@Archivos.Count archivo@(Archivos.Count == 1 ? "" : "s")</span>
+    </div>
+    
+    <div class="section-body">
+        @if (!Archivos.Any())
+        {
+            <div class="empty-section">
+                <i class="@Icono"></i>
+                <p>No hay archivos de este tipo</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var archivo in Archivos)
+            {
+                <div class="archivo-item" @onclick="() => OnSeleccionarArchivo.InvokeAsync(archivo)">
+                    <div class="archivo-info">
+                        <div class="archivo-icon">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </div>
+                        <div class="archivo-details">
+                            <h5>@archivo.NombreArchivo</h5>
+                            <div class="archivo-meta">
+                                <span>
+                                    <i class="bi bi-calendar"></i>
+                                    @archivo.FechaImportacion.ToString("dd/MM/yyyy")
+                                </span>
+                                <span>
+                                    <i class="bi bi-file-earmark"></i>
+                                    @FormatearTamano(archivo.TamanoArchivo)
+                                </span>
+                                @if (archivo.FechaEnvioValidacion.HasValue)
+                                {
+                                    <span>
+                                        <i class="bi bi-send"></i>
+                                        Enviado: @archivo.FechaEnvioValidacion.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="archivo-estado">
+                        <span class="estado-badge @ObtenerClaseEstado(archivo.Estado)">
+                            @ObtenerTextoEstado(archivo.Estado)
+                        </span>
+                        
+                        @if (archivo.Estado == "Importado")
+                        {
+                            <button type="button" 
+                                    class="btn btn-enviar-validacion"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => OnEnviarValidacion.InvokeAsync(archivo)">
+                                <i class="bi bi-send"></i>
+                                Enviar para Validación
+                            </button>
+                        }
+                        else if (archivo.Estado == "En Revisión")
+                        {
+                            <span class="text-muted">
+                                <i class="bi bi-clock"></i>
+                                En proceso de revisión
+                            </span>
+                        }
+                        else if (archivo.Estado == "Aprobado")
+                        {
+                            <span class="text-success">
+                                <i class="bi bi-check-circle"></i>
+                                Documento aprobado
+                            </span>
+                        }
+                        else if (archivo.Estado == "Rechazado")
+                        {
+                            <span class="text-danger">
+                                <i class="bi bi-x-circle"></i>
+                                Documento rechazado
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Titulo { get; set; } = "";
+    [Parameter] public string Icono { get; set; } = "";
+    [Parameter] public string ColorHeader { get; set; } = "#8a1538";
+    [Parameter] public List<ArchivoImportado> Archivos { get; set; } = new();
+    [Parameter] public EventCallback<ArchivoImportado> OnSeleccionarArchivo { get; set; }
+    [Parameter] public EventCallback<ArchivoImportado> OnEnviarValidacion { get; set; }
+
+    private string FormatearTamano(long bytes)
+    {
+        string[] sufijos = { "B", "KB", "MB", "GB" };
+        int contador = 0;
+        decimal tamano = bytes;
+        
+        while (Math.Round(tamano / 1024) >= 1)
+        {
+            tamano /= 1024;
+            contador++;
+        }
+        
+        return $"{tamano:n1} {sufijos[contador]}";
+    }
+
+    private string ObtenerClaseEstado(string estado)
+    {
+        return estado switch
+        {
+            "Importado" => "estado-importado",
+            "En Revisión" => "estado-revision",
+            "Aprobado" => "estado-aprobado",
+            "Rechazado" => "estado-rechazado",
+            _ => "estado-importado"
+        };
+    }
+
+    private string ObtenerTextoEstado(string estado)
+    {
+        return estado switch
+        {
+            "Importado" => "Importado",
+            "En Revisión" => "En Revisión",
+            "Aprobado" => "Aprobado",
+            "Rechazado" => "Rechazado",
+            _ => "Desconocido"
+        };
+    }
+}

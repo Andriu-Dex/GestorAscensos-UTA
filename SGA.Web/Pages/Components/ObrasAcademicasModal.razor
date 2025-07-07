@@ -225,4 +225,36 @@
 
     public List<NuevaObraAcademicaDto> GetNuevasObras() => nuevasObras;
     public string GetComentarios() => comentariosSolicitud;
+
+    /// <summary>
+    /// Precargar un archivo importado en el formulario
+    /// </summary>
+    public async Task PrecargarArchivo(SGA.Web.Models.ArchivoImportado archivo)
+    {
+        try
+        {
+            // Limpiar formulario actual
+            nuevasObras.Clear();
+            
+            // Crear nueva obra con los datos del archivo importado
+            var nuevaObra = new NuevaObraAcademicaDto
+            {
+                Titulo = archivo.NombreArchivo.Replace(".pdf", ""), // Usar nombre del archivo como título inicial
+                ArchivoNombre = archivo.NombreArchivo,
+                ArchivoTipo = "application/pdf",
+                // El contenido del archivo se obtendría del servicio si es necesario
+                // Por ahora marcamos que tiene archivo
+                Descripcion = $"Archivo importado desde Archivos Importados el {archivo.FechaImportacion:dd/MM/yyyy}"
+            };
+            
+            nuevasObras.Add(nuevaObra);
+            
+            ToastService.ShowInfo($"Archivo '{archivo.NombreArchivo}' precargado. Complete los campos obligatorios.");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al precargar archivo: {ex.Message}");
+        }
+    }
 }

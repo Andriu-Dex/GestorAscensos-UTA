@@ -1,0 +1,472 @@
+@page "/archivos-importados"
+@attribute [Authorize]
+@using SGA.Web.Models
+@using SGA.Web.Pages.Components
+@using SGA.Web.Services
+@using SGA.Web.Shared
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@inject Blazored.Toast.Services.IToastService ToastService
+@inject ArchivosImportadosService ArchivosImportadosService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="bi bi-file-earmark-arrow-down me-2"></i>Archivos Importados</h3>
+        <div>
+            <button class="btn btn-outline-primary" @onclick="ActualizarArchivos">
+                <i class="bi bi-arrow-clockwise"></i> Actualizar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Buscar archivos..." @bind="filtroTexto" @oninput="FiltrarArchivos" />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="filtroTipo" @bind:after="FiltrarArchivos">
+                <option value="">Todos los tipos</option>
+                <option value="Obra Académica">Obras Académicas</option>
+                <option value="Certificado de Capacitación">Certificados</option>
+                <option value="Evidencia de Investigación">Evidencias</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="filtroEstado" @bind:after="FiltrarArchivos">
+                <option value="">Todos los estados</option>
+                <option value="Importado">Importado</option>
+                <option value="En Revisión">En Revisión</option>
+                <option value="Aprobado">Aprobado</option>
+                <option value="Rechazado">Rechazado</option>
+            </select>
+        </div>
+    </div>
+    
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando archivos importados...</p>
+        </div>
+    }
+    else if (!archivosImportados.Any())
+    {
+        <div class="alert alert-info text-center py-5">
+            <i class="bi bi-info-circle fs-1 mb-3"></i>
+            <h4>No tienes archivos importados</h4>
+            <p class="mb-0">No tienes archivos importados aún. Ve a "Mis Documentos" para importar archivos existentes.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Sección de Obras Académicas -->
+        <div class="archivos-por-tipo">
+            <div class="section-header">
+                <h4><i class="bi bi-book"></i> Obras Académicas</h4>
+                <span class="section-count">@obrasAcademicas.Count</span>
+            </div>
+            <div class="section-body">
+                @if (obrasAcademicas.Any())
+                {
+                    @foreach (var archivo in obrasAcademicas)
+                    {
+                        <div class="archivo-item">
+                            <div class="archivo-info">
+                                <div class="archivo-icon">
+                                    <i class="bi bi-book"></i>
+                                </div>
+                                <div class="archivo-details">
+                                    <h5>@archivo.NombreArchivo</h5>
+                                    <div class="archivo-meta">
+                                        <span><i class="bi bi-calendar"></i> @archivo.FechaImportacion.ToString("dd/MM/yyyy")</span>
+                                        <span><i class="bi bi-file-earmark"></i> @FormatearTamano(archivo.TamanoArchivo)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="archivo-estado">
+                                <span class="estado-badge @GetEstadoClass(archivo.Estado)">@archivo.Estado</span>
+                                <div class="archivo-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => VisualizarPDF(archivo)" title="Visualizar PDF">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => DescargarArchivo(archivo)" title="Descargar">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    @if (archivo.Estado == "Importado")
+                                    {
+                                        <button class="btn btn-sm btn-enviar-validacion" @onclick="() => MostrarFormularioValidacion(archivo)" title="Enviar para Validación">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-section">
+                        <i class="bi bi-book"></i>
+                        <p>No hay obras académicas importadas</p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Sección de Certificados de Capacitación -->
+        <div class="archivos-por-tipo">
+            <div class="section-header">
+                <h4><i class="bi bi-award"></i> Certificados de Capacitación</h4>
+                <span class="section-count">@certificadosCapacitacion.Count</span>
+            </div>
+            <div class="section-body">
+                @if (certificadosCapacitacion.Any())
+                {
+                    @foreach (var archivo in certificadosCapacitacion)
+                    {
+                        <div class="archivo-item">
+                            <div class="archivo-info">
+                                <div class="archivo-icon">
+                                    <i class="bi bi-award"></i>
+                                </div>
+                                <div class="archivo-details">
+                                    <h5>@archivo.NombreArchivo</h5>
+                                    <div class="archivo-meta">
+                                        <span><i class="bi bi-calendar"></i> @archivo.FechaImportacion.ToString("dd/MM/yyyy")</span>
+                                        <span><i class="bi bi-file-earmark"></i> @FormatearTamano(archivo.TamanoArchivo)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="archivo-estado">
+                                <span class="estado-badge @GetEstadoClass(archivo.Estado)">@archivo.Estado</span>
+                                <div class="archivo-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => VisualizarPDF(archivo)" title="Visualizar PDF">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => DescargarArchivo(archivo)" title="Descargar">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    @if (archivo.Estado == "Importado")
+                                    {
+                                        <button class="btn btn-sm btn-enviar-validacion" @onclick="() => MostrarFormularioValidacion(archivo)" title="Enviar para Validación">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-section">
+                        <i class="bi bi-award"></i>
+                        <p>No hay certificados de capacitación importados</p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Sección de Evidencias de Investigación -->
+        <div class="archivos-por-tipo">
+            <div class="section-header">
+                <h4><i class="bi bi-search"></i> Evidencias de Investigación</h4>
+                <span class="section-count">@evidenciasInvestigacion.Count</span>
+            </div>
+            <div class="section-body">
+                @if (evidenciasInvestigacion.Any())
+                {
+                    @foreach (var archivo in evidenciasInvestigacion)
+                    {
+                        <div class="archivo-item">
+                            <div class="archivo-info">
+                                <div class="archivo-icon">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <div class="archivo-details">
+                                    <h5>@archivo.NombreArchivo</h5>
+                                    <div class="archivo-meta">
+                                        <span><i class="bi bi-calendar"></i> @archivo.FechaImportacion.ToString("dd/MM/yyyy")</span>
+                                        <span><i class="bi bi-file-earmark"></i> @FormatearTamano(archivo.TamanoArchivo)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="archivo-estado">
+                                <span class="estado-badge @GetEstadoClass(archivo.Estado)">@archivo.Estado</span>
+                                <div class="archivo-actions">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => VisualizarPDF(archivo)" title="Visualizar PDF">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => DescargarArchivo(archivo)" title="Descargar">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    @if (archivo.Estado == "Importado")
+                                    {
+                                        <button class="btn btn-sm btn-enviar-validacion" @onclick="() => MostrarFormularioValidacion(archivo)" title="Enviar para Validación">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-section">
+                        <i class="bi bi-search"></i>
+                        <p>No hay evidencias de investigación importadas</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modal para visualizar PDF -->
+<PdfViewerModal IsVisible="showPdfViewer"
+                PdfUrl="@currentPdfUrl"
+                FileName="@currentFileName"
+                IsLoading="@isLoadingPdf"
+                ErrorMessage="@pdfErrorMessage"
+                OnClose="CerrarVisorPDF"
+                OnDownload="DescargarArchivoActual"
+                OnRetry="ReintentarCargaPdf" />
+
+@code {
+    private List<ArchivoImportado> archivosImportados = new();
+    private List<ArchivoImportado> archivosFiltrados = new();
+    private List<ArchivoImportado> obrasAcademicas = new();
+    private List<ArchivoImportado> certificadosCapacitacion = new();
+    private List<ArchivoImportado> evidenciasInvestigacion = new();
+    
+    private bool isLoading = true;
+    private string filtroTexto = string.Empty;
+    private string filtroTipo = string.Empty;
+    private string filtroEstado = string.Empty;
+    
+    // Variables para el modal de PDF
+    private bool showPdfViewer = false;
+    private string? currentPdfUrl;
+    private string? currentFileName;
+    private bool isLoadingPdf = false;
+    private string? pdfErrorMessage;
+    private ArchivoImportado? archivoActual;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarArchivosImportados();
+    }
+    
+    private async Task CargarArchivosImportados()
+    {
+        isLoading = true;
+        
+        try
+        {
+            var archivos = await ArchivosImportadosService.GetArchivosImportadosAsync();
+            archivosImportados = archivos ?? new List<ArchivoImportado>();
+            
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar archivos importados: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void AplicarFiltros()
+    {
+        archivosFiltrados = archivosImportados.Where(a =>
+            (string.IsNullOrEmpty(filtroTexto) || a.NombreArchivo.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filtroTipo) || a.TipoDocumento == filtroTipo) &&
+            (string.IsNullOrEmpty(filtroEstado) || a.Estado == filtroEstado)
+        ).ToList();
+        
+        // Organizar por tipo
+        obrasAcademicas = archivosFiltrados.Where(a => a.TipoDocumento == "Obra Académica").ToList();
+        certificadosCapacitacion = archivosFiltrados.Where(a => a.TipoDocumento == "Certificado de Capacitación").ToList();
+        evidenciasInvestigacion = archivosFiltrados.Where(a => a.TipoDocumento == "Evidencia de Investigación").ToList();
+    }
+    
+    private void FiltrarArchivos()
+    {
+        AplicarFiltros();
+        StateHasChanged();
+    }
+    
+    private async Task ActualizarArchivos()
+    {
+        await CargarArchivosImportados();
+        ToastService.ShowSuccess("Archivos actualizados correctamente");
+    }
+    
+    private void MostrarFormularioValidacion(ArchivoImportado archivo)
+    {
+        // Determinar el tipo de documento y redirigir a Mis Documentos con el archivo precargado
+        var tipoSeccion = ObtenerSeccionPorTipo(archivo.TipoDocumento);
+        var url = $"/documentos?archivo={archivo.Id}&tipo={tipoSeccion}&accion=validar";
+        
+        ToastService.ShowInfo($"Redirigiendo al formulario de {archivo.TipoDocumento}...");
+        Navigation.NavigateTo(url);
+    }
+
+    private string ObtenerSeccionPorTipo(string tipoDocumento)
+    {
+        return tipoDocumento switch
+        {
+            "Obra Académica" => "obras",
+            "Certificado de Capacitación" => "capacitacion", 
+            "Evidencia de Investigación" => "investigacion",
+            _ => "obras"
+        };
+    }
+    
+    private string GetEstadoClass(string estado)
+    {
+        return estado switch
+        {
+            "Importado" => "estado-importado",
+            "En Revisión" => "estado-revision",
+            "Aprobado" => "estado-aprobado",
+            "Rechazado" => "estado-rechazado",
+            _ => "estado-importado"
+        };
+    }
+    
+    private string FormatearTamano(long bytes)
+    {
+        string[] suffixes = { "B", "KB", "MB", "GB" };
+        int counter = 0;
+        decimal number = bytes;
+        
+        while (Math.Round(number / 1024) >= 1)
+        {
+            number /= 1024;
+            counter++;
+        }
+        
+        return $"{number:n1} {suffixes[counter]}";
+    }
+
+    private async Task VisualizarPDF(ArchivoImportado archivo)
+    {
+        try
+        {
+            showPdfViewer = true;
+            isLoadingPdf = true;
+            pdfErrorMessage = null;
+            archivoActual = archivo;
+            currentFileName = archivo.NombreArchivo;
+            currentPdfUrl = null;
+            
+            StateHasChanged();
+
+            // Obtener el token de autorización
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            // Realizar la petición al endpoint de visualización
+            var response = await Http.GetAsync($"api/archivos-importados/{archivo.Id}/visualizar");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(contenido);
+                currentPdfUrl = $"data:application/pdf;base64,{base64}";
+                pdfErrorMessage = null;
+            }
+            else
+            {
+                pdfErrorMessage = $"Error al cargar el archivo: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            pdfErrorMessage = $"Error al visualizar el archivo: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPdf = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarArchivo(ArchivoImportado archivo)
+    {
+        try
+        {
+            ToastService.ShowInfo($"Descargando {archivo.NombreArchivo}...");
+            
+            // Obtener el token de autorización
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await Http.GetAsync($"api/archivos-importados/{archivo.Id}/descargar");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var contenido = await response.Content.ReadAsByteArrayAsync();
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", archivo.NombreArchivo, contenido);
+                ToastService.ShowSuccess($"Archivo {archivo.NombreArchivo} descargado correctamente");
+            }
+            else
+            {
+                ToastService.ShowError($"Error al descargar el archivo: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al descargar el archivo: {ex.Message}");
+        }
+    }
+
+    private void CerrarVisorPDF()
+    {
+        showPdfViewer = false;
+        currentPdfUrl = null;
+        currentFileName = null;
+        pdfErrorMessage = null;
+        isLoadingPdf = false;
+        archivoActual = null;
+        StateHasChanged();
+    }
+
+    private async Task DescargarArchivoActual()
+    {
+        if (archivoActual != null)
+        {
+            await DescargarArchivo(archivoActual);
+        }
+    }
+
+    private async Task ReintentarCargaPdf()
+    {
+        if (archivoActual != null)
+        {
+            await VisualizarPDF(archivoActual);
+        }
+    }
+}

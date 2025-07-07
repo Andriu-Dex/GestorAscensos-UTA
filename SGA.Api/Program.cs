@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configurar logging para suprimir logs no críticos
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Debug); // Cambiar a Debug temporalmente
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // Cargar archivo .env si existe
 var envFile = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
@@ -53,6 +53,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
         options.JsonSerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
     });
+
 builder.Services.AddEndpointsApiExplorer();
 
 // Configurar Swagger con autenticación JWT

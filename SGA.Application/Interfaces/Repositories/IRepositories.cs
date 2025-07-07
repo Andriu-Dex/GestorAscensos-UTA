@@ -52,6 +52,7 @@ public interface IDocumentoRepository
     // Métodos para importación de documentos
     Task<List<Documento>> GetDocumentosImportablesAsync(Guid docenteId, FiltrosImportacionDto filtros);
     Task<List<Documento>> GetDocumentosNoUtilizadosAsync(Guid docenteId);
+    Task<List<Documento>> GetDocumentosImportadosByDocenteAsync(Guid docenteId);
     Task<Documento> ClonarDocumentoAsync(Documento documentoOriginal, Guid? nuevaSolicitudId = null);
     Task<bool> EsDocumentoDisponibleParaImportacionAsync(Guid documentoId, Guid docenteId);
 }

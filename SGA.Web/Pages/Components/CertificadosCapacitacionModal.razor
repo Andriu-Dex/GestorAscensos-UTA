@@ -267,4 +267,37 @@
             }
         };
     }
+
+    /// <summary>
+    /// Precargar un archivo importado en el formulario
+    /// </summary>
+    public async Task PrecargarArchivo(SGA.Web.Models.ArchivoImportado archivo)
+    {
+        try
+        {
+            // Limpiar formulario actual
+            nuevosCertificados.Clear();
+            
+            // Crear nuevo certificado con los datos del archivo importado
+            var nuevoCertificado = new CrearCertificadoCapacitacionDto
+            {
+                NombreCurso = archivo.NombreArchivo.Replace(".pdf", ""), // Usar nombre del archivo como curso inicial
+                ArchivoNombre = archivo.NombreArchivo,
+                ArchivoTipo = "application/pdf",
+                FechaInicio = DateTime.Today,
+                FechaFin = DateTime.Today.AddDays(1),
+                HorasDuracion = 40, // Valor por defecto
+                Descripcion = $"Certificado importado desde Archivos Importados el {archivo.FechaImportacion:dd/MM/yyyy}"
+            };
+            
+            nuevosCertificados.Add(nuevoCertificado);
+            
+            ToastService.ShowInfo($"Certificado '{archivo.NombreArchivo}' precargado. Complete los campos obligatorios.");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al precargar certificado: {ex.Message}");
+        }
+    }
 }

@@ -266,6 +266,23 @@ public class DocumentoRepository : IDocumentoRepository
         // Verificar que no haya sido utilizado en solicitud aprobada
         return !documento.FueUtilizadoEnSolicitudAprobada;
     }
+
+    /// <summary>
+    /// Obtener documentos importados (clonados) de un docente
+    /// </summary>
+    public async Task<List<Documento>> GetDocumentosImportadosByDocenteAsync(Guid docenteId)
+    {
+        // Los documentos importados son aquellos que:
+        // 1. Pertenecen al docente (DocenteId)
+        // 2. No tienen solicitud asignada (SolicitudAscensoId == null)
+        // 3. Fueron creados como clones (no son los originales)
+        return await _context.Documentos
+            .Where(d => d.DocenteId == docenteId && 
+                       d.SolicitudAscensoId == null &&
+                       !d.FueUtilizadoEnSolicitudAprobada)
+            .OrderByDescending(d => d.FechaCreacion)
+            .ToListAsync();
+    }
 }
 
 public class LogAuditoriaRepository : ILogAuditoriaRepository
