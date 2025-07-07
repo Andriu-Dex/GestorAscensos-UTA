@@ -1,0 +1,577 @@
+/* Estilos para AdminEstadisticas.razor */
+
+.border-left-primary {
+  border-left: 0.25rem solid #8a1538 !important;
+}
+
+.border-left-warning {
+  border-left: 0.25rem solid #f6c23e !important;
+}
+
+.border-left-success {
+  border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+  border-left: 0.25rem solid #36b9cc !important;
+}
+
+.text-xs {
+  font-size: 0.7rem;
+}
+
+.font-weight-bold {
+  font-weight: 700 !important;
+}
+
+.text-gray-800 {
+  color: #5a5c69 !important;
+}
+
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.no-gutters > .col,
+.no-gutters > [class*="col-"] {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.shadow {
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.chart-pie,
+.chart-area {
+  position: relative;
+  height: 15rem;
+  width: 100%;
+}
+
+.chart-area canvas {
+  height: 15rem !important;
+}
+
+.chart-pie canvas {
+  height: 15rem !important;
+}
+
+/* Animaciones para las tarjetas KPI */
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 2rem 0 rgba(58, 59, 69, 0.2) !important;
+}
+
+/* Estilos para los badges de nivel */
+.badge {
+  font-size: 0.85em;
+}
+
+/* Responsive charts */
+@media (max-width: 768px) {
+  .chart-pie,
+  .chart-area {
+    height: 12rem;
+  }
+
+  .chart-area canvas,
+  .chart-pie canvas {
+    height: 12rem !important;
+  }
+
+  .h5 {
+    font-size: 1.1rem;
+  }
+
+  .fs-2 {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* Estilos para tablas responsive */
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+.table th {
+  background-color: var(--bs-primary);
+  color: white;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  vertical-align: middle;
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(138, 21, 56, 0.05);
+}
+
+/* Estilos para el progreso */
+.progress {
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.progress-bar {
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Estilos para alertas personalizadas */
+.alert {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Botones con efectos */
+.btn {
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+.btn-primary:hover {
+  background-color: #721229;
+  border-color: #721229;
+}
+
+.btn-outline-primary {
+  color: #8a1538;
+  border-color: #8a1538;
+}
+
+.btn-outline-primary:hover {
+  background-color: #8a1538;
+  border-color: #8a1538;
+}
+
+/* Iconos con efectos */
+.bi {
+  transition: all 0.2s ease;
+}
+
+/* Estilo para el spinner de carga */
+.spinner-border {
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Breadcrumb personalizado */
+.breadcrumb {
+  background-color: transparent;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: ">";
+  color: #6c757d;
+}
+
+.breadcrumb-item a {
+  color: #8a1538;
+  text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+  color: #721229;
+  text-decoration: underline;
+}
+
+/* Títulos con línea inferior */
+.card-header h6 {
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.card-header h6::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background-color: #8a1538;
+  border-radius: 1px;
+}
+
+/* Animación de entrada suave */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+/* Estilos para números grandes */
+.display-4 {
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+/* Responsividad mejorada */
+@media (max-width: 576px) {
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .h2 {
+    font-size: 1.5rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Estilos específicos para gráficos elegantes */
+.chart-container-enhanced {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(138, 21, 56, 0.08);
+}
+
+.chart-container-enhanced::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #8a1538 0%, #a91b47 50%, #c42556 100%);
+  border-radius: 20px 20px 0 0;
+}
+
+.chart-container-enhanced::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(138, 21, 56, 0.02) 0%,
+    transparent 70%
+  );
+  border-radius: 15px;
+  pointer-events: none;
+}
+
+/* Títulos de gráficos mejorados */
+.chart-title-enhanced {
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 1.4rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.chart-title-enhanced::after {
+  content: "";
+  position: absolute;
+  bottom: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, #8a1538, #a91b47, #c42556);
+  border-radius: 2px;
+}
+
+/* Canvas específico para gráfico circular mejorado */
+#chartNiveles {
+  max-height: 420px !important;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.12));
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+#chartNiveles:hover {
+  filter: drop-shadow(0 12px 28px rgba(138, 21, 56, 0.25));
+  transform: scale(1.02);
+}
+
+/* Leyenda personalizada elegante */
+.chart-legend-elegant {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(
+    135deg,
+    rgba(248, 249, 250, 0.9) 0%,
+    rgba(233, 236, 239, 0.8) 100%
+  );
+  border-radius: 15px;
+  border: 1px solid rgba(138, 21, 56, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.legend-item-elegant {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid rgba(138, 21, 56, 0.05);
+}
+
+.legend-item-elegant:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(138, 21, 56, 0.2);
+  background: rgba(255, 255, 255, 1);
+}
+
+.legend-color-elegant {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.legend-color-elegant::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.legend-item-elegant:hover .legend-color-elegant::after {
+  opacity: 1;
+}
+
+.legend-text-elegant {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Animaciones específicas para gráficos */
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes chartPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.chart-animate-in {
+  animation: chartFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-pulse {
+  animation: chartPulse 2s ease-in-out infinite;
+}
+
+/* Indicadores de carga elegantes */
+.loading-elegant {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 15px;
+}
+
+.spinner-elegant {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #8a1538;
+  border-radius: 50%;
+  animation: spin-elegant 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  filter: drop-shadow(0 4px 8px rgba(138, 21, 56, 0.3));
+}
+
+@keyframes spin-elegant {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Tooltip personalizado */
+.custom-tooltip {
+  background: rgba(33, 37, 41, 0.95);
+  border: 2px solid rgba(138, 21, 56, 0.5);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Mejoras responsive para gráficos elegantes */
+@media (max-width: 768px) {
+  .chart-container-enhanced {
+    padding: 1.5rem;
+    border-radius: 15px;
+  }
+
+  .chart-title-enhanced {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-legend-elegant {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .legend-item-elegant {
+    padding: 0.5rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .legend-color-elegant {
+    width: 16px;
+    height: 16px;
+  }
+
+  .legend-text-elegant {
+    font-size: 0.85rem;
+  }
+
+  #chartNiveles {
+    max-height: 300px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .chart-container-enhanced {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .chart-legend-elegant {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .legend-item-elegant {
+    justify-content: center;
+    width: 100%;
+  }
+
+  #chartNiveles {
+    max-height: 250px !important;
+  }
+}
+
+/* Efectos de partículas para el fondo */
+.chart-background-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.1;
+  pointer-events: none;
+  background-image: radial-gradient(
+      circle at 25% 25%,
+      rgba(138, 21, 56, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(169, 27, 71, 0.1) 0%,
+      transparent 50%
+    );
+  border-radius: 15px;
+}
+
+/* Transiciones suaves globales */
+* {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

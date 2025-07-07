@@ -53,6 +53,9 @@ public static class DependencyInjection
         // Servicio de administración de docentes
         services.AddScoped<IAdminDocenteService, AdminDocenteService>();
         
+        // Servicio de estadísticas
+        services.AddScoped<IEstadisticasService, EstadisticasService>();
+        
         // Configurar AutoMapper
         services.AddAutoMapper(typeof(DependencyInjection).Assembly);
         

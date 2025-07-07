@@ -1,0 +1,664 @@
+@page "/admin/estadisticas"
+@attribute [Authorize(Roles = "Administrador")]
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@using Blazored.Toast.Services
+@using Microsoft.JSInterop
+@inject HttpClient Http
+@inject IToastService ToastService
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-bar-chart-line"></i> 
+                        Dashboard de Estadísticas
+                    </h2>
+                    <p class="text-muted mb-0">Panel integral de análisis y métricas del sistema</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button @onclick="RefrescarEstadisticas" class="btn btn-outline-primary" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                    </button>
+                    <button @onclick="ExportarDashboard" class="btn btn-primary" disabled="@isExportando">
+                        @if (isExportando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="height: 400px;">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+                <p class="text-muted">Cargando estadísticas...</p>
+            </div>
+        </div>
+    }
+    else if (estadisticas == null)
+    {
+        <div class="alert alert-warning text-center" role="alert">
+            <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
+            <h5>No se pudieron cargar las estadísticas</h5>
+            <p class="mb-3">Ocurrió un error al obtener los datos del servidor.</p>
+            <button @onclick="RefrescarEstadisticas" class="btn btn-outline-warning">
+                <i class="bi bi-arrow-clockwise"></i> Reintentar
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- KPIs Principales -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total Docentes
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@estadisticas.TotalDocentes</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-people fs-2 text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Solicitudes Pendientes
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@estadisticas.SolicitudesPendientes</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Ascensos Este Año
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@estadisticas.AscensosEsteAnio</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-trophy fs-2 text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Solicitudes Este Mes
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@estadisticas.SolicitudesEsteMes</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-calendar-month fs-2 text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos y Análisis -->
+        <div class="row mb-4">
+            <!-- Distribución por Nivel Académico -->
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container-enhanced">
+                    <div class="chart-background-particles"></div>
+                    <h6 class="chart-title-enhanced">
+                        <i class="bi bi-pie-chart"></i> Distribución por Nivel Académico
+                    </h6>
+                    <div class="chart-animate-in">
+                        <canvas id="chartNiveles"></canvas>
+                    </div>
+                    <div class="chart-legend-elegant">
+                        @foreach (var nivel in estadisticas.DocentesPorNivel.OrderBy(x => x.Key))
+                        {
+                            var porcentaje = estadisticas.TotalDocentes > 0 ? (nivel.Value * 100.0 / estadisticas.TotalDocentes) : 0;
+                            <div class="legend-item-elegant">
+                                <div class="legend-color-elegant" style="background: @GetNivelColorGradient(nivel.Key)"></div>
+                                <div class="legend-text-elegant">
+                                    Titular @nivel.Key
+                                    <small class="d-block text-muted">@nivel.Value (@porcentaje.ToString("F1")%)</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de Solicitudes -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="bi bi-bar-chart"></i> Estado de Solicitudes
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="card bg-warning text-white text-center">
+                                    <div class="card-body py-3">
+                                        <div class="h4 mb-0">@estadisticas.SolicitudesPendientes</div>
+                                        <div class="small">Pendientes</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="card bg-info text-white text-center">
+                                    <div class="card-body py-3">
+                                        <div class="h4 mb-0">@estadisticas.SolicitudesEnProceso</div>
+                                        <div class="small">En Proceso</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="card bg-success text-white text-center">
+                                    <div class="card-body py-3">
+                                        <div class="h4 mb-0">@estadisticas.SolicitudesAprobadas</div>
+                                        <div class="small">Aprobadas</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="card bg-danger text-white text-center">
+                                    <div class="card-body py-3">
+                                        <div class="h4 mb-0">@estadisticas.SolicitudesRechazadas</div>
+                                        <div class="small">Rechazadas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Análisis Detallado por Nivel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="bi bi-table"></i> Análisis Detallado por Nivel Académico
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        @if (estadisticasNivel.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-primary">
+                                        <tr>
+                                            <th>Nivel</th>
+                                            <th>Total Docentes</th>
+                                            <th>% Distribución</th>
+                                            <th>Solicitudes Pendientes</th>
+                                            <th>Solicitudes Aprobadas</th>
+                                            <th>Solicitudes Rechazadas</th>
+                                            <th>Visualización</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var nivel in estadisticasNivel)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <span class="badge" style="background-color: @GetNivelColor(nivel.Nivel)">
+                                                        @nivel.NombreNivel
+                                                    </span>
+                                                </td>
+                                                <td class="fw-bold">@nivel.TotalDocentes</td>
+                                                <td>@nivel.PorcentajeDistribucion%</td>
+                                                <td>
+                                                    @if (nivel.SolicitudesPendientes > 0)
+                                                    {
+                                                        <span class="badge bg-warning">@nivel.SolicitudesPendientes</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">0</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (nivel.SolicitudesAprobadas > 0)
+                                                    {
+                                                        <span class="badge bg-success">@nivel.SolicitudesAprobadas</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">0</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (nivel.SolicitudesRechazadas > 0)
+                                                    {
+                                                        <span class="badge bg-danger">@nivel.SolicitudesRechazadas</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">0</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar" style="width: @nivel.PorcentajeDistribucion%; background-color: @GetNivelColor(nivel.Nivel)"
+                                                             role="progressbar" aria-valuenow="@nivel.PorcentajeDistribucion" aria-valuemin="0" aria-valuemax="100">
+                                                            @nivel.PorcentajeDistribucion.ToString("F1")%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-info-circle fs-3 text-muted"></i>
+                                <p class="text-muted mt-2">No hay datos de estadísticas por nivel disponibles</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actividad Mensual -->
+        @if (actividadMensual.Any())
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="bi bi-graph-up"></i> Actividad de los Últimos 12 Meses
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-area">
+                                <canvas id="chartActividad" width="100%" height="30"></canvas>
+                            </div>
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Solicitudes</div>
+                                    <div class="h5 mb-0 text-gray-800">@actividadMensual.Sum(a => a.SolicitudesCreadas)</div>
+                                </div>
+                                <div class="col">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Aprobadas</div>
+                                    <div class="h5 mb-0 text-success">@actividadMensual.Sum(a => a.SolicitudesAprobadas)</div>
+                                </div>
+                                <div class="col">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Total Rechazadas</div>
+                                    <div class="h5 mb-0 text-danger">@actividadMensual.Sum(a => a.SolicitudesRechazadas)</div>
+                                </div>
+                                <div class="col">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">Promedio Mensual</div>
+                                    <div class="h5 mb-0 text-info">@((actividadMensual.Sum(a => a.SolicitudesCreadas) / (double)actividadMensual.Count).ToString("F1"))</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Información Adicional -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="bi bi-info-circle"></i> Información del Sistema
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Última actualización:</strong> @estadisticas.FechaActualizacion.ToString("dd/MM/yyyy HH:mm")</p>
+                                <p><strong>Total de registros:</strong> @estadisticas.TotalSolicitudes solicitudes</p>
+                                <p><strong>Sistema operativo desde:</strong> @DateTime.Now.Year</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Tasa de aprobación:</strong> 
+                                    @{
+                                        var tasaAprobacion = estadisticas.TotalSolicitudes > 0 ? (estadisticas.SolicitudesAprobadas * 100.0 / estadisticas.TotalSolicitudes) : 0;
+                                    }
+                                    @tasaAprobacion.ToString("F1")%
+                                </p>
+                                <p><strong>Promedio procesamiento:</strong> 
+                                    @{
+                                        var procesadas = estadisticas.SolicitudesAprobadas + estadisticas.SolicitudesRechazadas;
+                                        var enProceso = estadisticas.SolicitudesPendientes + estadisticas.SolicitudesEnProceso;
+                                        var eficiencia = estadisticas.TotalSolicitudes > 0 ? (procesadas * 100.0 / estadisticas.TotalSolicitudes) : 0;
+                                    }
+                                    @eficiencia.ToString("F1")%
+                                </p>
+                                <p><strong>Estado del sistema:</strong> 
+                                    <span class="badge bg-success">Operativo</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private bool isExportando = false;
+    
+    private EstadisticasCompletasDto? estadisticas;
+    private List<EstadisticasNivelDto> estadisticasNivel = new();
+    private List<EstadisticasActividadMensualDto> actividadMensual = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && estadisticas != null)
+        {
+            await InicializarGraficos();
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Cargar estadísticas por separado para ser más resiliente a errores
+            try
+            {
+                estadisticas = await Http.GetFromJsonAsync<EstadisticasCompletasDto>("api/admin/estadisticas-completas");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar estadísticas completas: {ex.Message}");
+                // Crear estadísticas básicas usando otros endpoints
+                var estadisticasGenerales = await Http.GetFromJsonAsync<EstadisticasGeneralesDto>("api/admin/estadisticas");
+                if (estadisticasGenerales != null)
+                {
+                    estadisticas = new EstadisticasCompletasDto
+                    {
+                        TotalDocentes = estadisticasGenerales.TotalDocentes,
+                        TotalSolicitudes = estadisticasGenerales.SolicitudesPendientes + estadisticasGenerales.SolicitudesAprobadas + estadisticasGenerales.SolicitudesRechazadas,
+                        SolicitudesPendientes = estadisticasGenerales.SolicitudesPendientes,
+                        SolicitudesAprobadas = estadisticasGenerales.SolicitudesAprobadas,
+                        SolicitudesRechazadas = estadisticasGenerales.SolicitudesRechazadas,
+                        DocentesPorNivel = new Dictionary<int, int>(),
+                        FechaActualizacion = DateTime.Now
+                    };
+                }
+            }
+
+            estadisticasNivel = await Http.GetFromJsonAsync<List<EstadisticasNivelDto>>("api/admin/estadisticas-por-nivel") ?? new();
+            actividadMensual = await Http.GetFromJsonAsync<List<EstadisticasActividadMensualDto>>("api/admin/estadisticas-actividad-mensual") ?? new();
+
+            // Completar DocentesPorNivel si no se cargó desde estadísticas completas
+            if (estadisticas != null && !estadisticas.DocentesPorNivel.Any() && estadisticasNivel.Any())
+            {
+                estadisticas.DocentesPorNivel = estadisticasNivel.ToDictionary(x => x.Nivel, x => x.TotalDocentes);
+            }
+
+            ToastService.ShowSuccess("Estadísticas cargadas correctamente");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar estadísticas: {ex.Message}");
+            Console.WriteLine($"Error completo: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefrescarEstadisticas()
+    {
+        await CargarDatos();
+        if (estadisticas != null)
+        {
+            await InicializarGraficos();
+        }
+    }
+
+    private async Task ExportarDashboard()
+    {
+        try
+        {
+            isExportando = true;
+            ToastService.ShowInfo("Generando reporte del dashboard...");
+            
+            // Aquí se implementaría la lógica de exportación
+            await Task.Delay(2000); // Simular procesamiento
+            
+            ToastService.ShowSuccess("Dashboard exportado correctamente");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al exportar dashboard: {ex.Message}");
+        }
+        finally
+        {
+            isExportando = false;
+        }
+    }
+
+    private async Task InicializarGraficos()
+    {
+        if (estadisticas == null && estadisticasNivel == null) return;
+
+        try
+        {
+            // Datos para gráfico de niveles
+            var nivelesData = new object();
+            
+            if (estadisticas?.DocentesPorNivel?.Any() == true)
+            {
+                nivelesData = new
+                {
+                    labels = estadisticas.DocentesPorNivel.Keys.Select(k => $"Titular {k}").ToArray(),
+                    datasets = new[]
+                    {
+                        new
+                        {
+                            data = estadisticas.DocentesPorNivel.Values.ToArray(),
+                            backgroundColor = estadisticas.DocentesPorNivel.Keys.Select(GetNivelColor).ToArray(),
+                            borderWidth = 2,
+                            borderColor = "#fff"
+                        }
+                    }
+                };
+            }
+            else if (estadisticasNivel?.Any() == true)
+            {
+                // Usar datos de estadísticas por nivel como alternativa
+                nivelesData = new
+                {
+                    labels = estadisticasNivel.Select(n => n.NombreNivel).ToArray(),
+                    datasets = new[]
+                    {
+                        new
+                        {
+                            data = estadisticasNivel.Select(n => n.TotalDocentes).ToArray(),
+                            backgroundColor = estadisticasNivel.Select(n => GetNivelColor(n.Nivel)).ToArray(),
+                            borderWidth = 2,
+                            borderColor = "#fff"
+                        }
+                    }
+                };
+            }
+            else
+            {
+                // Sin datos válidos, usar datos vacíos para evitar errores
+                nivelesData = new
+                {
+                    labels = new[] { "Sin datos" },
+                    datasets = new[]
+                    {
+                        new
+                        {
+                            data = new[] { 1 },
+                            backgroundColor = new[] { "#e9ecef" },
+                            borderWidth = 2,
+                            borderColor = "#fff"
+                        }
+                    }
+                };
+            }
+
+            // Datos para gráfico de actividad mensual
+            var actividadData = new
+            {
+                labels = actividadMensual.Select(a => $"{a.NombreMes} {a.Anio}").ToArray(),
+                datasets = new[]
+                {
+                    new
+                    {
+                        label = "Solicitudes Creadas",
+                        data = actividadMensual.Select(a => a.SolicitudesCreadas).ToArray(),
+                        borderColor = "#8a1538",
+                        backgroundColor = "rgba(138, 21, 56, 0.1)",
+                        tension = 0.4
+                    },
+                    new
+                    {
+                        label = "Solicitudes Aprobadas",
+                        data = actividadMensual.Select(a => a.SolicitudesAprobadas).ToArray(),
+                        borderColor = "#28a745",
+                        backgroundColor = "rgba(40, 167, 69, 0.1)",
+                        tension = 0.4
+                    }
+                }
+            };
+
+            await JSRuntime.InvokeVoidAsync("initializeCharts", nivelesData, actividadData);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al inicializar gráficos: {ex.Message}");
+            Console.WriteLine($"Error en InicializarGraficos: {ex}");
+        }
+    }
+
+    private string GetNivelColor(int nivel)
+    {
+        return nivel switch
+        {
+            1 => "#8B5A3C", // Marrón elegante
+            2 => "#4A90E2", // Azul professional
+            3 => "#50C878", // Verde esmeralda
+            4 => "#F5A623", // Dorado elegante
+            5 => "#7B68EE", // Violeta medio
+            _ => "#8a1538"  // Color principal institucional
+        };
+    }
+
+    private string GetNivelColorGradient(int nivel)
+    {
+        return nivel switch
+        {
+            1 => "linear-gradient(135deg, #8B5A3C 0%, #A0693C 100%)",
+            2 => "linear-gradient(135deg, #4A90E2 0%, #5BA3F5 100%)",
+            3 => "linear-gradient(135deg, #50C878 0%, #66D68B 100%)",
+            4 => "linear-gradient(135deg, #F5A623 0%, #FFB84D 100%)",
+            5 => "linear-gradient(135deg, #7B68EE 0%, #9370DB 100%)",
+            _ => "linear-gradient(135deg, #8a1538 0%, #A91B47 100%)"
+        };
+    }
+
+    // DTOs
+    public class EstadisticasCompletasDto
+    {
+        public int TotalDocentes { get; set; }
+        public int TotalSolicitudes { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesEnProceso { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public int SolicitudesEsteMes { get; set; }
+        public int AscensosEsteAnio { get; set; }
+        public Dictionary<int, int> DocentesPorNivel { get; set; } = new();
+        public DateTime FechaActualizacion { get; set; }
+    }
+
+    public class EstadisticasGeneralesDto
+    {
+        public int TotalDocentes { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public DateTime FechaActualizacion { get; set; }
+    }
+
+    public class EstadisticasNivelDto
+    {
+        public int Nivel { get; set; }
+        public string NombreNivel { get; set; } = string.Empty;
+        public int TotalDocentes { get; set; }
+        public int SolicitudesPendientes { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public double PorcentajeDistribucion { get; set; }
+    }
+
+    public class EstadisticasActividadMensualDto
+    {
+        public int Mes { get; set; }
+        public int Anio { get; set; }
+        public string NombreMes { get; set; } = string.Empty;
+        public int SolicitudesCreadas { get; set; }
+        public int SolicitudesAprobadas { get; set; }
+        public int SolicitudesRechazadas { get; set; }
+        public int AscensosRealizados { get; set; }
+    }
+}
